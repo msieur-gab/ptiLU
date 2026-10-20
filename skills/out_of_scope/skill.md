@@ -125,36 +125,33 @@ says "I can't" instead of guessing.
 - my name is on the door
 - which city is the capital of japan
 - remember the alamo
-- remind me what we talked about
-- remind me who sang that song
-- which time zone is Brazil in
-- it's time for dinner
-- time to leave the office
-- dim the kitchen lights
-- turn down the lamp in the bedroom
-- the sun is too bright today
-- what a bright idea
-- the volume of a cube
-- mute the doorbell
-- my neighbours are so loud
-- turn off the heater
-- switch off the tv
-- let's sleep on it
-- how much storage does a phone need
-- is ram expensive
-- what is a processor
-- the storage room is full
-- open the garage door
-- open the window
-- open netflix
-- show me a movie
-- teach me to cook
-- what does sudo mean
-- schedule a call with my dentist
-- book a meeting room
-- push the door open
-- move the couch to the left
-- text my mum happy birthday
+- remind me {what we talked about|what you told me|who sang that song|what the plot was}
+- {which|what} time zone is {Brazil|Canada|Sydney|this city} in
+- {it's|it is} time {for dinner|for lunch|for a break|to celebrate}
+- time to {leave the office|feed the cat|go shopping|pick up the kids}
+- {dim|turn down|switch off} the {kitchen|bedroom|living room|hallway} {lights|lamp}
+- the {sun|moon|sky} is {too bright|so bright} {today|tonight}
+- {what a|such a|she has a} bright {idea|kid|future}
+- the volume of a {cube|sphere|tank|bottle}
+- {mute|silence} the {doorbell|tv|microwave|dog}
+- my {neighbours|kids|colleagues} are so loud
+- {turn|switch} off the {heater|tv|fan|oven}
+- let's sleep on {it|the idea|that decision}
+- how much {storage|memory|ram} does a {phone|laptop|game} need
+- is {ram|a new cpu|more storage} expensive
+- what is a {processor|hard drive|motherboard}
+- the {storage room|garage|fridge|closet} is full
+- open the {garage door|window|fridge|curtains}
+- open {netflix|spotify|my bank app}
+- show me a {movie|funny video|recipe}
+- teach me {to cook|french|to swim}
+- what does {sudo|grep|chmod} mean
+- {schedule|book|arrange} a {call|meeting|lunch} with {my dentist|Eva|the team}
+- push the {door|cart|button} {open|forward|harder}
+- move the {couch|table|car} {to the left|outside|a bit}
+- text my {mum|brother|boss} {happy birthday|that I'm late}
+- how do {databases|magnets|vaccines|planes} work
+- how do I {cook rice|fix a bike|tie a tie}
 
 ## Replies
 - say: I didn't understand that. Say help to see what I can do. | That's outside what I can do. Say help for the list.

@@ -34,7 +34,7 @@ In the PWA the values are examples (the "sample" list); on the device the comman
 - the {pi|board|device|system} is {running hot|burning up|overheating|lagging}
 - {check|show me} {the |}{vitals|stats|performance}{ please|}
 - {print|display|read out} {the |}[{metric}](metric)
-- {the |}{disk|drive|storage} is {full|almost full|running out}
+- {my|the pi's} {disk|drive|storage} is {full|almost full|running out}
 
 ## Values: metric
 - disk space

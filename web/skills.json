@@ -59,7 +59,7 @@
      "ignore": []
     }
    },
-   "sentences": 118,
+   "sentences": 121,
    "values": {
     "direction": [
      {
@@ -642,7 +642,7 @@
     ]
    },
    "slots": null,
-   "sentences": 29,
+   "sentences": 27,
    "values": {}
   },
   "forget_me": {
@@ -1192,7 +1192,7 @@
     ]
    },
    "slots": null,
-   "sentences": 25,
+   "sentences": 24,
    "values": {}
   },
   "help": {
@@ -1215,7 +1215,7 @@
     ]
    },
    "slots": null,
-   "sentences": 55,
+   "sentences": 49,
    "values": {}
   },
   "move_event": {
@@ -1565,7 +1565,7 @@
     ]
    },
    "slots": null,
-   "sentences": 147,
+   "sentences": 216,
    "values": {}
   },
   "power": {

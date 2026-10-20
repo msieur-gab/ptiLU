@@ -33,10 +33,8 @@ A no with nothing to cancel. No after a question cancels it.
 - hold on
 - wait no
 - skip it
-- forget about it
 - don't do that
 - no, leave it
-- not this time
 - nah, cancel
 
 ## Replies

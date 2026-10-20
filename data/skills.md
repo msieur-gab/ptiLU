@@ -119,6 +119,9 @@
 - [dim](direction) it down
 - [dim](direction) it a little
 - [dim](direction) it a bit
+- my eyes are tired from the screen
+- my eyes ache from the screen
+- my eyes are sore from the screen
 
 ## intent: adjust_volume
 - turn the music [up](direction) please
@@ -1042,10 +1045,8 @@
 - hold on
 - wait no
 - skip it
-- forget about it
 - don't do that
 - no, leave it
-- not this time
 - nah, cancel
 
 ## intent: forget_me
@@ -1543,7 +1544,6 @@
 - howdy
 - hey hey
 - hello there
-- good day
 - hi friend
 - hey you
 - hello again
@@ -1570,43 +1570,37 @@
 - commands
 - what can I say
 - how do I use ptilu?
-- how do I use this
-- how do I use this thing
-- how do i use this thing
+- how do I use ptilu
+- how do i use ptilu
 - how do I use you?
-- how do I use this?
-- show me how this works
-- explain how this works
 - show me how to use you
 - explain how to use you
-- give me instructions
-- I need help
-- i need help
-- give me help
 - I need some help
+- i need some help
+- I need some guidance
 - I need instructions
-- give me some guidance
+- i need instructions
+- give me some instructions
+- give me guidance
+- give me instructions
 - tell me your features
 - tell me your capabilities
+- list your capabilities
 - list your skills
-- tell me your skills
-- what should I try?
-- what should I type?
-- what should I say
-- what should i say
-- what should I try
+- what could I say?
+- what could i say?
+- what could I type?
 - what should I say?
-- what could I type
+- what should i say?
+- what should I try?
+- what could I try?
+- what could i try?
 - the manual please
 - usage
-- instructions please
-- the manual
-- usage please
-- where do I start
 - I'm stuck
-- i'm stuck
 - I don't know what to do
-- where do i start
+- where do I start
+- i'm stuck
 
 ## intent: move_event
 - please move the [dinner](event) to 10am
@@ -2518,36 +2512,105 @@
 - my name is on the door
 - which city is the capital of japan
 - remember the alamo
-- remind me what we talked about
 - remind me who sang that song
+- remind me what the plot was
+- remind me what you told me
+- which time zone is Canada in
 - which time zone is Brazil in
+- which time zone is this city in
+- what time zone is this city in
+- which time zone is Sydney in
+- which time zone is sydney in
+- which time zone is canada in
 - it's time for dinner
+- it is time for lunch
+- it is time for dinner
+- it's time for a break
 - time to leave the office
-- dim the kitchen lights
-- turn down the lamp in the bedroom
-- the sun is too bright today
+- time to pick up the kids
+- time to feed the cat
+- time to go shopping
+- turn down the living room lamp
+- turn down the kitchen lights
+- turn down the kitchen lamp
+- switch off the hallway lights
+- turn down the bedroom lights
+- the sun is too bright tonight
+- the sun is so bright tonight
+- the sky is so bright today
+- the moon is so bright tonight
+- what a bright kid
+- such a bright kid
+- she has a bright kid
 - what a bright idea
+- the volume of a bottle
+- the volume of a tank
 - the volume of a cube
-- mute the doorbell
-- my neighbours are so loud
-- turn off the heater
-- switch off the tv
+- silence the microwave
+- mute the dog
+- silence the tv
+- my kids are so loud
+- my colleagues are so loud
+- switch off the fan
+- turn off the fan
+- turn off the tv
+- switch off the oven
+- let's sleep on the idea
+- let's sleep on that decision
 - let's sleep on it
+- how much ram does a laptop need
 - how much storage does a phone need
+- how much ram does a game need
+- how much memory does a phone need
+- is a new cpu expensive
 - is ram expensive
-- what is a processor
+- what is a hard drive
+- what is a motherboard
 - the storage room is full
+- the garage is full
+- the closet is full
+- the fridge is full
 - open the garage door
+- open the fridge
 - open the window
 - open netflix
+- show me a recipe
 - show me a movie
+- show me a funny video
 - teach me to cook
+- teach me french
+- teach me to swim
 - what does sudo mean
-- schedule a call with my dentist
-- book a meeting room
+- what does chmod mean
+- what does grep mean
+- schedule a lunch with the team
+- arrange a lunch with Eva
+- arrange a lunch with the team
+- arrange a call with Eva
+- arrange a call with eva
+- book a meeting with my dentist
+- push the cart open
 - push the door open
-- move the couch to the left
+- push the cart harder
+- push the button open
+- push the button forward
+- move the table outside
+- move the car a bit
+- move the car to the left
+- move the car outside
+- text my brother that I'm late
 - text my mum happy birthday
+- text my boss that I'm late
+- text my boss that i'm late
+- text my mum that I'm late
+- how do vaccines work
+- how do databases work
+- how do magnets work
+- how do I cook rice
+- how do I tie a tie
+- how do i tie a tie
+- how do I fix a bike
+- how do i cook rice
 
 ## intent: power
 - [turn off](power_action) the computer please
@@ -4088,18 +4151,18 @@
 - display [temperature](metric)
 - display [processor](metric)
 - print the [performance](metric)
-- the storage is full
-- disk is full
-- storage is full
-- the drive is running out
-- the disk is full
-- the drive is full
-- the storage is running out
-- the storage is almost full
-- storage is almost full
-- drive is running out
-- the disk is running out
-- drive is full
+- my storage is full
+- the pi's disk is full
+- the pi's storage is full
+- my drive is running out
+- my disk is full
+- my drive is full
+- my storage is running out
+- my storage is almost full
+- the pi's storage is almost full
+- the pi's drive is running out
+- my disk is running out
+- the pi's drive is full
 
 ## intent: thanks
 - thanks

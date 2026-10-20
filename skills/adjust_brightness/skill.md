@@ -47,6 +47,7 @@ mute: "mute" means darker here.
 - {can|could} you [dim](direction) {it|this|the screen}{ a little|}{?|}
 - {too much|not enough} light {on|from} the screen
 - [dim](direction) it {down|a little|a bit}
+- my eyes {ache|are tired|are sore} from the screen
 
 ## Values: level
 - 50%

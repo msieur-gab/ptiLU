@@ -25,7 +25,6 @@ Hello. Uses your name if the agent knows it.
 - howdy
 - hey hey
 - hello there
-- good day
 - hi friend
 - hey you
 - hello again
