@@ -1405,66 +1405,61 @@
 - what can I say
 
 ## intent: move_event
-- please move the [appointment](event) to tomorrow
-- please move my [appointment](event) to the 12th
-- move the [dinner](event) to tomorrow morning
-- move my [doctor's appointment](event) to monday at 3pm
-- please move my [meeting](event) to tomorrow morning
-- please move my [appointment](event) to next monday
+- please move the [dinner](event) to 10am
 - move my [standup](event) to tomorrow morning
-- move my [appointment](event) to the 12th
-- move my [team meeting](event) to next week
-- please move the [team meeting](event) to friday
-- please move the [appointment](event) to friday
-- please move my [doctor's appointment](event) to monday at 3pm
-- please move my [team meeting](event) to the 12th
-- please move my [interview](event) to tomorrow morning
-- could you move my [doctor's appointment](event) to tomorrow?
-- can you move the [standup](event) to next monday?
-- could you move the [interview](event) to the 12th
-- could you move the [standup](event) to monday at 3pm
-- can you move the [interview](event) to tomorrow morning?
-- could you move the [doctor's appointment](event) to tomorrow
-- could you move the [meeting](event) to the 12th
-- could you move my [team meeting](event) to friday
-- could you move my [meeting](event) to the 12th
-- could you move the [dinner](event) to next week
-- can you move my [call](event) to 10am
-- can you move my [interview](event) to tomorrow morning
-- can you move my [standup](event) to tomorrow morning?
-- can you move my [appointment](event) to tomorrow
-- reschedule the [dinner](event) to the 12th
-- reschedule the [doctor's appointment](event)
-- reschedule the [doctor's appointment](event) to the 12th
-- reschedule my [meeting](event) to tomorrow
-- reschedule my [doctor's appointment](event) to tomorrow
-- reschedule my [meeting](event)
+- push my [team meeting](event) to the 12th
+- move my [appointment](event) to tomorrow
+- move the [interview](event) to monday at 3pm
+- push my [standup](event) to tomorrow morning
+- push the [doctor's appointment](event) to next week
+- move the [interview](event) to tomorrow
+- please move the [appointment](event) to monday at 3pm
+- move the [appointment](event) to tomorrow morning
+- please move the [dinner](event) to the 12th
+- move my [interview](event) to tomorrow morning
+- push my [doctor's appointment](event) to the 12th
+- please move my [dinner](event) to next monday
+- could you move my [call](event) to next monday
+- can you push my [team meeting](event) to 10am?
+- could you move my [team meeting](event) to next week
+- can you move the [doctor's appointment](event) to next monday
+- could you push my [dinner](event) to monday at 3pm?
+- could you push my [doctor's appointment](event) to the 12th
+- could you push the [dinner](event) to next week
+- can you push the [standup](event) to tomorrow?
+- could you push my [doctor's appointment](event) to next week
+- could you push my [call](event) to monday at 3pm?
+- could you move the [doctor's appointment](event) to 10am
+- could you move the [doctor's appointment](event) to next week
+- can you push my [standup](event) to monday at 3pm?
+- can you move my [meeting](event) to tomorrow morning?
+- reschedule my [appointment](event) to tomorrow
+- reschedule the [interview](event)
+- reschedule the [doctor's appointment](event) to friday
 - reschedule my [standup](event)
-- reschedule the [appointment](event)
-- reschedule my [call](event)
-- reschedule my [doctor's appointment](event) to 10am
-- reschedule my [appointment](event)
-- reschedule the [meeting](event)
-- reschedule my [dinner](event) to next week
-- move the [call](event) from today to the 12th
-- move the [meeting](event) from today to monday at 3pm
-- move the [call](event) to the 12th
-- move my [meeting](event) from today to the 12th
+- reschedule the [standup](event)
+- reschedule my [team meeting](event) to friday
+- reschedule my [dinner](event)
+- reschedule my [interview](event) to friday
+- reschedule my [meeting](event) to next monday
+- reschedule my [team meeting](event) to tomorrow
+- reschedule the [team meeting](event)
+- reschedule my [meeting](event) to tomorrow
+- reschedule my [doctor's appointment](event)
+- move my [doctor's appointment](event) to friday
+- move the [call](event) from today to next week
+- move the [meeting](event) from today to next week
+- move my [meeting](event) from today to monday at 3pm
+- move my [interview](event) from today to friday
 - move the [doctor's appointment](event) to next week
-- move my [interview](event) from today to monday at 3pm
-- move my [call](event) to tomorrow
-- move my [call](event) to next week
-- move the [call](event) from today to tomorrow morning
-- move my [appointment](event) from today to friday
-- move the [dinner](event) from today to next week
-- move the [standup](event) from today to next week
-- move my [interview](event) from today to tomorrow morning
-- move the [interview](event) to 10am
-- I need to move my [interview](event) to tomorrow
-- I want to move my [team meeting](event) to next monday
-- i want to move my [team meeting](event) to next monday
-- I need to move my [dinner](event) to monday at 3pm
-- I want to move the [appointment](event) to monday at 3pm
+- move my [team meeting](event) to next week
+- move my [team meeting](event) to next monday
+- move my [call](event) to next monday
+- move my [standup](event) to next week
+- move the [doctor's appointment](event) from today to 10am
+- move the [call](event) from today to the 12th
+- move my [call](event) from today to 10am
+- move the [appointment](event) from today to tomorrow
 - I need to move the [doctor's appointment](event) to 10am
 - i need to move the [doctor's appointment](event) to 10am
 - I want to move my [standup](event) to the 12th
@@ -1479,92 +1474,95 @@
 - i need to move my [interview](event) to monday at 3pm
 - I want to move my [standup](event) to tomorrow morning
 - i want to move my [standup](event) to tomorrow morning
-- move the [dinner](event)
-- move my [team meeting](event)
-- move the [interview](event)
-- move my [doctor's appointment](event)
-- move my [appointment](event)
-- move my [call](event)
-- move my [interview](event)
+- I want to move my [standup](event) to monday at 3pm
+- I need to move the [standup](event) to next monday
+- i need to move the [standup](event) to next monday
+- I need to move my [call](event) to next week
+- i need to move my [call](event) to next week
+- I want to move my [doctor's appointment](event) to the 12th
+- i want to move my [doctor's appointment](event) to the 12th
 - move the [standup](event)
+- move the [doctor's appointment](event)
+- move the [interview](event)
+- move my [team meeting](event)
+- move my [meeting](event)
+- move the [dinner](event)
+- move my [appointment](event)
 - move the [call](event)
+- move my [call](event)
 - move the [meeting](event)
-- reschedule the [interview](event) for 10am
-- move the [dinner](event) for next week
-- move my [team meeting](event) for friday
-- move my [call](event) for 10am
-- reschedule the [meeting](event) for next week
-- reschedule the [meeting](event) for 10am
-- reschedule the [appointment](event) for tomorrow morning
-- reschedule my [team meeting](event) for the 12th
-- move my [meeting](event) for friday
-- move my [dinner](event) for friday
-- move my [meeting](event) for the 12th
-- reschedule the [dinner](event) for the 12th
-- reschedule the [standup](event) for the 12th
-- move the [standup](event) for monday at 3pm
+- move the [appointment](event) for tomorrow
+- move the [meeting](event) for friday
+- move my [call](event) for monday at 3pm
+- move my [standup](event) for tomorrow
+- reschedule the [doctor's appointment](event) for 10am
+- reschedule my [interview](event) for tomorrow
+- move the [appointment](event) for 10am
+- move the [appointment](event) for the 12th
+- move my [standup](event) for the 12th
+- reschedule my [meeting](event) for the 12th
+- reschedule my [meeting](event) for 10am
+- move my [appointment](event) for tomorrow
+- reschedule my [meeting](event) for next monday
+- reschedule my [appointment](event) for the 12th
 
 ## intent: move_file
-- move [invoice.pdf](name) to my [documents](location) folder
-- move [drafts](name) to my [desktop](location) folder
-- move [drafts](name) to my [documents](location)
-- please move [report.txt](name) to [documents](location) folder
-- move [report.txt](name) to my [work](location) folder
-- move [client-work](name) to [projects](location)
-- please move [client-work](name) to the [documents](location) folder
-- please move [invoice.pdf](name) to [pictures](location) folder
-- move [client-work](name) to my [desktop](location)
-- please move [old stuff](name) to the [desktop](location) folder
-- please move [client-work](name) to the [work](location) folder
-- please move [report.txt](name) to [pictures](location) folder
-- please move [report.txt](name) to the [pictures](location) folder
-- please move [report.txt](name) to the [desktop](location) folder
-- move the [report.txt](name) folder into my [desktop](location)
-- move my [budget.xlsx](name) file to the [music](location)
-- move the [report.txt](name) folder into the [archive](location)
-- move my [drafts](name) file into my [downloads](location)
-- move the [todo.txt](name) file into my [pictures](location)
-- move my [old stuff](name) folder to [projects](location)
-- move the [drafts](name) folder to the [work](location)
-- move my [report.txt](name) folder to the [documents](location)
-- move my [notes.md](name) file to the [projects](location)
-- move my [invoice.pdf](name) file to [music](location)
-- move my [drafts](name) folder into [pictures](location)
-- move the [photo.jpg](name) file to my [desktop](location)
-- move the [report.txt](name) folder to the [projects](location)
-- move my [invoice.pdf](name) file into [desktop](location)
-- can you move [old stuff](name) to [music](location)
-- can you move [photo.jpg](name) into [work](location)
-- can you move [client-work](name) to [projects](location)?
-- could you move [drafts](name) to the [desktop](location)?
-- could you move [todo.txt](name) to [work](location)
-- could you move [invoice.pdf](name) to my [archive](location)
-- can you move [todo.txt](name) to my [pictures](location)
-- could you move [invoice.pdf](name) to [downloads](location)
-- could you move [todo.txt](name) into the [work](location)?
-- can you move [old stuff](name) into my [desktop](location)?
-- can you move [report.txt](name) into the [documents](location)?
-- could you move [report.txt](name) to the [archive](location)
-- could you move [drafts](name) into my [projects](location)
-- could you move [photo.jpg](name) into [pictures](location)?
-- move [report.txt](name) into [downloads](location) please
-- move [budget.xlsx](name) into [pictures](location) please
-- move [old stuff](name) into the [archive](location)
-- move [report.txt](name) into my [music](location) please
-- move [notes.md](name) in the [projects](location) please
-- move [budget.xlsx](name) into my [archive](location)
-- move [receipts](name) in [music](location) please
-- move [receipts](name) in my [archive](location)
-- move [budget.xlsx](name) in the [desktop](location) please
+- push [notes.md](name) to [projects](location) folder
+- push [receipts](name) to my [archive](location) folder
+- push [report.txt](name) to [documents](location) folder
+- please move [receipts](name) to the [documents](location) folder
+- move [client-work](name) to my [projects](location)
+- please move [todo.txt](name) to my [projects](location) folder
+- move [invoice.pdf](name) to [pictures](location) folder
+- push [photo.jpg](name) to [music](location)
+- push [photo.jpg](name) to the [pictures](location) folder
+- please push [old stuff](name) to my [projects](location) folder
+- please push [budget.xlsx](name) to [documents](location)
+- move [drafts](name) to [music](location)
+- please push [notes.md](name) to the [archive](location) folder
+- please push [invoice.pdf](name) to the [projects](location)
+- move my [invoice.pdf](name) file into the [pictures](location)
+- move my [invoice.pdf](name) folder to [archive](location)
+- move the [old stuff](name) file to the [work](location)
+- move my [todo.txt](name) folder to my [downloads](location)
+- move the [drafts](name) folder to the [projects](location)
+- move my [receipts](name) file into my [documents](location)
+- move the [receipts](name) file to the [projects](location)
+- move the [invoice.pdf](name) folder to the [desktop](location)
+- move my [notes.md](name) folder into the [archive](location)
+- move my [report.txt](name) file into the [projects](location)
+- move the [todo.txt](name) file to my [projects](location)
+- move the [receipts](name) folder into the [pictures](location)
+- move the [drafts](name) folder to the [documents](location)
+- move the [invoice.pdf](name) file into my [downloads](location)
+- can you move [client-work](name) into my [downloads](location)?
+- can you move [todo.txt](name) into the [projects](location)?
+- could you move [notes.md](name) to my [desktop](location)
+- could you move [drafts](name) into my [desktop](location)
+- could you move [drafts](name) to the [desktop](location)
+- can you move [drafts](name) into my [downloads](location)?
+- could you move [old stuff](name) to the [music](location)
+- could you move [notes.md](name) into my [work](location)?
+- can you move [photo.jpg](name) to my [work](location)?
+- could you move [budget.xlsx](name) to my [documents](location)
+- could you move [old stuff](name) into [work](location)?
+- could you move [client-work](name) to the [pictures](location)
+- could you move [report.txt](name) to [documents](location)?
+- can you move [budget.xlsx](name) to [pictures](location)?
+- put [notes.md](name) into my [documents](location) please
+- move [budget.xlsx](name) in the [documents](location)
+- put [photo.jpg](name) in [desktop](location) please
+- put [receipts](name) in my [music](location) please
+- put [photo.jpg](name) in the [work](location)
+- put [client-work](name) into the [downloads](location)
 - move [invoice.pdf](name) into the [work](location) please
-- move [todo.txt](name) into the [documents](location)
-- move [report.txt](name) into the [downloads](location) please
-- move [photo.jpg](name) into my [work](location) please
-- move [notes.md](name) into [pictures](location)
-- I want to move [report.txt](name) to the [desktop](location)
-- I need to move [notes.md](name) to my [work](location)
-- I want to move [invoice.pdf](name) to my [music](location)
-- I want to move [notes.md](name) to [work](location)
+- move [receipts](name) in [desktop](location) please
+- move [notes.md](name) into [projects](location) please
+- move [client-work](name) in [desktop](location) please
+- move [drafts](name) in [documents](location)
+- move [drafts](name) in [pictures](location)
+- move [drafts](name) in the [archive](location) please
+- put [budget.xlsx](name) into [work](location)
 - I want to move [invoice.pdf](name) to [downloads](location)
 - I want to move [receipts](name) to [work](location)
 - I need to move [receipts](name) to [pictures](location)
@@ -1577,24 +1575,32 @@
 - I want to move [drafts](name) to my [pictures](location)
 - I need to move [todo.txt](name) to [pictures](location)
 - i need to move [todo.txt](name) to [pictures](location)
-- move [report.txt](name)
-- move [notes.md](name)
-- move [receipts](name)
-- move [budget.xlsx](name)
+- I want to move [todo.txt](name) to [archive](location)
+- I want to move [budget.xlsx](name) to the [archive](location)
+- I want to move [client-work](name) to [archive](location)
+- i want to move [client-work](name) to [archive](location)
+- I need to move [notes.md](name) to the [archive](location)
 - move [photo.jpg](name)
+- move [report.txt](name)
+- move [old stuff](name)
 - move [todo.txt](name)
-- move the file to [documents](location)
-- move the file to the [archive](location)
-- move the file to the [documents](location)
-- move the folder to my [desktop](location)
-- move this folder to the [downloads](location)
-- move this file to the [work](location)
-- move this folder to my [downloads](location)
-- move the file to my [projects](location)
-- move this file to [documents](location)
-- move the folder to the [archive](location)
+- move [receipts](name)
+- move [invoice.pdf](name)
+- move [drafts](name)
+- move [budget.xlsx](name)
+- move this folder to my [archive](location)
+- move the folder to [desktop](location)
+- move the folder to my [documents](location)
+- move the folder to my [music](location)
+- move the folder to [work](location)
+- move this file to [work](location)
+- move the file to [downloads](location)
 - move the file to [projects](location)
-- move the file to the [desktop](location)
+- move the folder to the [downloads](location)
+- move this folder to the [pictures](location)
+- move this folder to my [downloads](location)
+- move the file to my [pictures](location)
+- move this folder to [music](location)
 
 ## intent: open_app
 - launch my [console](app)

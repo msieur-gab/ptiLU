@@ -13,8 +13,8 @@ Test skill for the move experiment (20 October 2026): only answers, no calendar.
 - when: datetime, required, ask: ask_when
 
 ## Examples
-- {please |}move {the|my} [{event}](event) to {when}
-- {can|could} you move {the|my} [{event}](event) to {when}{?|}
+- {please |}{move|push} {the|my} [{event}](event) to {when}
+- {can|could} you {move|push} {the|my} [{event}](event) to {when}{?|}
 - reschedule {the|my} [{event}](event){ to {when}|}
 - move {the|my} [{event}](event) {from today |}to {when}
 - I {want|need} to move {the|my} [{event}](event) to {when}
