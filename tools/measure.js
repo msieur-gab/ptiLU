@@ -1,4 +1,4 @@
-// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|folders|lists|lists-strict|lists-add] [--show file.md] [--errors out.tsv]
+// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|folders] [--show file.md] [--errors out.tsv]
 // Held-out, boundary and extra probes (intent only, with errors listed), and optionally
 // 5-fold cross-validation over the training sentences: abstained / false yes / wrong skill.
 const path = require("path");
@@ -41,28 +41,6 @@ if (typesMode) {
       if (on && line.startsWith("- ")) FOLDERS.add(line.slice(2).trim().toLowerCase());
     }
   }
-  // closed lists: "list x" slots, plus the level, metric and file-type lists of text slots
-  const LISTS = new Map();
-  for (const d of fs.readdirSync("skills")) {
-    const f = path.join("skills", d, "skill.md");
-    if (!fs.existsSync(f)) continue;
-    const md = fs.readFileSync(f, "utf8");
-    const wanted = new Set([...md.matchAll(/^- \w+: list (\w+)/gm)].map(m => m[1]));
-    for (const extra of ["level", "metric", "type"]) if (new RegExp("^## Values: " + extra + "$", "m").test(md)) wanted.add(extra);
-    let on = null;
-    for (const line of md.split("\n")) {
-      if (/^## /.test(line)) { const m = /^## Values: (\w+)$/.exec(line); on = m && wanted.has(m[1]) ? m[1] : null; continue; }
-      if (!on || !line.startsWith("- ")) continue;
-      const body = line.slice(2).split("→")[0];
-      const [key, syn = ""] = body.split(/:(.*)/s);
-      for (const v of [key, ...syn.split(",")].map(x => x.trim().toLowerCase()).filter(Boolean)) {
-        if (!LISTS.has(v)) LISTS.set(v, new Set());
-        LISTS.get(v).add(d.replace(/^adjust_/, "") + "_" + on); // each skill's list is its own family
-      }
-    }
-  }
-  // lists-strict: one-word list values that are everyday words elsewhere stay words
-  const COMMON = new Set(["up", "down", "off", "on", "more", "less", "quiet", "rest", "bed", "nap", "text", "memory", "space", "full", "web", "internet", "files", "folders", "term", "half", "zero", "temp", "network"]);
   const PLACES = new Set(fs.readFileSync("tools/places.txt", "utf8").split("\n").filter(l => l && !l.startsWith("#")));
   const INTO = new Set(["in", "into", "inside", "to", "from", "under", "within", "onto", "on"]);
   const DET = new Set(["the", "my", "your", "our"]);
@@ -83,6 +61,7 @@ if (typesMode) {
       const span = text.slice(e.start, e.end).toLowerCase().trim();
       if (/^(right )?now$|^(morning|afternoon|evening|night)$/.test(span)) continue; // "not now", "good morning"
       if (/^\s*(%|percent)/i.test(text.slice(e.end))) continue; // "brightness at 5%"
+      if (/^(at|to)?\s*\d{1,3}$/.test(span) && /\b(brightness|volume|sound|level)\s*$/i.test(text.slice(0, e.start))) continue; // "brightness at 20"
       if (spans.some(([a, b]) => e.start < b && e.end > a)) continue;
       spans.push([e.start, e.end, e.type === "duration" ? "zduration" : "zdate"]);
     }
@@ -108,25 +87,9 @@ if (typesMode) {
         }
       }
     }
-    if (typesMode.startsWith("lists")) {
-      // every value and synonym a skill declares in a closed list becomes its list's type
-      const free = (a, b) => !spans.some(([x, y]) => a < y && b > x);
-      const w = [...text.matchAll(/[A-Za-z0-9%][A-Za-z0-9%'\-_]*/g)].map(m => ({ t: m[0].toLowerCase(), a: m.index, b: m.index + m[0].length }));
-      for (let i = 0; i < w.length; i++) {
-        if (NAMING.has(w[i - 1] && w[i - 1].t)) continue;
-        for (let n = 4; n >= 1; n--) {
-          if (i + n > w.length) continue;
-          const phrase = w.slice(i, i + n).map(x => x.t).join(" ");
-          const kinds = LISTS.get(phrase);
-          if (kinds && typesMode === "lists-strict" && n === 1 && COMMON.has(phrase)) continue;
-          if (kinds && free(w[i].a, w[i + n - 1].b)) { spans.push([w[i].a, w[i + n - 1].b, [...kinds].map(k => "z" + k).join(" "), typesMode === "lists-add"]); i += n - 1; break; }
-        }
-      }
-      for (const m of text.matchAll(/\b\d{1,3} ?(%|percent)/g)) if (free(m.index, m.index + m[0].length)) spans.push([m.index, m.index + m[0].length, "zlevel"]);
-    }
     spans.sort((a, b) => b[0] - a[0]);
     let out = text;
-    for (const [a, b, kind, keep] of spans) out = out.slice(0, a) + (typesMode === "add" || keep ? out.slice(a, b) + " " + kind : kind) + out.slice(b);
+    for (const [a, b, kind] of spans) out = out.slice(0, a) + (typesMode === "add" ? out.slice(a, b) + " " + kind : kind) + out.slice(b);
     cache.set(text, out);
     return out;
   });
@@ -168,14 +131,13 @@ for (const [name, f] of [["held-out", manifest.test], ["boundary", manifest.boun
 }
 
 if (cv) {
-  // fixed shuffle, same folds for every lexicon
-  let seed = 7; const rand = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
-  const idx = examples.map((_, i) => i);
-  for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  // folds from a hash of each sentence: adding or removing sentences never moves the others,
+  // so two versions of the skills are compared on the same folds
+  const fold = t => { let h = 2166136261; for (const c of norm(t)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0) % 5; };
   const cvErrs = [];
   const K = 5; let abst = 0, fyes = 0, wrong = 0, n = 0;
   for (let k = 0; k < K; k++) {
-    const testI = new Set(idx.filter((_, p) => p % K === k));
+    const testI = new Set(examples.map((e, i) => fold(e.text) === k ? i : -1).filter(i => i >= 0));
     const m = T.train(examples.filter((_, i) => !testI.has(i)), { prune: 0.2, lexicon, ...quiet });
     const fn = new R.NLU(m, lexicon);
     for (const i of testI) {
