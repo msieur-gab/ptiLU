@@ -1,4 +1,4 @@
-// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places] [--show file.md]
+// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|lists|lists-strict] [--show file.md]
 // Held-out, boundary and extra probes (intent only, with errors listed), and optionally
 // 5-fold cross-validation over the training sentences: abstained / false yes / wrong skill.
 const path = require("path");
@@ -41,6 +41,28 @@ if (typesMode) {
       if (on && line.startsWith("- ")) FOLDERS.add(line.slice(2).trim().toLowerCase());
     }
   }
+  // closed lists: "list x" slots, plus the level, metric and file-type lists of text slots
+  const LISTS = new Map();
+  for (const d of fs.readdirSync("skills")) {
+    const f = path.join("skills", d, "skill.md");
+    if (!fs.existsSync(f)) continue;
+    const md = fs.readFileSync(f, "utf8");
+    const wanted = new Set([...md.matchAll(/^- \w+: list (\w+)/gm)].map(m => m[1]));
+    for (const extra of ["level", "metric", "type"]) if (new RegExp("^## Values: " + extra + "$", "m").test(md)) wanted.add(extra);
+    let on = null;
+    for (const line of md.split("\n")) {
+      if (/^## /.test(line)) { const m = /^## Values: (\w+)$/.exec(line); on = m && wanted.has(m[1]) ? m[1] : null; continue; }
+      if (!on || !line.startsWith("- ")) continue;
+      const body = line.slice(2).split("→")[0];
+      const [key, syn = ""] = body.split(/:(.*)/s);
+      for (const v of [key, ...syn.split(",")].map(x => x.trim().toLowerCase()).filter(Boolean)) {
+        if (!LISTS.has(v)) LISTS.set(v, new Set());
+        LISTS.get(v).add(on);
+      }
+    }
+  }
+  // lists-strict: one-word list values that are everyday words elsewhere stay words
+  const COMMON = new Set(["up", "down", "off", "on", "more", "less", "quiet", "rest", "bed", "nap", "text", "memory", "space", "full", "web", "internet", "files", "folders", "term", "half", "zero", "temp", "network"]);
   const PLACES = new Set(fs.readFileSync("tools/places.txt", "utf8").split("\n").filter(l => l && !l.startsWith("#")));
   const INTO = new Set(["in", "into", "inside", "to", "from", "under", "within", "onto", "on"]);
   const DET = new Set(["the", "my", "your", "our"]);
@@ -73,6 +95,22 @@ if (typesMode) {
           if (PLACES.has(name) && free(w[i].a, w[i + n - 1].b)) { spans.push([w[i].a, w[i + n - 1].b, "zplace"]); i += n - 1; break; }
         }
       }
+    }
+    if (typesMode === "lists" || typesMode === "lists-strict") {
+      // every value and synonym a skill declares in a closed list becomes its list's type
+      const free = (a, b) => !spans.some(([x, y]) => a < y && b > x);
+      const w = [...text.matchAll(/[A-Za-z0-9%][A-Za-z0-9%'\-]*/g)].map(m => ({ t: m[0].toLowerCase(), a: m.index, b: m.index + m[0].length }));
+      for (let i = 0; i < w.length; i++) {
+        if (NAMING.has(w[i - 1] && w[i - 1].t)) continue;
+        for (let n = 4; n >= 1; n--) {
+          if (i + n > w.length) continue;
+          const phrase = w.slice(i, i + n).map(x => x.t).join(" ");
+          const kinds = LISTS.get(phrase);
+          if (kinds && typesMode === "lists-strict" && n === 1 && COMMON.has(phrase)) continue;
+          if (kinds && free(w[i].a, w[i + n - 1].b)) { spans.push([w[i].a, w[i + n - 1].b, [...kinds].map(k => "z" + k).join(" ")]); i += n - 1; break; }
+        }
+      }
+      for (const m of text.matchAll(/\b\d{1,3} ?(%|percent)/g)) if (free(m.index, m.index + m[0].length)) spans.push([m.index, m.index + m[0].length, "zlevel"]);
     }
     spans.sort((a, b) => b[0] - a[0]);
     let out = text;
