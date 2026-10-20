@@ -18,7 +18,6 @@ says "I can't" instead of guessing.
 - delete the reports folder
 - remove notes.md
 - rename the folder to drafts
-- move invoices to the archive
 - delete everything
 - what is the capital of france
 - who are you

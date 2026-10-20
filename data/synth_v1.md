@@ -270,7 +270,6 @@
 - delete the folder called reports
 - remove index.html
 - rename notes.txt to old_notes.txt
-- move pictures to documents
 - copy the file
 - close the web browser
 - search for budget.csv

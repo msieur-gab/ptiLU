@@ -213,7 +213,6 @@
 - delete the report file
 - remove that folder
 - rename the picture
-- move my documents to backup
 - copy this over there
 - close the window please
 - search for my budget spreadsheet
