@@ -1292,6 +1292,105 @@
    "sentences": 17,
    "values": {}
   },
+  "move_event": {
+   "file": "skills/move_event/skill.md",
+   "dir": "skills/move_event",
+   "code": false,
+   "action": "say",
+   "params": {
+    "skill": "move_event",
+    "help": "move a meeting or appointment (“move the meeting to friday”)",
+    "samples": "14",
+    "train_only": "event, when"
+   },
+   "request": null,
+   "answer": {},
+   "replies": {
+    "done": [
+     "OK, {event} moves to {when}."
+    ],
+    "ask_event": [
+     "Which event?"
+    ],
+    "ask_when": [
+     "To when?"
+    ]
+   },
+   "slots": {
+    "event": {
+     "type": "text",
+     "list": null,
+     "required": true,
+     "guess": false,
+     "ask": "ask_event",
+     "invalid": null,
+     "default": null,
+     "ignore": []
+    },
+    "when": {
+     "type": "datetime",
+     "list": null,
+     "required": true,
+     "guess": false,
+     "ask": "ask_when",
+     "invalid": null,
+     "default": null,
+     "ignore": []
+    }
+   },
+   "sentences": 98,
+   "values": {}
+  },
+  "move_file": {
+   "file": "skills/move_file/skill.md",
+   "dir": "skills/move_file",
+   "code": false,
+   "action": "say",
+   "params": {
+    "skill": "move_file",
+    "help": "move a file or folder (“move report.txt to documents”)",
+    "samples": "14",
+    "train_only": "file, loc",
+    "acts": "yes"
+   },
+   "request": null,
+   "answer": {},
+   "replies": {
+    "done": [
+     "OK, {name} moves to {location}."
+    ],
+    "ask_name": [
+     "Which file or folder?"
+    ],
+    "ask_where": [
+     "Where should I move it?"
+    ]
+   },
+   "slots": {
+    "name": {
+     "type": "text",
+     "list": null,
+     "required": true,
+     "guess": false,
+     "ask": "ask_name",
+     "invalid": null,
+     "default": null,
+     "ignore": []
+    },
+    "location": {
+     "type": "text",
+     "list": null,
+     "required": true,
+     "guess": false,
+     "ask": "ask_where",
+     "invalid": null,
+     "default": null,
+     "ignore": []
+    }
+   },
+   "sentences": 90,
+   "values": {}
+  },
   "open_app": {
    "file": "skills/open_app/skill.md",
    "dir": "skills/open_app",

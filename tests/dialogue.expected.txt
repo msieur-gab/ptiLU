@@ -404,7 +404,7 @@ Uptime: 3 hours 12 minutes.
 
 > help
   [help]
-  I can change the brightness, change the volume, create files, create folders, tell the date, tell the time, here or in another city, check the weather, open apps, open files and folders, shut down or restart, remember your name and where you live, send yourself a Telegram message, send a message to your phone, set reminders, set timers, show a place on a map and check the system. Try “make a folder called drafts in documents”, “remind me to call mum next friday at 3pm”, “weather tomorrow” or “I live in Munich”.
+  I can change the brightness, change the volume, create files, create folders, tell the date, tell the time, here or in another city, check the weather, move a meeting or appointment, move a file or folder, open apps, open files and folders, shut down or restart, remember your name and where you live, send yourself a Telegram message, send a message to your phone, set reminders, set timers, show a place on a map and check the system. Try “make a folder called drafts in documents”, “remind me to call mum next friday at 3pm”, “weather tomorrow” or “I live in Munich”.
 
 > hello
   [greet]
@@ -430,7 +430,7 @@ Uptime: 3 hours 12 minutes.
   [create_folder]
   What should I call the folder?
 > drafts in documents
-  [create_file {"location":"documents"}]
+  [create_file {"name":"drafts","location":"documents"}]
   Done. “drafts” is now in Documents.
   $ mkdir -p $HOME/Documents/drafts
 

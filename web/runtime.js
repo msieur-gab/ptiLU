@@ -14,7 +14,12 @@ const NLURuntime = (() => {
 
   // lex: word → family (skills/lexicon.md). A word of a family is read as the family's word, so
   // examples that teach one word teach them all.
+  // Value types (experiment, 20 Oct): a function that rewrites a sentence before routing, so
+  // the router sees "move <file> to <date>" instead of the words of each value.
+  let VALUE_TYPES = null;
+  function setValueTypes(fn) { VALUE_TYPES = fn; }
   function intentFeatures(text, lex) {
+    if (VALUE_TYPES) text = VALUE_TYPES(text);
     const toks = tokenize(text).map(t => t[0]).filter(t => WORD_RE.test(t)).map(t => t.toLowerCase())
       .map(t => (lex && lex[t]) || t);
     const feats = [];
@@ -171,6 +176,6 @@ const NLURuntime = (() => {
         slots, labels, ms: performance.now() - t0 };
     }
   }
-  return { NLU, tokenize, intentFeatures, tokenFeatures };
+  return { NLU, tokenize, intentFeatures, tokenFeatures, setValueTypes };
 })();
 if (typeof module !== "undefined") module.exports = NLURuntime;
