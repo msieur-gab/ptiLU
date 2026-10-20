@@ -2598,18 +2598,15 @@
 - move the car a bit
 - move the car to the left
 - move the car outside
-- text my brother that I'm late
+- text my brother happy birthday
+- text my boss happy birthday
 - text my mum happy birthday
-- text my boss that I'm late
-- text my boss that i'm late
-- text my mum that I'm late
 - how do vaccines work
 - how do databases work
-- how do magnets work
-- how do I cook rice
-- how do I tie a tie
-- how do i tie a tie
+- how do planes work
 - how do I fix a bike
+- how do I tie a tie
+- how do I cook rice
 - how do i cook rice
 
 ## intent: power

@@ -149,7 +149,7 @@ says "I can't" instead of guessing.
 - {schedule|book|arrange} a {call|meeting|lunch} with {my dentist|Eva|the team}
 - push the {door|cart|button} {open|forward|harder}
 - move the {couch|table|car} {to the left|outside|a bit}
-- text my {mum|brother|boss} {happy birthday|that I'm late}
+- text my {mum|brother|boss} happy birthday
 - how do {databases|magnets|vaccines|planes} work
 - how do I {cook rice|fix a bike|tie a tie}
 

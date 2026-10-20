@@ -1,4 +1,4 @@
-// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|folders] [--show file.md] [--errors out.tsv]
+// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|folders] [--show file.md] [--errors out.tsv] [--predictions out.tsv]
 // Held-out, boundary and extra probes (intent only, with errors listed), and optionally
 // 5-fold cross-validation over the training sentences: abstained / false yes / wrong skill.
 const path = require("path");
@@ -109,11 +109,13 @@ if (args.includes("--collide")) { // training sentences that look the same to th
   process.exit(0);
 }
 
+const evalPreds = [];
 function score(nlu, set) {
   let ok = 0; const errs = [];
   for (const e of set) {
     const r = nlu.parse(e.text);
     const pred = r.confidence >= TH ? r.intent : "out_of_scope";
+    evalPreds.push(`${e.intent}\t${r.intent}\t${r.confidence.toFixed(4)}\t${e.text}\t${set.name || ""}`);
     if (pred === e.intent) ok++; else errs.push(`  ${e.text}  want=${e.intent} got=${pred} (${r.intent} ${r.confidence.toFixed(2)})`);
   }
   return { ok, n: set.length, errs };
@@ -125,16 +127,21 @@ const seen = new Set(examples.map(e => norm(e.text)));
 const load = f => T.parseDataset(fs.readFileSync(f, "utf8")).filter(e => !seen.has(norm(e.text)));
 const report = { types: typesMode || "none", lexicon: lexFile, families: new Set(Object.values(lexicon)).size, words: Object.keys(lexicon).length, kb: Math.round(JSON.stringify(model).length / 1024) };
 for (const [name, f] of [["held-out", manifest.test], ["boundary", manifest.boundary], ...probeFiles.map(f => [path.basename(f, ".md"), f])]) {
-  const r = score(nlu, load(f));
+  const r = score(nlu, Object.assign(load(f), { name }));
   report[name] = `${r.ok}/${r.n}`;
   console.log(`${name}: ${r.ok}/${r.n}`); r.errs.forEach(e => console.log(e));
+}
+
+{ // --predictions file.eval.tsv: the same for held-out, boundary and probes
+  const pi = args.indexOf("--predictions");
+  if (pi >= 0) fs.writeFileSync(path.resolve(args[pi + 1]).replace(/\.tsv$/, "") + ".eval.tsv", "want\ttop\tconfidence\tsentence\tset\n" + evalPreds.join("\n") + "\n");
 }
 
 if (cv) {
   // folds from a hash of each sentence: adding or removing sentences never moves the others,
   // so two versions of the skills are compared on the same folds
   const fold = t => { let h = 2166136261; for (const c of norm(t)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0) % 5; };
-  const cvErrs = [];
+  const cvErrs = [], preds = [];
   const K = 5; let abst = 0, fyes = 0, wrong = 0, n = 0;
   for (let k = 0; k < K; k++) {
     const testI = new Set(examples.map((e, i) => fold(e.text) === k ? i : -1).filter(i => i >= 0));
@@ -144,6 +151,7 @@ if (cv) {
       const e = examples[i], r = fn.parse(e.text);
       const pred = r.confidence >= TH ? r.intent : "out_of_scope";
       n++;
+      preds.push(`${e.intent}\t${r.intent}\t${r.confidence.toFixed(4)}\t${e.text}`);
       if (pred === e.intent) continue;
       if (pred === "out_of_scope") abst++; else if (e.intent === "out_of_scope") fyes++; else wrong++;
       cvErrs.push(`${e.intent}\t${pred}\t${r.intent} ${r.confidence.toFixed(2)}\t${e.text}`);
@@ -153,6 +161,10 @@ if (cv) {
   // --errors file: every cross-validation error (want, got, top skill and confidence, sentence)
   const ei = args.indexOf("--errors");
   if (ei >= 0) fs.writeFileSync(path.resolve(args[ei + 1]), "want\tgot\ttop\tsentence\n" + cvErrs.join("\n") + "\n");
+  // --predictions file: every cross-validation sentence with its top skill and confidence, for
+  // choosing a threshold without retraining
+  const pi = args.indexOf("--predictions");
+  if (pi >= 0) fs.writeFileSync(path.resolve(args[pi + 1]), "want\ttop\tconfidence\tsentence\n" + preds.join("\n") + "\n");
   report.cv = { n, abstained: abst, false_yes: fyes, wrong_skill: wrong, errors: abst + fyes + wrong };
   console.log(`cv (${n}): abstained ${abst}, false yes ${fyes}, wrong skill ${wrong}, total ${abst + fyes + wrong}`);
 }
