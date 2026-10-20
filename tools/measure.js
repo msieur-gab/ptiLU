@@ -1,4 +1,4 @@
-// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|lists|lists-strict|lists-add] [--show file.md]
+// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|folders|lists|lists-strict|lists-add] [--show file.md]
 // Held-out, boundary and extra probes (intent only, with errors listed), and optionally
 // 5-fold cross-validation over the training sentences: abstained / false yes / wrong skill.
 const path = require("path");
@@ -76,7 +76,7 @@ if (typesMode) {
     try { ents = E.parse(text); } catch (e) {}
     for (const e of ents) if (e.start != null) spans.push([e.start, e.end, e.type === "duration" ? "zduration" : "zdate"]);
     for (const m of text.matchAll(FILE)) if (!spans.some(([a, b]) => m.index < b && m.index + m[0].length > a)) spans.push([m.index, m.index + m[0].length, "zfile"]);
-    if (typesMode === "places") {
+    if (typesMode === "places" || typesMode === "folders") {
       const free = (a, b) => !spans.some(([x, y]) => a < y && b > x);
       const w = [...text.matchAll(/[A-Za-z][A-Za-z'\-]*/g)].map(m => ({ t: m[0].toLowerCase(), a: m.index, b: m.index + m[0].length }));
       for (let i = 0; i < w.length; i++) {
@@ -88,6 +88,7 @@ if (typesMode) {
         if ((FOLDERS.has(w[i].t) && afterInto) || (DIR.has(next) && !DET.has(w[i].t) && !["a", "new", "this", "that", "same"].includes(w[i].t))) {
           spans.push([w[i].a, w[i].b, "zfolder"]); continue;
         }
+        if (typesMode === "folders") continue; // folders only, no world places
         // a place in the world: the longest known name of up to three words
         for (let n = 3; n >= 1; n--) {
           if (i + n > w.length) continue;
