@@ -97,6 +97,28 @@
 - a bit [dimmer](direction) please
 - a bit [dimmer](direction)
 - [dimmer](direction)
+- the screen is blinding me
+- the screen is hurting my eyes
+- the screen is hard to read
+- the screen is too glaring
+- I'm straining to see the screen
+- I'm squinting at the screen
+- i'm squinting at the screen
+- i'm straining to see the screen
+- can you [dim](direction) this a little
+- can you [dim](direction) the screen
+- can you [dim](direction) this?
+- can you [dim](direction) the screen?
+- could you [dim](direction) the screen
+- could you [dim](direction) this a little
+- can you [dim](direction) the screen a little?
+- too much light from the screen
+- too much light on the screen
+- not enough light from the screen
+- not enough light on the screen
+- [dim](direction) it down
+- [dim](direction) it a little
+- [dim](direction) it a bit
 
 ## intent: adjust_volume
 - turn the music [up](direction) please
@@ -216,6 +238,42 @@
 - volume [down](direction)
 - adjust the volume
 - change the volume
+- it's far too much
+- the sound is deafening
+- the music is deafening
+- it's blasting
+- the sound is booming
+- the music is blasting
+- I cannot think with the sound
+- I can't think with this sound
+- i can't think with this sound
+- I cannot concentrate with the sound
+- I cannot think with this noise
+- i cannot think with this noise
+- I cannot concentrate with the noise
+- I can't concentrate with the sound
+- i can't concentrate with the sound
+- I can't concentrate with this noise
+- i can't concentrate with this noise
+- I can't focus with this noise
+- i can't focus with this noise
+- I can't think with this noise
+- i can't think with this noise
+- shh
+- shush
+- quiet down please
+- quiet down
+- shh please
+- lower it a little
+- raise it a bit
+- lower it a notch
+- lower it a bit
+- raise it a little
+- the speaker is too loud
+- the noise is too loud
+- [mute](direction) this
+- [mute](direction) the noise
+- [mute](direction) the speaker
 
 ## intent: affirm
 - yes
@@ -237,6 +295,19 @@
 - of course
 - go for it
 - y
+- yes indeed
+- certainly
+- by all means
+- that works
+- fine by me
+- let's do it
+- go on
+- ok do it
+- yes go ahead
+- uh huh
+- sure thing
+- alright then
+- yes, that's it
 
 ## intent: create_file
 - please make a file named [main](name)
@@ -591,6 +662,42 @@
 - lets make a [markdown](file_type) file called [call notes](name)
 - lets create a [yaml](file_type) file called [draft for friday](name)
 - lets make a [html](file_type) file named [brief](name)
+- jot down a [tasks](name)
+- jot down [travel plan](name)
+- jot down [meeting notes](name)
+- jot down a [changelog](name)
+- jot down [readme](name)
+- jot down a [grocery list](name)
+- jot down [shopping list](name)
+- jot down [scratch](name)
+- jot down a [meeting notes](name)
+- jot down [gift ideas](name)
+- jot down [draft for friday](name)
+- start a new note named [call notes](name)
+- start a new document called [meeting notes](name)
+- begin a new document named [budget](name)
+- begin a new document named [scratch](name)
+- begin a new note called [book ideas](name)
+- begin a new note named [index](name)
+- start a new note called [index](name)
+- begin a new note named [bug list](name)
+- start a new document called [agenda](name)
+- start a new note named [main](name)
+- begin a new note named [draft for friday](name)
+- begin a new document called [plan](name)
+- take a note called [scratch](name)
+- make a note named [meeting notes](name)
+- take a note called [brief](name)
+- take a note named [packing list](name)
+- make a note called [main](name)
+- make a note named [journal](name)
+- take a note named [Report2026](name)
+- take a note named [report2026](name)
+- take a note named [ideas](name)
+- make a note named [workout log](name)
+- take a note called [gift ideas](name)
+- make a note called [bug list](name)
+- take a note called [journal](name)
 
 ## intent: create_folder
 - please add dir named [family photos](name)
@@ -929,6 +1036,17 @@
 - scratch that
 - actually no
 - drop it
+- no no
+- not really
+- I'd rather not
+- hold on
+- wait no
+- skip it
+- forget about it
+- don't do that
+- no, leave it
+- not this time
+- nah, cancel
 
 ## intent: forget_me
 - forget my name
@@ -1048,6 +1166,16 @@
 - what month is it?
 - what year is it
 - what year is it?
+- tell me again which day it is today please
+- remind me what today's date is
+- tell me again which day it is today
+- tell me again the date
+- remind me which day it is today please
+- remind me which day it is today
+- tell me again what today's date is
+- what's the date again
+- what is the date again?
+- what's the date again?
 
 ## intent: get_time
 - what time is it?
@@ -1366,6 +1494,35 @@
 - what's it like outside later?
 - what's it like outside?
 - what's it like out there tomorrow morning?
+- how does [Lisbon](place) look for the weekend
+- how does [lisbon](place) look for the weekend
+- how does [Paris](place) look weather-wise?
+- how does [Garmisch](place) look this weekend
+- how does [garmisch](place) look this weekend
+- how does [Kyoto](place) look for the weekend?
+- how does [Hamburg](place) look weather-wise
+- how does [hamburg](place) look weather-wise
+- how does [Tokyo](place) look for the weekend?
+- how does [tokyo](place) look for the weekend?
+- how does [Buenos Aires](place) look for the weekend?
+- how does [buenos aires](place) look for the weekend?
+- how does [Paris](place) look for the weekend?
+- what's it like outside in [London](place)
+- what's it like outside in [Rio de Janeiro](place)?
+- what's it like outside in [Montreal](place)?
+- what's it like outside in [New York](place)
+- what's it like outside in [Cape Town](place)
+- what's it like outside in [cape town](place)
+- what's it like outside in [Zurich](place)
+- what's it like outside in [San Francisco](place)?
+- is there rain this afternoon
+- is there sun today?
+- any drizzle this afternoon
+- is there sun this afternoon
+- any rain today
+- is there wind this afternoon?
+- any rain today?
+- any drizzle today
 
 ## intent: greet
 - hi
@@ -1384,6 +1541,15 @@
 - hey buddy
 - good afternoon
 - howdy
+- hey hey
+- hello there
+- good day
+- hi friend
+- hey you
+- hello again
+- anyone there?
+- hi, are you there?
+- hey, good to see you
 
 ## intent: help
 - help
@@ -1403,6 +1569,44 @@
 - any tips
 - commands
 - what can I say
+- how do I use ptilu?
+- how do I use this
+- how do I use this thing
+- how do i use this thing
+- how do I use you?
+- how do I use this?
+- show me how this works
+- explain how this works
+- show me how to use you
+- explain how to use you
+- give me instructions
+- I need help
+- i need help
+- give me help
+- I need some help
+- I need instructions
+- give me some guidance
+- tell me your features
+- tell me your capabilities
+- list your skills
+- tell me your skills
+- what should I try?
+- what should I type?
+- what should I say
+- what should i say
+- what should I try
+- what should I say?
+- what could I type
+- the manual please
+- usage
+- instructions please
+- the manual
+- usage please
+- where do I start
+- I'm stuck
+- i'm stuck
+- I don't know what to do
+- where do i start
 
 ## intent: move_event
 - please move the [dinner](event) to 10am
@@ -1505,6 +1709,33 @@
 - move my [appointment](event) for tomorrow
 - reschedule my [meeting](event) for next monday
 - reschedule my [appointment](event) for the 12th
+- postpone the [interview](event) to 10am
+- shift the [meeting](event) until 10am
+- bump the [doctor's appointment](event) to next monday
+- bump my [meeting](event) to next week
+- delay the [interview](event) until next monday
+- shift the [meeting](event) to tomorrow
+- delay my [call](event) to next monday
+- postpone the [call](event) until tomorrow morning
+- shift my [meeting](event) to next monday
+- delay my [call](event) to 10am
+- shift the [call](event) to friday
+- delay my [standup](event) until friday
+- delay my [doctor's appointment](event) to the 12th
+- delay the [meeting](event) until tomorrow morning
+- move up the [standup](event) to monday at 3pm
+- move up my [interview](event) to the 12th
+- bring forward the [call](event) to tomorrow
+- move up the [team meeting](event) to friday
+- bring forward the [call](event) to the 12th
+- move up my [doctor's appointment](event) to tomorrow morning
+- bring forward the [dinner](event) to monday at 3pm
+- bring forward my [call](event) to next week
+- bring forward my [meeting](event) to monday at 3pm
+- bring forward the [standup](event) to next monday
+- bring forward the [call](event) to 10am
+- move up my [team meeting](event) to 10am
+- move up the [dinner](event) to 10am
 
 ## intent: move_file
 - push [notes.md](name) to [projects](location) folder
@@ -1601,6 +1832,20 @@
 - move this folder to my [downloads](location)
 - move the file to my [pictures](location)
 - move this folder to [music](location)
+- transfer [receipts](name) into my [work](location)
+- relocate [photo.jpg](name) into my [music](location)
+- transfer [old stuff](name) to my [downloads](location)
+- transfer [client-work](name) to my [pictures](location)
+- transfer [receipts](name) to [downloads](location)
+- shift [drafts](name) to my [pictures](location)
+- shift [notes.md](name) to [archive](location)
+- transfer [budget.xlsx](name) to my [desktop](location)
+- relocate [receipts](name) to my [work](location)
+- transfer [notes.md](name) to my [documents](location)
+- shift [client-work](name) to [downloads](location)
+- transfer [client-work](name) to [downloads](location)
+- shift [drafts](name) to [pictures](location)
+- transfer [receipts](name) to the [downloads](location)
 
 ## intent: open_app
 - launch my [console](app)
@@ -1807,6 +2052,56 @@
 - switch to the [calc](app)
 - go to the [settings](app)
 - switch to the [file manager](app)
+- let me use the [internet](app)
+- I'd like to use the [mousepad](app)
+- I'd like to use the [editor](app)
+- let me use the [firefox](app)
+- I'd like to use the [notepad](app)
+- let me use the [calculator](app)
+- let me use the [files](app)
+- let me use the [terminal](app)
+- let me use the [preferences](app)
+- I'd like to use the [chrome](app)
+- i'd like to use the [chrome](app)
+- let me use the [Terminal](app)
+- I'd like to use the [Terminal](app)
+- let me use the [chrome browser](app)
+- let me use the [web browser](app)
+- I'd like to use the [folders](app)
+- [calc](app), launch it
+- [finder](app) - open it
+- [calculator](app) - start it
+- [editor](app), start it
+- [preferences](app) - start it
+- [console](app) - open it
+- [calc](app), open it
+- [text editor](app) - launch it
+- [calc](app) - start it
+- [control panel](app), start it
+- [mousepad](app) - open it
+- [file manager](app) - launch it
+- [cli](app) - start it
+- [chromium](app), start it
+- [calculator](app), start it
+- [text editor](app), launch it
+- get me to the [files](app)
+- get me to the [text editor](app)
+- take me to the [term](app)
+- take me to the [system settings](app)
+- get me to the [file explorer](app)
+- get me to the [shell](app)
+- get me to the [folders](app)
+- get me to the [Browser](app)
+- get me to the [console](app)
+- get me to the [Chromium browser](app)
+- get me to the [chromium browser](app)
+- get me to the [calc](app)
+- get me to the [explorer](app)
+- take me to the [control panel](app)
+- take me to the [chromium](app)
+- get me to the [Firefox browser](app)
+- get me to the [firefox browser](app)
+- take me to the [calculator](app)
 
 ## intent: open_file
 - open [index.html](name)
@@ -2062,6 +2357,48 @@
 - show me a file
 - show me the file
 - open the file
+- let me see the [documents](location) folder
+- show me the [archive](location) folder
+- look in the [archive](location) folder
+- show me the [photos](location) folder
+- let me see my [photos](location) folder
+- let me see [school](location) folder
+- look in the [src](location) folder
+- let me see the [archive](location) folder
+- look in my [Desktop](location) folder
+- show me my [photos](location) folder
+- let me see my [music](location) folder
+- let me see [home](location) folder
+- look in the [music](location) folder
+- show me [work](location) folder
+- let me see the [photos](location) folder
+- look in [documents](location) folder
+- show me the [downloads](location) folder
+- let me see [inbox](location) folder
+- let me see my [downloads](location) folder
+- let me see my [Desktop](location) folder
+- let me see my [desktop](location) folder
+- let me see [work](location) folder
+- look in my [music](location) folder
+- show the [call notes](name) file
+- show the [tasks](name) file
+- display the [main](name) file please
+- show the [index](name) file please
+- display the [travel plan](name) file please
+- display the [ideas](name) file
+- display the [index](name) file
+- show the [release notes](name) file please
+- display the [project notes](name) file
+- show the [changelog](name) file please
+- display the [book ideas](name) file please
+- display the [draft](name) file
+- display the [reading list](name) file
+- show the [reading list](name) file
+- show the [ideas](name) file please
+- show the [book ideas](name) file please
+- show the [shopping list](name) file
+- display the [main](name) file
+- show the [book ideas](name) file
 
 ## intent: out_of_scope
 - tell me a joke
@@ -2181,6 +2518,36 @@
 - my name is on the door
 - which city is the capital of japan
 - remember the alamo
+- remind me what we talked about
+- remind me who sang that song
+- which time zone is Brazil in
+- it's time for dinner
+- time to leave the office
+- dim the kitchen lights
+- turn down the lamp in the bedroom
+- the sun is too bright today
+- what a bright idea
+- the volume of a cube
+- mute the doorbell
+- my neighbours are so loud
+- turn off the heater
+- switch off the tv
+- let's sleep on it
+- how much storage does a phone need
+- is ram expensive
+- what is a processor
+- the storage room is full
+- open the garage door
+- open the window
+- open netflix
+- show me a movie
+- teach me to cook
+- what does sudo mean
+- schedule a call with my dentist
+- book a meeting room
+- push the door open
+- move the couch to the left
+- text my mum happy birthday
 
 ## intent: power
 - [turn off](power_action) the computer please
@@ -2287,6 +2654,23 @@
 - switch off the device
 - shut it down
 - power it down
+- cut the power
+- switch everything off
+- pull the plug
+- go into standby
+- go to standby
+- enter standby
+- shut down for the night
+- shut it down for the night
+- power it down for the night
+- power down for the night
+- I'm done, [shut down](power_action) the pi
+- I'm done for today, [shut down](power_action) the computer
+- i'm done, [shut down](power_action) the pi
+- I'm done for today, [shut down](power_action) the pi
+- i'm done for today, [shut down](power_action) the pi
+- I'm done, [shut down](power_action) the computer
+- i'm done for today, [shut down](power_action) the computer
 
 ## intent: recall_me
 - what's my name
@@ -2855,6 +3239,42 @@
 - notify me on my phone [the parcel is at the neighbour's](text)
 - notify me on my phone [turn off the heater in the shed](text)
 - notify me on my phone [the kiln is cooling down](text)
+- sms me [call the plumber](text)
+- sms me [the kiln is cooling down](text) on my phone
+- sms me [turn off the heater in the shed](text) on my phone
+- text me [start the slow cooker](text)
+- text me [the train is cancelled](text)
+- sms me [feed the cat](text)
+- sms me [turn off the heater in the shed](text)
+- sms me [water the plants](text) on my phone
+- text me [call the plumber](text) on my phone
+- text me [bring the drill to the workshop](text)
+- text me [take the chicken out of the freezer](text) on my phone
+- sms me [take the chicken out of the freezer](text)
+- sms me [call the bank back](text)
+- sms me [don't forget the charger](text) on my phone
+- text me [feed the cat](text) on my phone
+- sms me [photos are uploaded](text)
+- text me [the printer is out of paper](text) on my phone
+- sms me [the backup finished](text)
+- drop me a message that says [sand the second coat tomorrow](text)
+- drop me a message that says [the bus is late](text)
+- shoot me a message that says [the dishwasher is done](text)
+- drop me a text saying [turn off the heater in the shed](text)
+- drop me a message that says [pick up the kids at 5](text)
+- shoot me a message that says [take the chicken out of the freezer](text)
+- shoot me a message that says [start the slow cooker](text)
+- shoot me a message that says [pick up the kids at 5](text)
+- drop me a message that says [clamps are on the bench](text)
+- drop me a text that says [start the slow cooker](text)
+- drop me a message saying [take the chicken out of the freezer](text)
+- drop me a message saying [the dishwasher is done](text)
+- shoot me a message that says [the kiln is cooling down](text)
+- shoot me a text that says [call the plumber](text)
+- drop me a message that says [the oil needs another hour to cure](text)
+- drop me a message saying [lock the back door](text)
+- shoot me a text that says [meeting moved to Thursday](text)
+- shoot me a text that says [meeting moved to thursday](text)
 
 ## intent: set_reminder
 - remind me to [call mum](task) in 10 minutes
@@ -3066,6 +3486,34 @@
 - set a reminder to [take a break](task)
 - add a reminder that I need to [go to bed](task)
 - add a reminder that i need to [go to bed](task)
+- warn me tomorrow about [give the keys to Lea](task)
+- warn me in 2 days about [send the photos to grandma](task)
+- warn me at noon about [renew my passport](task)
+- alert me every monday at 9 to [take the bread out](task)
+- warn me at 3pm to [book the dentist](task)
+- notify me next friday to [send the invoice](task)
+- alert me in three days about [bring the drill to the workshop](task)
+- alert me this evening about [take the car to the garage](task)
+- warn me every monday at 9 about [move the car](task)
+- notify me next friday to [ask Romain about the demo](task)
+- warn me next tuesday afternoon about [water the plants](task)
+- alert me at 3pm about [pick up the kids](task)
+- warn me in an hour about [check the laundry](task)
+- notify me on monday at 9 to [give the keys to Lea](task)
+- give me a heads-up next week to [buy milk](task)
+- give me a heads-up in three days to [take the car to the garage](task)
+- let me know the day after tomorrow at 10:30 to [pick up the kids](task)
+- give me a heads-up every weekday at 8 about [send the quote to Marc](task)
+- give me a heads-up on sunday to [buy milk](task)
+- let me know every weekday at 8 about [drink some water](task)
+- let me know this evening about [clean the workshop](task)
+- give me a heads-up at midnight to [submit the report](task)
+- let me know in an hour about [reply to Eva](task)
+- let me know on monday at 9 about [back up the photos](task)
+- let me know in 2 days about [send the photos to grandma](task)
+- give me a heads-up every weekday at 8 to [clean the workshop](task)
+- give me a heads-up tomorrow morning to [charge the camera](task)
+- give me a heads-up at 6:45 about [go to bed](task)
 
 ## intent: set_timer
 - make a timer for 90 seconds please
@@ -3321,6 +3769,32 @@
 - let me see [ljubljana](place) on a map
 - let me see [San Francisco](place) on the map
 - I want to see [Porto](place) on the map
+- show me where [Bordeaux](place) is
+- show me where [Shenzhen](place) is
+- show me where [Copenhagen](place) is
+- let me see where [Oslo](place) is
+- let me see where [oslo](place) is
+- let me see where [Montreal](place) is
+- show me where [Hong Kong](place) is
+- show me where [hong kong](place) is
+- let me see where [Hong Kong](place) is
+- let me see where [montreal](place) is
+- let me see where [Lisbon](place) is
+- show me where [Lyon](place) is
+- display [Montreal](place) for me
+- show [Garmisch](place)
+- display [Salzburg](place)
+- show [Reykjavik](place) for me
+- show [reykjavik](place) for me
+- display [Ljubljana](place) please
+- display [Munich](place) please
+- display [munich](place) please
+- show [Garmisch](place) please
+- show [Nara](place)
+- show [Salzburg](place)
+- show [salzburg](place)
+- display [Montreal](place) please
+- display [montreal](place) please
 
 ## intent: system_status
 - how much [ip](metric) is left
@@ -3539,6 +4013,93 @@
 - are we enough [ram](metric)
 - is there enough [performance](metric)
 - are we enough [load](metric)
+- is the pi so laggy
+- why is the system so laggy
+- why is it so sluggish
+- is the pi so sluggish
+- is the pi so slow
+- is the system so slow?
+- is it slow
+- is the system so laggy?
+- why is the pi so laggy
+- is the pi laggy?
+- is it laggy
+- is it so slow?
+- is the system laggy
+- is it sluggish?
+- why is the system slow?
+- why is the pi so slow?
+- since when has the system been on
+- how long has the pi been on?
+- since when has it been running
+- since when has the system been up?
+- since when has it been on
+- how long has it been up
+- how long has the pi been running?
+- since when has the pi been running
+- since when has the pi been up
+- how long has the pi been up
+- since when has the system been up
+- how long has the system been running
+- how long has the system been up?
+- how long has the system been on?
+- how long has the system been up
+- since when has the pi been on?
+- memory usage please
+- uptime
+- cpu load
+- system load
+- memory usage
+- cpu load please
+- the pi is running hot
+- the pi is burning up
+- the device is burning up
+- the device is running hot
+- the system is overheating
+- the board is overheating
+- the pi is lagging
+- the board is running hot
+- the board is lagging
+- the system is burning up
+- show me performance
+- show me the performance
+- show me performance please
+- show me the stats please
+- check the vitals
+- check the stats please
+- show me vitals please
+- check performance
+- check the performance please
+- check vitals please
+- read out the [disk](metric)
+- display [disk space](metric)
+- display the [uptime](metric)
+- read out the [uptime](metric)
+- read out [ip address](metric)
+- print [cpu](metric)
+- print [cpu temperature](metric)
+- read out the [ip address](metric)
+- print the [disk](metric)
+- display [cpu usage](metric)
+- read out the [memory](metric)
+- print [load](metric)
+- read out the [cpu usage](metric)
+- read out the [temperature](metric)
+- display [temperature](metric)
+- display [processor](metric)
+- print the [performance](metric)
+- the storage is full
+- disk is full
+- storage is full
+- the drive is running out
+- the disk is full
+- the drive is full
+- the storage is running out
+- the storage is almost full
+- storage is almost full
+- drive is running out
+- the disk is running out
+- drive is full
 
 ## intent: thanks
 - thanks
@@ -3556,3 +4117,13 @@
 - great, thanks
 - cool thanks
 - brilliant thank you
+- thanks so much
+- appreciate it
+- good job
+- great job, thanks
+- brilliant
+- lovely, thanks
+- you're the best
+- that helps, thanks
+- thanks mate
+- nice work

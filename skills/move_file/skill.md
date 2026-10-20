@@ -21,6 +21,7 @@ Test skill for the move experiment (20 October 2026): only answers, runs nothing
 - I {want|need} to move [{file}](name) to {|the |my }[{loc}](location)
 - move [{file}](name)
 - move {the|this} {file|folder} to {|the |my }[{loc}](location)
+- {relocate|transfer|shift} [{file}](name) {to|into} {|the |my }[{loc}](location)
 
 ## Values: file
 - report.txt

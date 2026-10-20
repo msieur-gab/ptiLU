@@ -27,6 +27,17 @@ A no with nothing to cancel. No after a question cancels it.
 - scratch that
 - actually no
 - drop it
+- no no
+- not really
+- I'd rather not
+- hold on
+- wait no
+- skip it
+- forget about it
+- don't do that
+- no, leave it
+- not this time
+- nah, cancel
 
 ## Replies
 - say: OK. There's nothing to cancel.

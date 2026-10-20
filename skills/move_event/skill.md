@@ -20,6 +20,8 @@ Test skill for the move experiment (20 October 2026): only answers, no calendar.
 - I {want|need} to move {the|my} [{event}](event) to {when}
 - move {the|my} [{event}](event)
 - {reschedule|move} {the|my} [{event}](event) for {when}
+- {postpone|delay|shift|bump} {the|my} [{event}](event) {to|until} {when}
+- {bring forward|move up} {the|my} [{event}](event) to {when}
 
 ## Values: event
 - meeting

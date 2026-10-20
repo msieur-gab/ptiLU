@@ -23,6 +23,13 @@ Lists what the agent can do, from the help line in each skill's front matter.
 - any tips
 - commands
 - what can I say
+- how do I use {you|this|this thing|ptilu}{?|}
+- {explain|show me} how {to use you|this works}
+- {give me|I need} {some |}{help|guidance|instructions}
+- {list|tell me} your {skills|capabilities|features}
+- what {should|could} I {type|say|try}{?|}
+- {instructions|the manual|usage}{ please|}
+- {I'm stuck|I don't know what to do|where do I start}
 
 ## Replies
 - say: I can {list}.

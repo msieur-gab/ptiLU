@@ -48,6 +48,12 @@ track of the level. Brightness uses the same script with its own commands.
 - volume [up](direction)
 - volume [down](direction)
 - {change|adjust} the volume
+- {it's|the music is|the sound is} {deafening|blasting|booming|far too much}
+- I {can't|cannot} {concentrate|focus|think} with {this|the} {noise|sound}
+- {shh|hush|shush|quiet down}{ please|}
+- {raise|lower} it a {little|bit|notch}
+- {the noise is|the speaker is} too loud
+- [mute](direction) {this|the speaker|the noise}
 
 ## Values: level
 - 50%

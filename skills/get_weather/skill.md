@@ -43,6 +43,9 @@ in the 16-day forecast.
 - is it going to {rain|snow|be sunny|be cold|be warm|be windy|storm} {day}{?|}
 - {any|is there any} {rain|snow|sun|wind} {expected|coming|forecast}{ in [{city}](place)|}{ {day}|}{?|}
 - what's it like {outside|out there}{ {day}|}{?|}
+- how does [{city}](place) look {weather-wise|this weekend|for the weekend}{?|}
+- what's it like outside in [{city}](place){?|}
+- {any|is there} {rain|drizzle|sun|wind} {in [{city}](place)|today|this afternoon}{?|}
 
 ## Values: city
 - Munich

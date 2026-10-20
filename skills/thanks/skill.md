@@ -23,6 +23,16 @@ You're welcome.
 - great, thanks
 - cool thanks
 - brilliant thank you
+- thanks so much
+- appreciate it
+- good job
+- great job, thanks
+- brilliant
+- lovely, thanks
+- you're the best
+- that helps, thanks
+- thanks mate
+- nice work
 
 ## Replies
 - say: You're welcome. | Anytime.

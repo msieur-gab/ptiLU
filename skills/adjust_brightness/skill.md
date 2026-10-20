@@ -42,6 +42,11 @@ mute: "mute" means darker here.
 - {change|adjust} the {brightness|screen brightness}
 - {a bit |}[brighter](direction){ please|}
 - {a bit |}[dimmer](direction){ please|}
+- the screen is {hurting my eyes|blinding me|too glaring|hard to read}
+- {I'm squinting at|I'm straining to see} the screen
+- {can|could} you [dim](direction) {it|this|the screen}{ a little|}{?|}
+- {too much|not enough} light {on|from} the screen
+- [dim](direction) it {down|a little|a bit}
 
 ## Values: level
 - 50%

@@ -32,6 +32,8 @@ topic kept on the device, is in action.md next to it.
 - {notify|ping} my phone{ please|}
 - {send|give} me a {notification|push notification|ping}{ on my phone|}
 - {message|notify} me on my phone{:|} [{msg}](text)
+- {text|sms} me [{msg}](text){ on my phone|}
+- {drop|shoot} me a {text|message} {saying|that says} [{msg}](text)
 
 ## Values: msg
 - buy milk

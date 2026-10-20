@@ -125,6 +125,36 @@ says "I can't" instead of guessing.
 - my name is on the door
 - which city is the capital of japan
 - remember the alamo
+- remind me what we talked about
+- remind me who sang that song
+- which time zone is Brazil in
+- it's time for dinner
+- time to leave the office
+- dim the kitchen lights
+- turn down the lamp in the bedroom
+- the sun is too bright today
+- what a bright idea
+- the volume of a cube
+- mute the doorbell
+- my neighbours are so loud
+- turn off the heater
+- switch off the tv
+- let's sleep on it
+- how much storage does a phone need
+- is ram expensive
+- what is a processor
+- the storage room is full
+- open the garage door
+- open the window
+- open netflix
+- show me a movie
+- teach me to cook
+- what does sudo mean
+- schedule a call with my dentist
+- book a meeting room
+- push the door open
+- move the couch to the left
+- text my mum happy birthday
 
 ## Replies
 - say: I didn't understand that. Say help to see what I can do. | That's outside what I can do. Say help for the list.

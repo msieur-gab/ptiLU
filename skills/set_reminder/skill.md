@@ -31,6 +31,8 @@ after you agree. A day without a time is 9:00.
 - remind me {when}
 - I {need|want} a reminder to [{task}](task){ {when}|}
 - {set|add} a reminder {to|that I need to} [{task}](task)
+- {notify|alert|warn} me {when} {to|about} [{task}](task)
+- {give me a heads-up|let me know} {when} {to|about} [{task}](task)
 
 ## Values: task
 - call mum

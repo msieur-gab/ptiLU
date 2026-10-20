@@ -28,6 +28,9 @@ the name, the other words people use for it, then the command after the arrow.
 - {open|launch|start} {an app|an application|a program|something}{ please|}
 - {let's|lets} open the [{app}](app)
 - {switch to|go to} the [{app}](app)
+- {let me use|I'd like to use} the [{app}](app)
+- [{app}](app){,| -} {open|start|launch} it
+- {get|take} me to the [{app}](app)
 
 ## Values: app
 - terminal: Terminal, console, shell, command line, cli, term → x-terminal-emulator

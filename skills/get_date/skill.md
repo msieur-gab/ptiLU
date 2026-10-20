@@ -29,6 +29,8 @@ read by the date parser (web/entities.js); holidays are not known.
 - {is today|is it} {monday|friday|the weekend|sunday}{?|}
 - what month is it{?|}
 - what year is it{?|}
+- {remind me|tell me again} {which day it is today|what today's date is|the date}{ please|}
+- {what's|what is} the date again{?|}
 
 ## Values: day
 - tomorrow

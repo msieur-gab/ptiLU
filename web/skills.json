@@ -59,7 +59,7 @@
      "ignore": []
     }
    },
-   "sentences": 96,
+   "sentences": 118,
    "values": {
     "direction": [
      {
@@ -257,7 +257,7 @@
      "ignore": []
     }
    },
-   "sentences": 117,
+   "sentences": 153,
    "values": {
     "direction": [
      {
@@ -402,7 +402,7 @@
     ]
    },
    "slots": null,
-   "sentences": 19,
+   "sentences": 32,
    "values": {}
   },
   "create_file": {
@@ -465,7 +465,7 @@
      "ignore": []
     }
    },
-   "sentences": 352,
+   "sentences": 388,
    "values": {
     "ext": [
      {
@@ -642,7 +642,7 @@
     ]
    },
    "slots": null,
-   "sentences": 18,
+   "sentences": 29,
    "values": {}
   },
   "forget_me": {
@@ -741,7 +741,7 @@
      "ignore": []
     }
    },
-   "sentences": 82,
+   "sentences": 92,
    "values": {}
   },
   "get_time": {
@@ -885,7 +885,7 @@
      "ignore": []
     }
    },
-   "sentences": 203,
+   "sentences": 232,
    "values": {
     "sky": [
      {
@@ -1192,7 +1192,7 @@
     ]
    },
    "slots": null,
-   "sentences": 16,
+   "sentences": 25,
    "values": {}
   },
   "help": {
@@ -1215,7 +1215,7 @@
     ]
    },
    "slots": null,
-   "sentences": 17,
+   "sentences": 55,
    "values": {}
   },
   "move_event": {
@@ -1264,7 +1264,7 @@
      "ignore": []
     }
    },
-   "sentences": 100,
+   "sentences": 127,
    "values": {}
   },
   "move_file": {
@@ -1314,7 +1314,7 @@
      "ignore": []
     }
    },
-   "sentences": 94,
+   "sentences": 108,
    "values": {}
   },
   "open_app": {
@@ -1361,7 +1361,7 @@
      ]
     }
    },
-   "sentences": 204,
+   "sentences": 254,
    "values": {
     "app": [
      {
@@ -1542,7 +1542,7 @@
      "ignore": []
     }
    },
-   "sentences": 253,
+   "sentences": 295,
    "values": {}
   },
   "out_of_scope": {
@@ -1565,7 +1565,7 @@
     ]
    },
    "slots": null,
-   "sentences": 117,
+   "sentences": 147,
    "values": {}
   },
   "power": {
@@ -1620,7 +1620,7 @@
      "ignore": []
     }
    },
-   "sentences": 104,
+   "sentences": 121,
    "values": {
     "action": [
      {
@@ -1956,7 +1956,7 @@
      "ignore": []
     }
    },
-   "sentences": 181,
+   "sentences": 217,
    "values": {}
   },
   "set_reminder": {
@@ -2027,7 +2027,7 @@
      "ignore": []
     }
    },
-   "sentences": 209,
+   "sentences": 237,
    "values": {}
   },
   "set_timer": {
@@ -2151,7 +2151,7 @@
      "ignore": []
     }
    },
-   "sentences": 128,
+   "sentences": 154,
    "values": {}
   },
   "system_status": {
@@ -2187,7 +2187,7 @@
      "ignore": []
     }
    },
-   "sentences": 216,
+   "sentences": 303,
    "values": {
     "check": [
      {
@@ -2394,7 +2394,7 @@
     ]
    },
    "slots": null,
-   "sentences": 15,
+   "sentences": 25,
    "values": {}
   }
  },

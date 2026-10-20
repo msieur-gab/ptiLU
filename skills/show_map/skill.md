@@ -27,6 +27,8 @@ This file is what people say and what the agent answers. The place search is in 
 - {show me|open|pull up} {my area|where I live|home} on the map
 - map{ please|}
 - {I want to|let me} see [{city}](place) on {a|the} map
+- {show me|let me see} where [{city}](place) is
+- {display|show} [{city}](place){ please| for me|}
 
 ## Values: city
 - Kyoto

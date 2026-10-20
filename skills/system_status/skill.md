@@ -28,6 +28,13 @@ In the PWA the values are examples (the "sample" list); on the device the comman
 - [{metric}](metric){?| please| status|}
 - {check|run a} {system|health} check
 - {is|are} {there|we} enough [{metric}](metric){?|}
+- {is|why is} {it|the pi|the system} {so |}{slow|laggy|sluggish}{?|}
+- {how long|since when} has {it|the pi|the system} been {running|up|on}{?|}
+- {uptime|cpu load|system load|memory usage}{ please|}
+- the {pi|board|device|system} is {running hot|burning up|overheating|lagging}
+- {check|show me} {the |}{vitals|stats|performance}{ please|}
+- {print|display|read out} {the |}[{metric}](metric)
+- {the |}{disk|drive|storage} is {full|almost full|running out}
 
 ## Values: metric
 - disk space

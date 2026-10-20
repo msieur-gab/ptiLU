@@ -23,6 +23,15 @@ Hello. Uses your name if the agent knows it.
 - hey buddy
 - good afternoon
 - howdy
+- hey hey
+- hello there
+- good day
+- hi friend
+- hey you
+- hello again
+- anyone there?
+- hi, are you there?
+- hey, good to see you
 
 ## Replies
 - say: Hi. Tell me what to create or open. | Hello. I can create folders and files, or open apps.

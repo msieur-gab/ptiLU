@@ -22,6 +22,10 @@ Shut down, restart or sleep. Always asks for a yes first: these can't be undone 
 - {please |}[{power}](power_action) everything
 - {turn the computer off|switch off the device}
 - {power|shut} it down
+- {pull the plug|cut the power|switch everything off}
+- {enter|go into|go to} standby
+- {shut|power} {it |}down for the night
+- I'm done{ for today|}, [shut down](power_action) the {pi|computer}
 
 ## Values: power
 - shut down

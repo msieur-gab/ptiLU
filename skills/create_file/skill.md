@@ -45,6 +45,9 @@ Makes an empty file. A type ("a python file") becomes the extension; a name that
 - {create|make|add|put} [{fext}](name) {on the|in the|in my|on my} {|||the |my }[{loc}](location){||| folder}
 - {create|make|add} {a |a new |}[{type}](file_type) file {called|named} [{fname}](name) {on the|in my} {|||the |my }[{loc}](location){||| folder}
 - {let's|lets} {create|make} {a |}[{type}](file_type) file {called|named} [{fname}](name)
+- jot down {a |}[{fname}](name)
+- {start|begin} a new {note|document} {called|named} [{fname}](name)
+- {take|make} a note {called|named} [{fname}](name)
 
 ## Values: fname
 - notes

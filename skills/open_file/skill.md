@@ -28,6 +28,8 @@ Opens a file or a folder with its default app. If what you named is actually an 
 - {open|edit} {[{fext}](name)|[{fext}](name)|the [{fname}](name) file|the [{folder}](name) folder} {on the|in my} {|||the |my }[{loc}](location){||| folder}
 - open a file{ please|}
 - {open|show me} {a|the} file
+- {let me see|show me|look in} {the |my |}[{loc}](location) folder
+- {show|display} the [{fname}](name) file{ please|}
 
 ## Values: fname
 - notes
