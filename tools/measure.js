@@ -1,4 +1,4 @@
-// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|lists|lists-strict] [--show file.md]
+// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|lists|lists-strict|lists-add] [--show file.md]
 // Held-out, boundary and extra probes (intent only, with errors listed), and optionally
 // 5-fold cross-validation over the training sentences: abstained / false yes / wrong skill.
 const path = require("path");
@@ -96,7 +96,7 @@ if (typesMode) {
         }
       }
     }
-    if (typesMode === "lists" || typesMode === "lists-strict") {
+    if (typesMode.startsWith("lists")) {
       // every value and synonym a skill declares in a closed list becomes its list's type
       const free = (a, b) => !spans.some(([x, y]) => a < y && b > x);
       const w = [...text.matchAll(/[A-Za-z0-9%][A-Za-z0-9%'\-]*/g)].map(m => ({ t: m[0].toLowerCase(), a: m.index, b: m.index + m[0].length }));
@@ -107,14 +107,14 @@ if (typesMode) {
           const phrase = w.slice(i, i + n).map(x => x.t).join(" ");
           const kinds = LISTS.get(phrase);
           if (kinds && typesMode === "lists-strict" && n === 1 && COMMON.has(phrase)) continue;
-          if (kinds && free(w[i].a, w[i + n - 1].b)) { spans.push([w[i].a, w[i + n - 1].b, [...kinds].map(k => "z" + k).join(" ")]); i += n - 1; break; }
+          if (kinds && free(w[i].a, w[i + n - 1].b)) { spans.push([w[i].a, w[i + n - 1].b, [...kinds].map(k => "z" + k).join(" "), typesMode === "lists-add"]); i += n - 1; break; }
         }
       }
       for (const m of text.matchAll(/\b\d{1,3} ?(%|percent)/g)) if (free(m.index, m.index + m[0].length)) spans.push([m.index, m.index + m[0].length, "zlevel"]);
     }
     spans.sort((a, b) => b[0] - a[0]);
     let out = text;
-    for (const [a, b, kind] of spans) out = out.slice(0, a) + (typesMode === "add" ? out.slice(a, b) + " " + kind : kind) + out.slice(b);
+    for (const [a, b, kind, keep] of spans) out = out.slice(0, a) + (typesMode === "add" || keep ? out.slice(a, b) + " " + kind : kind) + out.slice(b);
     cache.set(text, out);
     return out;
   });
@@ -122,6 +122,16 @@ if (typesMode) {
     for (const t of fs.readFileSync(args[args.indexOf("--show") + 1], "utf8").split("\n").filter(l => l.startsWith("- "))) console.log(t.slice(2), " → ", R.intentFeatures(t.slice(2)).filter(f => f.startsWith("w:")).map(f => f.slice(2)).join(" "));
     process.exit(0);
   }
+}
+
+if (args.includes("--collide")) { // training sentences that look the same to the router in two skills
+  const by = new Map();
+  for (const e of examples) { const k = R.intentFeatures(e.text, lexicon).filter(f => f.startsWith("w:")).map(f => f.slice(2)).join(" "); if (!by.has(k)) by.set(k, new Map()); const c = by.get(k); c.set(e.intent, (c.get(e.intent) || 0) + 1); }
+  const pairs = new Map(); let n = 0, shown = 0;
+  for (const [k, c] of by) if (c.size > 1) { n++; const key = [...c.keys()].sort().join(" / "); pairs.set(key, (pairs.get(key) || 0) + 1); if (shown++ < 10) console.log("  " + k + "  " + JSON.stringify(Object.fromEntries(c))); }
+  console.log("sentence shapes shared by two or more skills: " + n);
+  for (const [k, v] of [...pairs].sort((a, b) => b[1] - a[1]).slice(0, 8)) console.log("  " + v + "  " + k);
+  process.exit(0);
 }
 
 function score(nlu, set) {
