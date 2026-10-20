@@ -57,7 +57,7 @@ if (typesMode) {
       const [key, syn = ""] = body.split(/:(.*)/s);
       for (const v of [key, ...syn.split(",")].map(x => x.trim().toLowerCase()).filter(Boolean)) {
         if (!LISTS.has(v)) LISTS.set(v, new Set());
-        LISTS.get(v).add(on);
+        LISTS.get(v).add(d.replace(/^adjust_/, "") + "_" + on); // each skill's list is its own family
       }
     }
   }
