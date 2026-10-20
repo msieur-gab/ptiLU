@@ -1,4 +1,4 @@
-// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|folders|lists|lists-strict|lists-add] [--show file.md]
+// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|folders|lists|lists-strict|lists-add] [--show file.md] [--errors out.tsv]
 // Held-out, boundary and extra probes (intent only, with errors listed), and optionally
 // 5-fold cross-validation over the training sentences: abstained / false yes / wrong skill.
 const path = require("path");
@@ -74,8 +74,18 @@ if (typesMode) {
     const spans = [];
     let ents = [];
     try { ents = E.parse(text); } catch (e) {}
-    for (const e of ents) if (e.start != null) spans.push([e.start, e.end, e.type === "duration" ? "zduration" : "zdate"]);
-    for (const m of text.matchAll(FILE)) if (!spans.some(([a, b]) => m.index < b && m.index + m[0].length > a)) spans.push([m.index, m.index + m[0].length, "zfile"]);
+    // a value right after "called" or "named" is a name, whatever it looks like
+    const named = a => /\b(called|named)\s+["'“]?$/i.test(text.slice(0, a));
+    // files first: "Monday.csv" is a file, not a day
+    for (const m of text.matchAll(FILE)) if (!named(m.index)) spans.push([m.index, m.index + m[0].length, "zfile"]);
+    for (const e of ents) {
+      if (e.start == null || named(e.start)) continue;
+      const span = text.slice(e.start, e.end).toLowerCase().trim();
+      if (/^(right )?now$|^(morning|afternoon|evening|night)$/.test(span)) continue; // "not now", "good morning"
+      if (/^\s*(%|percent)/i.test(text.slice(e.end))) continue; // "brightness at 5%"
+      if (spans.some(([a, b]) => e.start < b && e.end > a)) continue;
+      spans.push([e.start, e.end, e.type === "duration" ? "zduration" : "zdate"]);
+    }
     if (typesMode === "places" || typesMode === "folders") {
       const free = (a, b) => !spans.some(([x, y]) => a < y && b > x);
       const w = [...text.matchAll(/[A-Za-z][A-Za-z'\-]*/g)].map(m => ({ t: m[0].toLowerCase(), a: m.index, b: m.index + m[0].length }));
@@ -83,9 +93,10 @@ if (typesMode) {
         if (!free(w[i].a, w[i].b)) continue;
         const prev = w[i - 1] && w[i - 1].t, prev2 = w[i - 2] && w[i - 2].t, next = w[i + 1] && w[i + 1].t;
         if (NAMING.has(prev)) continue; // "a folder called paris": a name, not a place
-        // a place on disk: a known folder after "in/to/into…", or any word just before "folder"
+        // a place on disk: a known folder after "in/to/into…", or a word before "folder" that is a
+        // known folder or follows the/my/in/to ("create folder x" keeps its verb)
         const afterInto = INTO.has(prev) || (DET.has(prev) && INTO.has(prev2));
-        if ((FOLDERS.has(w[i].t) && afterInto) || (DIR.has(next) && !DET.has(w[i].t) && !["a", "new", "this", "that", "same"].includes(w[i].t))) {
+        if ((FOLDERS.has(w[i].t) && afterInto) || (DIR.has(next) && (FOLDERS.has(w[i].t) || DET.has(prev) || INTO.has(prev)) && !DET.has(w[i].t) && !["a", "new", "this", "that", "same"].includes(w[i].t))) {
           spans.push([w[i].a, w[i].b, "zfolder"]); continue;
         }
         if (typesMode === "folders") continue; // folders only, no world places
@@ -100,7 +111,7 @@ if (typesMode) {
     if (typesMode.startsWith("lists")) {
       // every value and synonym a skill declares in a closed list becomes its list's type
       const free = (a, b) => !spans.some(([x, y]) => a < y && b > x);
-      const w = [...text.matchAll(/[A-Za-z0-9%][A-Za-z0-9%'\-]*/g)].map(m => ({ t: m[0].toLowerCase(), a: m.index, b: m.index + m[0].length }));
+      const w = [...text.matchAll(/[A-Za-z0-9%][A-Za-z0-9%'\-_]*/g)].map(m => ({ t: m[0].toLowerCase(), a: m.index, b: m.index + m[0].length }));
       for (let i = 0; i < w.length; i++) {
         if (NAMING.has(w[i - 1] && w[i - 1].t)) continue;
         for (let n = 4; n >= 1; n--) {
@@ -161,6 +172,7 @@ if (cv) {
   let seed = 7; const rand = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
   const idx = examples.map((_, i) => i);
   for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  const cvErrs = [];
   const K = 5; let abst = 0, fyes = 0, wrong = 0, n = 0;
   for (let k = 0; k < K; k++) {
     const testI = new Set(idx.filter((_, p) => p % K === k));
@@ -172,9 +184,13 @@ if (cv) {
       n++;
       if (pred === e.intent) continue;
       if (pred === "out_of_scope") abst++; else if (e.intent === "out_of_scope") fyes++; else wrong++;
+      cvErrs.push(`${e.intent}\t${pred}\t${r.intent} ${r.confidence.toFixed(2)}\t${e.text}`);
     }
     process.stderr.write(`fold ${k + 1}/${K}\n`);
   }
+  // --errors file: every cross-validation error (want, got, top skill and confidence, sentence)
+  const ei = args.indexOf("--errors");
+  if (ei >= 0) fs.writeFileSync(path.resolve(args[ei + 1]), "want\tgot\ttop\tsentence\n" + cvErrs.join("\n") + "\n");
   report.cv = { n, abstained: abst, false_yes: fyes, wrong_skill: wrong, errors: abst + fyes + wrong };
   console.log(`cv (${n}): abstained ${abst}, false yes ${fyes}, wrong skill ${wrong}, total ${abst + fyes + wrong}`);
 }
