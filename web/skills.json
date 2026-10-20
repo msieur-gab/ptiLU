@@ -60,6 +60,100 @@
     }
    },
    "sentences": 121,
+   "templates": [
+    {
+     "re": "^ *(?:turn|put) *(?:the *|)(?:brightness|screen *brightness) *up(?: *please| *a *bit|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:turn|put) *(?:the *|)(?:brightness|screen *brightness) *down(?: *please| *a *bit|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *increase *(?:the *|)(?:brightness|screen *brightness) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *decrease *(?:the *|)(?:brightness|screen *brightness) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *raise *the *brightness *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *lower *the *brightness(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *make *the *(?:screen|display) *brighter(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *make *the *(?:screen|display) *darker(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *dim *the *(?:screen|display)(?: *please| *a *bit|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *brighten *the *(?:screen|display) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:the *|)screen *is *too *(?:dark|bright) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:i *can't *see *the *screen|it's *too *bright|it's *too *dark) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *brightness *up *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *brightness *down *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:change|adjust) *the *(?:brightness|screen *brightness) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:a *bit *|)brighter(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:a *bit *|)dimmer(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *the *screen *is *(?:hurting *my *eyes|blinding *me|too *glaring|hard *to *read) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:i'm *squinting *at|i'm *straining *to *see) *the *screen *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:can|could) *you *dim *(?:it|this|the *screen)(?: *a *little|)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:too *much|not *enough) *light *(?:on|from) *the *screen *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *dim *it *(?:down|a *little|a *bit) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *my *eyes *(?:ache|are *tired|are *sore) *from *the *screen *$",
+     "kinds": []
+    }
+   ],
    "values": {
     "direction": [
      {
@@ -258,6 +352,112 @@
     }
    },
    "sentences": 153,
+   "templates": [
+    {
+     "re": "^ *(?:turn|crank|bump|put) *(?:the *|)(?:volume|sound|music) *up(?: *please| *a *bit| *a *little|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:turn|put) *(?:the *|)(?:volume|sound|music) *down(?: *please| *a *bit| *a *little|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:turn|crank|bump) *it *up *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *turn *it *down(?: *a *bit|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *increase *(?:the *|)volume(?: *please| *a *bit|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *decrease *(?:the *|)volume(?: *please| *a *bit|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *raise *the *(?:volume|sound) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *lower *the *(?:volume|sound)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *make *it *louder(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *make *it *quieter(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:a *bit *|)louder(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:a *bit *|)quieter(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:too *loud|it's *too *loud|way *too *loud) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:i *can't *hear *anything|i *can *barely *hear *it|can't *hear) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *mute(?: *the *sound| *the *volume| *it| *everything|)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *unmute(?: *the *sound| *the *volume| *it|)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:silence|quiet) *please *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *volume *up *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *volume *down *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:change|adjust) *the *volume *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:it's|the *music *is|the *sound *is) *(?:deafening|blasting|booming|far *too *much) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *i *(?:can't|cannot) *(?:concentrate|focus|think) *with *(?:this|the) *(?:noise|sound) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:shh|hush|shush|quiet *down)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:raise|lower) *it *a *(?:little|bit|notch) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:the *noise *is|the *speaker *is) *too *loud *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *mute *(?:this|the *speaker|the *noise) *$",
+     "kinds": []
+    }
+   ],
    "values": {
     "direction": [
      {
@@ -403,6 +603,136 @@
    },
    "slots": null,
    "sentences": 32,
+   "templates": [
+    {
+     "re": "^ *yes *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *yeah *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *yep *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *sure *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *ok *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *okay *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *do *it *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *go *ahead *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *correct *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *absolutely *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *sounds *good *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *please *do *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *yes *please *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *that's *right *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *right *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *affirmative *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *of *course *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *go *for *it *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *y *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *yes *indeed *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *certainly *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *by *all *means *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *that *works *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *fine *by *me *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *let's *do *it *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *go *on *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *ok *do *it *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *yes *go *ahead *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *uh *huh *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *sure *thing *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *alright *then *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *yes *that's *it *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "create_file": {
@@ -466,6 +796,16 @@
     }
    },
    "sentences": 388,
+   "templates": [
+    {
+     "re": "^ *(?:create|make) *(?:a *|a *new *|)file(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:create|make) *(?:a *|a *new *|)file *here *$",
+     "kinds": []
+    }
+   ],
    "values": {
     "ext": [
      {
@@ -621,6 +961,16 @@
     }
    },
    "sentences": 316,
+   "templates": [
+    {
+     "re": "^ *(?:create|make) *(?:a *|a *new *|)(?:folder|directory)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:create|make) *(?:a *|a *new *|)(?:folder|directory) *here *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "deny": {
@@ -643,6 +993,116 @@
    },
    "slots": null,
    "sentences": 27,
+   "templates": [
+    {
+     "re": "^ *no *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *nope *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *cancel *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *never *mind *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *nevermind *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *stop *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *forget *it *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *don't *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *no *thanks *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *abort *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *no *way *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *not *now *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *cancel *that *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *leave *it *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *n *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *scratch *that *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *actually *no *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *drop *it *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *no *no *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *not *really *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *i'd *rather *not *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hold *on *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *wait *no *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *skip *it *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *don't *do *that *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *no *leave *it *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *nah *cancel *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "forget_me": {
@@ -676,6 +1136,40 @@
    },
    "slots": null,
    "sentences": 33,
+   "templates": [
+    {
+     "re": "^ *forget *my *name *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *forget *where *i *live *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *forget *my *(?:location|city|home) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *forget *(?:everything|everything *about *me|all *about *me|what *you *know *about *me) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:delete|erase|clear|remove) *(?:my *name|my *location|my *city|what *you *know *about *me|my *data|my *details) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:don't|do *not) *remember *(?:my *name|where *i *live|me)(?: *anymore|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:stop *remembering|unlearn) *(?:my *name|where *i *live|me) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:reset|wipe) *(?:my *profile|what *you *know|your *memory) *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "get_date": {
@@ -742,6 +1236,92 @@
     }
    },
    "sentences": 92,
+   "templates": [
+    {
+     "re": "^ *what's *the *date(?: *today|)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *is *(?:today's|the) *date(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *day *is *it(?: *today|)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:which|what) *day *(?:is *it|are *we)(?: *today|)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what's *today(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *day *of *the *week *is *it(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:what's|what *is) *the *date *(§)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *what *(?:day|date) *is *(§)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *(?:which|what) *date *(?:is|will *it *be) *(§)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *what *day *(?:does|is) *(§) *fall *on(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *how *many *days *until *(§)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *how *(?:long|many *days) *(?:is *it *|)(?:until|till|before) *(§)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *(?:tell *me|give *me) *the *date(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:is *today|is *it) *(?:monday|friday|the *weekend|sunday)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *month *is *it(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *year *is *it(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:remind *me|tell *me *again) *(?:which *day *it *is *today|what *today's *date *is|the *date)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:what's|what *is) *the *date *again(?:|) *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "get_time": {
@@ -789,6 +1369,52 @@
     }
    },
    "sentences": 111,
+   "templates": [
+    {
+     "re": "^ *what *time *is *it(?: *now| *right *now| *at *the *moment|)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what's *the *time(?: *now| *please|)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:tell *me|give *me) *the *time(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:can|could) *you *tell *me *the *time(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:the *|)time(?: *please||) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *do *you *have *the *time(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:current|local) *time(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *hour *is *it(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *late *is *it(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:is *it|it's) *(?:already *|)(?:late|early)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:check|show *me) *the *(?:time|clock) *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "get_weather": {
@@ -886,6 +1512,80 @@
     }
    },
    "sentences": 232,
+   "templates": [
+    {
+     "re": "^ *what's *the *weather(?: *like|)(?: *today| *now|)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:will|is *it *going *to) *(?:rain|snow) *(§)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *(?:do *i *need|should *i *take) *an *umbrella(?: *(§)|)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *(?:how|how's *the) *weather *(§)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *(?:weather|forecast)(?: *please| *today| *for *(§)|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *what's *the *(?:forecast|weather *forecast) *(§)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *(?:how|how's *it) *(?:hot|cold|warm) *(?:is *it *|)(?:outside|out *there)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what's *the *temperature *(?:outside|out *there)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:is *it|will *it *be) *(?:sunny|nice|warm|cold) *(§)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *(?:should|can) *i *(?:go *for *a *walk|ride *my *bike|hang *the *laundry *outside) *(§)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *(?:do *i *need|should *i *wear|should *i *bring|will *i *need) *(?:a *coat|a *jacket|an *umbrella|sunglasses|gloves|a *scarf|sunscreen|boots)(?: *(§)|)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *is *it *going *to *(?:rain|snow|be *sunny|be *cold|be *warm|be *windy|storm) *(§)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *what's *it *like *(?:outside|out *there)(?: *(§)|)(?:|) *$",
+     "kinds": [
+      "date"
+     ]
+    }
+   ],
    "values": {
     "sky": [
      {
@@ -1193,6 +1893,104 @@
    },
    "slots": null,
    "sentences": 24,
+   "templates": [
+    {
+     "re": "^ *hi *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hello *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hey *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hey *there *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *good *morning *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *good *evening *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hello *agent *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hi *there *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *yo *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *morning *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hiya *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *greetings *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hello *computer *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hey *buddy *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *good *afternoon *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *howdy *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hey *hey *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hello *there *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hi *friend *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hey *you *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hello *again *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *anyone *there *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hi *are *you *there *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *hey *good *to *see *you *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "help": {
@@ -1216,6 +2014,100 @@
    },
    "slots": null,
    "sentences": 49,
+   "templates": [
+    {
+     "re": "^ *help *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *can *you *do *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *are *your *commands *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *does *this *work *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *show *me *what *you *can *do *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *options *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *i'm *lost *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *do *you *know *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *help *me *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *list *your *commands *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *can *i *ask *you *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *do *i *use *you *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *are *you *able *to *do *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *any *tips *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *commands *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *can *i *say *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *do *i *use *(?:you|ptilu)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:explain|show *me) *how *to *use *you *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:give *me|i *need) *(?:some *|)(?:help|guidance|instructions) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:list|tell *me) *your *(?:skills|capabilities|features) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *(?:should|could) *i *(?:type|say|try)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:instructions|the *manual|usage)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:i'm *stuck|i *don't *know *what *to *do|where *do *i *start) *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "move_event": {
@@ -1265,6 +2157,7 @@
     }
    },
    "sentences": 127,
+   "templates": [],
    "values": {}
   },
   "move_file": {
@@ -1315,6 +2208,7 @@
     }
    },
    "sentences": 108,
+   "templates": [],
    "values": {}
   },
   "open_app": {
@@ -1362,6 +2256,72 @@
     }
    },
    "sentences": 254,
+   "templates": [
+    {
+     "re": "^ *(?:open|launch|start|run) *(?:the *|my *|)(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:please *|)(?:open|launch|start) *(?:the *|)(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:can|could|would) *you *(?:open|launch|start) *(?:the *|a *|)(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web)(?: *please|)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:bring *up|fire *up|pull *up|show) *(?:the *|my *|)(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *i *(?:need|want) *(?:the *|a *|)(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *i *(?:want|need) *to *use *the *(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:open|launch) *(?:a *|)new *(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web) *window *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:give *me|get *me) *(?:a *|the *|)(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:open|start) *(?:up *|)(?:the *|)(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web) *(?:app|application|program) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:open|launch|start) *(?:an *app|an *application|a *program|something)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:let's|lets) *open *the *(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:switch *to|go *to) *the *(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:let *me *use|i'd *like *to *use) *the *(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web)(?:| *-) *(?:open|start|launch) *it *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:get|take) *me *to *the *(?:chromium *browser|firefox *browser|system *settings|chrome *browser|file *explorer|control *panel|command *line|file *manager|web *browser|text *editor|preferences|calculator|terminal|terminal|internet|chromium|explorer|mousepad|settings|console|browser|browser|firefox|folders|notepad|chrome|finder|editor|shell|files|term|calc|cli|web) *$",
+     "kinds": []
+    }
+   ],
    "values": {
     "app": [
      {
@@ -1543,6 +2503,16 @@
     }
    },
    "sentences": 295,
+   "templates": [
+    {
+     "re": "^ *open *a *file(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:open|show *me) *(?:a|the) *file *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "out_of_scope": {
@@ -1566,6 +2536,572 @@
    },
    "slots": null,
    "sentences": 213,
+   "templates": [
+    {
+     "re": "^ *tell *me *a *joke *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *play *some *music *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *much *is *12 *times *7 *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *send *an *email *to *my *boss *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *delete *the *reports *folder *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *remove *notes *md *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *rename *the *folder *to *drafts *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *delete *everything *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *is *the *capital *of *france *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *who *are *you *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *set *an *alarm *for *7 *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *turn *off *the *wifi *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *are *you *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *order *a *pizza *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *copy *the *file *to *desktop *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *show *me *the *news *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *translate *hello *into *japanese *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *book *a *flight *to *tokyo *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what's *2 *plus *2 *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *install *firefox *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *update *the *system *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *take *a *screenshot *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *lock *the *screen *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *connect *to *bluetooth *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *where *am *i *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *list *the *files *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what's *in *this *folder *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *go *to *documents *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *change *directory *to *projects *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *close *the *browser *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *kill *the *terminal *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *uninstall *python *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *zip *the *photos *folder *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *search *for *invoices *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *find *my *notes *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *read *me *the *file *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *print *the *document *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *the *sky *is *blue *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *banana *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *asdfgh *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *i *like *trains *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *my *cat *is *sleeping *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *can *you *sing *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *is *love *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *write *me *a *poem *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *sudo *rm *-rf *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *format *the *drive *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *make *me *a *sandwich *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *create *an *account *on *github *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *open *my *bank *account *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *call *mom *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *send *a *text *to *paul *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *old *are *you *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *the *folder *is *too *big *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *i *hate *this *file *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *files *are *boring *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *is *a *markdown *file *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *do *folders *work *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *explain *the *terminal *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *is *the *browser *safe *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *which *editor *is *the *best *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *i *created *a *folder *yesterday *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *my *terminal *crashed *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *the *file *is *empty *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *share *this *folder *with *eva *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *empty *the *trash *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *restore *the *backup *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *download *the *report *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *turn *off *the *bluetooth *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *turn *off *notifications *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *close *the *file *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *loud *is *a *jet *engine *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *is *cpu *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *buy *more *ram *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *my *screen *is *broken *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *clean *the *screen *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *does *reboot *mean *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *never *shut *down *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *who *turned *off *the *lights *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *the *volume *of *a *sphere *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *the *music *was *great *yesterday *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *to *free *up *disk *space *on *windows *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *open *the *window *it's *hot *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *open *the *door *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *show *me *a *picture *of *a *cat *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *play *the *next *song *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *skip *this *track *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *check *my *email *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *open *my *bank *app *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *open *google *com *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what's *the *battery *level *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *set *an *alarm *for *7am *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *wake *me *up *at *6 *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what's *on *my *calendar *tomorrow *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *add *a *meeting *on *friday *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *when *is *the *next *train *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *long *does *it *take *to *boil *an *egg *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *time *does *the *bakery *open *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *when *was *the *eiffel *tower *built *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *time *flies *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *i *had *a *long *day *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *my *timer *app *is *broken *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *who *invented *the *clock *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *delete *my *reminders *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *did *i *do *yesterday *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *who *built *you *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *who *created *you *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *who *is *your *creator *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what's *your *name *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *where *do *you *live *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what's *the *name *of *this *song *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *my *name *is *on *the *door *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *which *city *is *the *capital *of *japan *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *remember *the *alamo *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *remind *me *(?:what *we *talked *about|what *you *told *me|who *sang *that *song|what *the *plot *was) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:which|what) *time *zone *is *(?:brazil|canada|sydney|this *city) *in *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:it's|it *is) *time *(?:for *dinner|for *lunch|for *a *break|to *celebrate) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *time *to *(?:leave *the *office|feed *the *cat|go *shopping|pick *up *the *kids) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:dim|turn *down|switch *off) *the *(?:kitchen|bedroom|living *room|hallway) *(?:lights|lamp) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *the *(?:sun|moon|sky) *is *(?:too *bright|so *bright) *(?:today|tonight) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:what *a|such *a|she *has *a) *bright *(?:idea|kid|future) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *the *volume *of *a *(?:cube|sphere|tank|bottle) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:mute|silence) *the *(?:doorbell|tv|microwave|dog) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *my *(?:neighbours|kids|colleagues) *are *so *loud *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:turn|switch) *off *the *(?:heater|tv|fan|oven) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *let's *sleep *on *(?:it|the *idea|that *decision) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *much *(?:storage|memory|ram) *does *a *(?:phone|laptop|game) *need *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *is *(?:ram|a *new *cpu|more *storage) *expensive *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *is *a *(?:processor|hard *drive|motherboard) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *the *(?:storage *room|garage|fridge|closet) *is *full *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *open *the *(?:garage *door|window|fridge|curtains) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *open *(?:netflix|spotify|my *bank *app) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *show *me *a *(?:movie|funny *video|recipe) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *teach *me *(?:to *cook|french|to *swim) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *does *(?:sudo|grep|chmod) *mean *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:schedule|book|arrange) *a *(?:call|meeting|lunch) *with *(?:my *dentist|eva|the *team) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *push *the *(?:door|cart|button) *(?:open|forward|harder) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *move *the *(?:couch|table|car) *(?:to *the *left|outside|a *bit) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *text *my *(?:mum|brother|boss) *happy *birthday *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *do *(?:databases|magnets|vaccines|planes) *work *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *do *i *(?:cook *rice|fix *a *bike|tie *a *tie) *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "power": {
@@ -1621,6 +3157,60 @@
     }
    },
    "sentences": 121,
+   "templates": [
+    {
+     "re": "^ *(?:please *|)(?:shutting *down|power *cycle|power *down|switch *off|kill *power|drop *power|restart *it|hard *reset|sleep *mode|shut *down|power *off|goodnight|shutdown|turn *off|restart|restrat|suspend|standby|unplug|reboot|rebot|sleep|slepp|halt|down|rest|off|dwn|pwr|nap|bed) *(?:the *|)(?:computer|pi|device|system|board|machine)(?: *now| *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:shutting *down|power *cycle|power *down|switch *off|kill *power|drop *power|restart *it|hard *reset|sleep *mode|shut *down|power *off|goodnight|shutdown|turn *off|restart|restrat|suspend|standby|unplug|reboot|rebot|sleep|slepp|halt|down|rest|off|dwn|pwr|nap|bed)(?: *now| *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:can|could) *you *(?:shutting *down|power *cycle|power *down|switch *off|kill *power|drop *power|restart *it|hard *reset|sleep *mode|shut *down|power *off|goodnight|shutdown|turn *off|restart|restrat|suspend|standby|unplug|reboot|rebot|sleep|slepp|halt|down|rest|off|dwn|pwr|nap|bed) *(?:the *|)(?:computer|system|device)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *i *want *to *(?:shutting *down|power *cycle|power *down|switch *off|kill *power|drop *power|restart *it|hard *reset|sleep *mode|shut *down|power *off|goodnight|shutdown|turn *off|restart|restrat|suspend|standby|unplug|reboot|rebot|sleep|slepp|halt|down|rest|off|dwn|pwr|nap|bed)(?: *the *device| *the *computer|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:time *to|let's|lets) *(?:shutting *down|power *cycle|power *down|switch *off|kill *power|drop *power|restart *it|hard *reset|sleep *mode|shut *down|power *off|goodnight|shutdown|turn *off|restart|restrat|suspend|standby|unplug|reboot|rebot|sleep|slepp|halt|down|rest|off|dwn|pwr|nap|bed) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:go *to|put *it *to) *sleep(?: *now|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:please *|)(?:shutting *down|power *cycle|power *down|switch *off|kill *power|drop *power|restart *it|hard *reset|sleep *mode|shut *down|power *off|goodnight|shutdown|turn *off|restart|restrat|suspend|standby|unplug|reboot|rebot|sleep|slepp|halt|down|rest|off|dwn|pwr|nap|bed) *everything *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:turn *the *computer *off|switch *off *the *device) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:power|shut) *it *down *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:pull *the *plug|cut *the *power|switch *everything *off) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:enter|go *into|go *to) *standby *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:shut|power) *(?:it *|)down *for *the *night *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *i'm *done(?: *for *today|)shut *down *the *(?:pi|computer) *$",
+     "kinds": []
+    }
+   ],
    "values": {
     "action": [
      {
@@ -1745,6 +3335,64 @@
    },
    "slots": null,
    "sentences": 78,
+   "templates": [
+    {
+     "re": "^ *what's *my *name(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:do *you *know|do *you *remember) *my *name(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *who *am *i(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:what *do *you *call *me|what *did *i *tell *you *my *name *was)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *where *do *i *live(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:do *you *know|do *you *remember) *where *i *live(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:what's|what *is) *my *(?:location|city|home *town|home)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *do *you *(?:know|remember) *about *me(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:tell *me|show *me) *what *you *(?:know|remember) *about *me *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *what *have *you *(?:saved|stored|remembered)(?: *about *me|)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:do *you *remember *me|do *you *know *who *i *am)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:which|what) *(?:city|town|place) *do *i *live *in(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:where|in *which *city) *am *i *(?:based|living)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:which|what) *name *(?:do *you *have *for *me|do *you *know *me *by)(?:|) *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "remember_me": {
@@ -1805,6 +3453,12 @@
     }
    },
    "sentences": 181,
+   "templates": [
+    {
+     "re": "^ *(?:remember|save|store) *my *(?:name|location|city) *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "send_telegram": {
@@ -1887,6 +3541,24 @@
     }
    },
    "sentences": 120,
+   "templates": [
+    {
+     "re": "^ *(?:send|write) *(?:me *|)(?:a *telegram|a *telegram *message|something *on *telegram) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:send|forward) *that *(?:on|to|via) *telegram *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *telegram *me(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:message|ping) *me *on *telegram(?: *please|) *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "send_to_phone": {
@@ -1957,6 +3629,24 @@
     }
    },
    "sentences": 217,
+   "templates": [
+    {
+     "re": "^ *(?:send|push) *that *to *my *phone *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:send|push) *(?:a *message|a *note|something) *to *my *phone *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:notify|ping) *my *phone(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:send|give) *me *a *(?:notification|push *notification|ping)(?: *on *my *phone|) *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "set_reminder": {
@@ -2028,6 +3718,24 @@
     }
    },
    "sentences": 237,
+   "templates": [
+    {
+     "re": "^ *(?:set|create|add|make) *a *reminder *(?:for|on|at) *(§) *$",
+     "kinds": [
+      "date"
+     ]
+    },
+    {
+     "re": "^ *(?:set|create|add|make) *a *reminder(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *remind *me *(§) *$",
+     "kinds": [
+      "date"
+     ]
+    }
+   ],
    "values": {}
   },
   "set_timer": {
@@ -2073,6 +3781,64 @@
     }
    },
    "sentences": 123,
+   "templates": [
+    {
+     "re": "^ *(?:set|start|make) *a *timer *for *(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:set|start) *a *(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30) *timer(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:set|start|put) *(?:the *|a *|)timer *(?:on *|)(?:for *|to *)(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *timer *(?:for *|)(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30) *timer(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:start|begin|run) *a *countdown *(?:of|for) *(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *countdown *(?:for *|)(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:can|could) *you *(?:set|start) *a *timer(?: *for *(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30)|)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:set|start) *a *timer(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *time *(?:me|this) *for *(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:alert|ping|buzz) *me *in *(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:let *me *know|tell *me) *when *(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30) *(?:are|is) *up *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:set|start) *a *(?:pasta|tea|egg|glue|baking|break) *timer *for *(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *i *need *a *timer(?: *for *(?:a *quarter *of *an *hour|twenty *five *minutes|an *hour *and *a *half|2 *and *a *half *hours|three *minutes|half *an *hour|10 *minutes|90 *seconds|45 *seconds|15 *minutes|30 *seconds|12 *minutes|7 *minutes|a *minute|an *hour|2 *hours|20 *mins|40 *min|5 *min|1h30)|) *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "show_map": {
@@ -2152,6 +3918,20 @@
     }
    },
    "sentences": 154,
+   "templates": [
+    {
+     "re": "^ *(?:show *me|open) *(?:a|the) *map(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:show *me|open|pull *up) *(?:my *area|where *i *live|home) *on *the *map *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *map(?: *please|) *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   },
   "system_status": {
@@ -2188,6 +3968,56 @@
     }
    },
    "sentences": 303,
+   "templates": [
+    {
+     "re": "^ *(?:system|device) *(?:status|info|health)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how(?:'s| *is) *the *(?:system|device|computer|board|pi) *doing(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:is *the *pi|is *it|is *the *board) *(?:overheating|too *hot|getting *hot)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *how *hot *is *the *(?:cpu|pi|board|processor)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:give *me|show *me) *a *(?:system|status|health) *(?:report|overview|check) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:check|run *a) *(?:system|health) *check *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:is|why *is) *(?:it|the *pi|the *system) *(?:so *|)(?:slow|laggy|sluggish)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:how *long|since *when) *has *(?:it|the *pi|the *system) *been *(?:running|up|on)(?:|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:uptime|cpu *load|system *load|memory *usage)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *the *(?:pi|board|device|system) *is *(?:running *hot|burning *up|overheating|lagging) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:check|show *me) *(?:the *|)(?:vitals|stats|performance)(?: *please|) *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *(?:my|the *pi's) *(?:disk|drive|storage) *is *(?:full|almost *full|running *out) *$",
+     "kinds": []
+    }
+   ],
    "values": {
     "check": [
      {
@@ -2395,6 +4225,108 @@
    },
    "slots": null,
    "sentences": 25,
+   "templates": [
+    {
+     "re": "^ *thanks *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *thank *you *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *cheers *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *thanks *a *lot *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *great *thanks *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *perfect *thank *you *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *thx *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *nice *one *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *awesome *thanks *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *much *appreciated *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *thank *you *so *much *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *ty *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *great *thanks *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *cool *thanks *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *brilliant *thank *you *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *thanks *so *much *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *appreciate *it *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *good *job *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *great *job *thanks *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *brilliant *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *lovely *thanks *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *you're *the *best *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *that *helps *thanks *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *thanks *mate *$",
+     "kinds": []
+    },
+    {
+     "re": "^ *nice *work *$",
+     "kinds": []
+    }
+   ],
    "values": {}
   }
  },

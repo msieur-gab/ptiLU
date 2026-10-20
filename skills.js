@@ -210,6 +210,65 @@ function expand(tpl, skill, rand) {
   return t.replace(/\s+/g, " ").replace(/\s+([?!.,])/g, "$1").trim();
 }
 
+// Templates as exact patterns (Snips' deterministic parser): an example line becomes a regular
+// expression over a normalised sentence. {a|b} is a choice, a list value is any of its words,
+// a date or duration is "§" (the matcher puts it where the date parser finds one). A line with a
+// free-text value (a name, a message, a place) is not a template: "open <anything>" would answer
+// "open youtube" with certainty. Those sentences stay with the model.
+const normText = t => t.toLowerCase().replace(/[’‘]/g, "'").replace(/[?!.,:;"“”]/g, " ").replace(/\s+/g, " ").trim();
+const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function closing(t, i, open, close) { // index of the bracket closing the one at i
+  for (let d = 0, k = i; k < t.length; k++) { if (t[k] === open) d++; else if (t[k] === close && --d === 0) return k; }
+  throw new Error("unbalanced " + open + " in “" + t + "”");
+}
+function splitTop(t) { // a|b|c, ignoring | inside nested braces or brackets
+  const out = []; let d = 0, start = 0;
+  for (let k = 0; k < t.length; k++) {
+    if (t[k] === "{" || t[k] === "[") d++; else if (t[k] === "}" || t[k] === "]") d--;
+    else if (t[k] === "|" && d === 0) { out.push(t.slice(start, k)); start = k + 1; }
+  }
+  return out.concat(t.slice(start));
+}
+function templatePattern(tpl, skill) {
+  const kinds = []; let words = 0;
+  const slotType = name => skill.slots && skill.slots[name] ? skill.slots[name].type : "text";
+  const listOf = name => "(?:" + skill.values[name].flatMap(v => v.say).map(w => esc(normText(w))).filter(Boolean).sort((a, b) => b.length - a.length).join("|") + ")";
+  // a date or duration is matched as "§": the matcher replaces what the date parser finds by it
+  const capture = type => { const k = type === "datetime" || type === "duration" ? "date" : "text"; kinds.push(k); return k === "date" ? "(§)" : "(.+?)"; };
+  function walk(t, literal) {
+    let out = "";
+    for (let i = 0; i < t.length;) {
+      const c = t[i];
+      if (c === "{") {
+        const j = closing(t, i, "{", "}"), inner = t.slice(i + 1, j), alts = splitTop(inner);
+        if (alts.length > 1) out += "(?:" + alts.map(a => walk(a, literal)).join("|") + ")";
+        else if (skill.slots && skill.slots[inner] && /^(datetime|duration)$/.test(slotType(inner))) out += capture(slotType(inner));
+        else if (skill.values[inner]) out += listOf(inner);
+        else throw new Error(`${skill.file}: {${inner}} has no list`);
+        i = j + 1;
+      } else if (c === "[") {
+        const j = closing(t, i, "[", "]"), m = /^\(([a-z_]+)\)/.exec(t.slice(j + 1));
+        if (!m) { out += esc("["); i++; continue; }
+        const inner = t.slice(i + 1, j), slot = skill.slots && skill.slots[m[1]], ref = /^\{([a-z_]+)\}$/.exec(inner);
+        if (!ref) out += walk(inner, true);                                  // [up](direction): the words themselves
+        else if (slot && slot.type === "list") out += listOf(slot.list);     // a closed list: its words
+        else out += capture(slot ? slot.type : "text");                     // free text, place, date…
+        i = j + 1 + m[0].length;
+      } else {
+        const j = t.slice(i).search(/[{[]/), chunk = j < 0 ? t.slice(i) : t.slice(i, i + j);
+        const n = normText(chunk);
+        if (n) words += n.split(" ").length;
+        out += (/^\s/.test(chunk) ? " " : "") + esc(n) + (n && /\s$/.test(chunk) ? " " : "");
+        i += chunk.length || 1;
+      }
+    }
+    return out;
+  }
+  const body = walk(tpl, false).replace(/ +/g, " *");
+  if (kinds.includes("text")) return null;
+  return { re: "^ *" + body + " *$", kinds };
+}
+
 function compile(dir = "skills") {
   const folders = fs.readdirSync(dir).filter(f => fs.existsSync(path.join(dir, f, "skill.md"))).sort();
   const skills = [];
@@ -242,7 +301,8 @@ function compile(dir = "skills") {
     }
     md += `\n## intent: ${s.skill}\n` + [...lines].map(l => "- " + l).join("\n") + "\n";
     const { skill, file, dir, code, action, params, values, replies, request, answer, slots } = s;
-    runtime[skill] = { file, dir, code, action, params, request, answer, replies, slots, sentences: lines.size,
+    const templates = s.examples.map(t => templatePattern(t, s)).filter(Boolean);
+    runtime[skill] = { file, dir, code, action, params, request, answer, replies, slots, sentences: lines.size, templates,
       values: Object.fromEntries(Object.entries(values).filter(([k]) => !(params.train_only || "").split(/\s*,\s*/).includes(k))) };
   }
   fs.writeFileSync("data/skills.md", md);
@@ -258,4 +318,4 @@ if (require.main === module) {
   const fams = new Set(Object.values(r.lexicon)).size;
   console.log(`data/skills.md: ${r.sentences} sentences · web/skills.json · lexicon: ${fams} families, ${Object.keys(r.lexicon).length} words`);
 }
-module.exports = { compile, parseSkill, parseLexicon, validate };
+module.exports = { compile, parseSkill, parseLexicon, validate, templatePattern, normText };

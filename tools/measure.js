@@ -1,4 +1,4 @@
-// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|folders] [--show file.md] [--errors out.tsv] [--predictions out.tsv]
+// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|folders] [--show file.md] [--errors out.tsv] [--predictions out.tsv] [--templates]
 // Held-out, boundary and extra probes (intent only, with errors listed), and optionally
 // 5-fold cross-validation over the training sentences: abstained / false yes / wrong skill.
 const path = require("path");
@@ -110,10 +110,16 @@ if (args.includes("--collide")) { // training sentences that look the same to th
 }
 
 const evalPreds = [];
+// --templates: a sentence matching one skill's example lines exactly is that skill (web/agent.js)
+const tplIntent = args.includes("--templates") ? require(path.join(repo, "web/agent.js")).templateIntent : null;
+function parse(nlu, text) {
+  const r = nlu.parse(text), k = tplIntent && tplIntent(text);
+  return k ? Object.assign({}, r, { intent: k, confidence: 1, template: true }) : r;
+}
 function score(nlu, set) {
   let ok = 0; const errs = [];
   for (const e of set) {
-    const r = nlu.parse(e.text);
+    const r = parse(nlu, e.text);
     const pred = r.confidence >= TH ? r.intent : "out_of_scope";
     evalPreds.push(`${e.intent}\t${r.intent}\t${r.confidence.toFixed(4)}\t${e.text}\t${set.name || ""}`);
     if (pred === e.intent) ok++; else errs.push(`  ${e.text}  want=${e.intent} got=${pred} (${r.intent} ${r.confidence.toFixed(2)})`);

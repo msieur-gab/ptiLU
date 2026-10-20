@@ -14,6 +14,20 @@ const COMPILED = new Set(Object.keys(SKILLS)); // skill folders; the rest are ta
 // the skills the dialogue relies on, by the role their file declares: yes, no, fallback
 const ROLE = Object.fromEntries(Object.entries(SKILLS).filter(([, s]) => s.params.role).map(([k, s]) => [s.params.role, k]));
 
+// Templates (Snips' deterministic parser): skills.js turns each example line into a pattern. A
+// sentence that matches lines of exactly one skill is that skill, with certainty; anything else is
+// left to the model. Dates and durations are matched as "§", where the date parser finds them.
+const TEMPLATES = Object.entries(SKILLS).flatMap(([k, s]) => (s.templates || []).map(t => [k, new RegExp(t.re)]));
+const normText = t => t.toLowerCase().replace(/[’‘]/g, "'").replace(/[?!.,:;"“”]/g, " ").replace(/\s+/g, " ").trim();
+function templateIntent(text) {
+  let dated = text;
+  try { for (const e of ENT.parse(text).filter(e => e.start != null).sort((a, b) => b.start - a.start)) dated = dated.slice(0, e.start) + " § " + dated.slice(e.end); } catch (e) {}
+  const forms = [normText(text), normText(dated)];
+  const hits = new Set();
+  for (const [k, re] of TEMPLATES) if (forms.some(f => re.test(f))) hits.add(k);
+  return hits.size === 1 ? [...hits][0] : null;
+}
+
 // the dialogue's own replies; every skill brings its own as "<skill>.<name>"
 const RESPONSES = {
   cancel: ["Cancelled.", "OK, I dropped it."],
@@ -97,16 +111,16 @@ class Agent {
     const parts = text.split(/\s*(?:,\s*)?\b(?:and then|and also|then|and)\b\s*|\s*;\s*/i).map(p => p.trim()).filter(Boolean);
     if (parts.length < 2 || parts.length > 4) return null;
     const ok = r => ACTIONABLE.has(r.intent) && r.confidence >= SURE;
-    const rs = parts.map(p => this.nlu.parse(p));
+    const rs = parts.map(p => this.parse(p));
     for (let i = 1; i < parts.length; i++) {
       if (ok(rs[i])) continue;
       const verb = parts[i - 1].split(/\s+/)[0];
-      const r = this.nlu.parse(verb + " " + parts[i]);
+      const r = this.parse(verb + " " + parts[i]);
       if (ok(r) && r.intent === rs[i - 1].intent) { parts[i] = verb + " " + parts[i]; rs[i] = r; }
     }
     if (!rs.every(ok)) return null;
     // one skill with all its values in the whole sentence ("I live in Munich and my name is Gab"): keep it whole
-    const whole = this.nlu.parse(text);
+    const whole = this.parse(text);
     if (rs.every(r => r.intent === whole.intent) && Object.keys(whole.slots).length >= rs.reduce((n, r) => n + Object.keys(r.slots).length, 0)) return null;
     return parts;
   }
@@ -133,7 +147,7 @@ class Agent {
       if (this.pending) { i++; break; } // a part asked a question: the rest waits for the answer
     }
     this.queue = i < parts.length ? parts.slice(i) : null;
-    const trace = [{ type: "nlu", r: first ? first.trace[0].r : this.nlu.parse(text) },
+    const trace = [{ type: "nlu", r: first ? first.trace[0].r : this.parse(text) },
       { type: "state", text: (first ? "answer received, continuing with " : "split into commands: ") + parts.map(p => "“" + p + "”").join(" + ") }];
     outs.forEach((o, k) => {
       trace.push({ type: "state", text: "→ " + (k + 1) + ". " + o.trace[0].r.intent + " " + o.trace[0].r.confidence.toFixed(2) });
@@ -151,7 +165,7 @@ class Agent {
   handleOne(text) {
     const trace = [];
     this.lastText = text;
-    const r = this.nlu.parse(text);
+    const r = this.parse(text);
     trace.push({ type: "nlu", r });
     const p = this.pending, t = text.trim();
     const no = NO_RE.test(t) || (r.intent === ROLE.no && r.confidence >= 0.5);
@@ -446,8 +460,14 @@ class Agent {
   request(sk, vars, ctx) { return SV.net.request(this, sk, vars, ctx); }
   geocode(name) { return SV.net.geocode(this, name); }
   mem() { return SV.me.get(this.store, this); }
+  // the model's reading, unless the sentence matches one skill's example lines exactly
+  parse(text) {
+    const r = this.nlu.parse(text), k = templateIntent(text);
+    if (!k) return r;
+    return Object.assign({}, r, { intent: k, confidence: 1, template: true, ranking: [[k, 1]].concat(r.ranking.filter(([i]) => i !== k)).slice(0, 3) });
+  }
   secret(k) { return SV.secrets.get(this.store, this, k); }
   setSecret(k, v) { SV.secrets.set(this.store, this, k, v); }
   setMem(m) { SV.me.set(this.store, this, m); }
 }
-if (typeof module !== "undefined") module.exports = { Agent };
+if (typeof module !== "undefined") module.exports = { Agent, templateIntent };
