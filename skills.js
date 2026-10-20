@@ -168,14 +168,16 @@ function validate(s) {
   for (const m of (p.command || "").matchAll(/\{(\w+)\}/g)) if (!slots[m[1]]) err(`command uses {${m[1]}} but ## Slots doesn't declare it`);
 }
 
-// skills/lexicon.md: "- family: word, word" under ## Families → { word: family } (the family's
-// own word included). A word in two families, or more than one word, stops the compile.
+// skills/lexicon.md: "- family: word, word" under a role heading (## Actions, ## Things,
+// ## Qualities, ## Answers; ## Families still read) → { word: family } (the family's own word
+// included). A word in two families, or more than one word, stops the compile.
+const LEX_SECTIONS = /^##\s+(families|actions|things|qualities|answers)$/i;
 function parseLexicon(md, file) {
   const lex = {};
   let on = false;
   for (const raw of md.split("\n")) {
     const line = raw.trim();
-    if (/^##\s/.test(line)) { on = /^##\s+families$/i.test(line); continue; }
+    if (/^##\s/.test(line)) { on = LEX_SECTIONS.test(line); continue; }
     if (!on || !line.startsWith("- ")) continue;
     const m = /^-\s*([^:]+):\s*(.+)$/.exec(line);
     if (!m) throw new Error(`${file}: can't read “${line}” (expected "- family: word, word")`);
