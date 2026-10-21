@@ -25,7 +25,7 @@ GitHub Pages.
   required slot without an `ask:` reply, a missing reply, a `[..](slot)` or `{slot}` in a
   command that isn't declared, a list slot without its list, a duplicated role.
 - **Core:** `web/agent.js` (382 lines) is the dialogue: routing, slot filling and asking,
-  confirm, choose, handover, several commands per sentence. It knows no skill by name or
+  confirm, choose, handover (several commands per sentence: removed 21 October). It knows no skill by name or
   vocabulary. `web/services.js` holds shared services.
 - **Date parser:** `web/entities.js`, rule-based, 99/99 tests.
 - **Inbox:** unknown sentences saved on the phone; triage, retrain on the device, export `.md`.
@@ -289,6 +289,22 @@ Held-out slot F1 0.91 → 0.94 (places 2 errors → 0). Decisions on held-out an
 same as before. The gain is mostly in the code: one rule per principle instead of one per case.
 List values and system words still miss 10–20% in the model alone; the agent's readers (`guess`
 for lists, the system_status script, folders, places) recover many of them, not measured yet.
+
+## Removed (21 October, same branch)
+
+Gab: "drop and remove the multiple command in one sentence. That was interesting on paper but bad
+in practice", then the two cuts proposed after counting the code (+140 lines that day):
+- **Several commands in one sentence** (splitCommands, runSequence, the queue). One command per
+  sentence. "make a folder called salt and pepper" now simply asks about "pepper".
+- **The exact-match layer** (example lines as patterns: templatePattern, templateIntent, the
+  `templates` in skills.json). Measured first: held-out, boundary and actions probes gave
+  exactly the same decisions with and without it. The word check does its job.
+- **Value typing** (the `--types` experiment in tools/measure.js, the runtime hook,
+  tools/places.txt): it measured flat on 20–21 October.
+
+Dialogue test: 100 conversations (the 5 multi-command ones removed), all others unchanged.
+Code without comments, dialogue + model + services + trainer: main 993, principles before the
+cuts 1,152, now 1,083. The dialogue has 2 confidence numbers (main: 7).
 
 ## Branches
 

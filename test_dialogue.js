@@ -66,11 +66,6 @@ const CONVERSATIONS = [
   ["what's my name"],
   // several commands in one sentence
   ["i live in munich and my name is gab"],
-  ["open the terminal and set a timer for 10 minutes"],
-  ["open the terminal and the browser"],
-  ["set a timer and open firefox", "10 minutes"],
-  ["set a timer and open firefox", "cancel"],
-  ["create a folder called reports and open the browser"],
   ["make a folder called salt and pepper"],
   // the rest of the original skills
   ["shut down", "yes"],

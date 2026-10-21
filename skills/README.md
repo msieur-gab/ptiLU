@@ -126,8 +126,7 @@ sure *and* every word of the sentence that isn't a value is a word this skill's 
 (grammar words like “with” or “into” aside). Otherwise the agent asks first, naming the new
 word: “I don't know “fresh” yet. Do you want me to create a file?” (the skill's `unsure` reply
 or the generic “Do you want me to {help line}?”); below 0.25 it abstains. The sentence
-goes to the inbox, where the word can be taught: an example line that uses it. A sentence that
-matches an example line exactly acts at once. When the skill is about to ask for a
+goes to the inbox, where the word can be taught: an example line that uses it. When the skill is about to ask for a
 missing value anyway, that question names the new word instead (“I don't know “thing” yet. Which app?”). Skills that only answer (time, weather, help) answer at 0.45 or abstain:
 a wrong answer shows what was understood. Leave it off a skill that already confirms every
 time (power).
@@ -219,7 +218,7 @@ from the list can be used, so a sentence can't inject a command.
 | key | |
 |---|---|
 | `role: yes` / `no` / `fallback` | the skills the dialogue relies on: yes and no to its questions, and “I can't do that” |
-| `kind: chat` | conversational (greet, thanks, yes, no…): never split out of a sentence as a command |
+| `kind: chat` | conversational (greet, thanks, yes, no…): answers or abstains, never asks “Do you want me to…?” |
 | `action: say` | no script: answer with the `say` reply |
 | `script: adjust_volume` | use another skill's skill.js (Brightness reuses Volume's, with its own commands) |
 | `lowercase: 0.35` | share of generated sentences also added in lowercase |
