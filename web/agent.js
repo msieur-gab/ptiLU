@@ -3,14 +3,22 @@
 // several commands in one sentence) and hands each skill a toolbox (ctx) of shared services.
 // Commands are simulated: the trace shows what would run on the device.
 
-// Act, ask or abstain: a skill that changes something (acts: yes) acts only when the model is
-// sure enough AND every word that isn't a value is a word the skill was taught. Otherwise it asks
-// "Do you want me to …?" first, and below ASK the agent abstains. The model only counts evidence for a skill, never against:
-// words it doesn't know are invisible to it, so its confidence alone can't tell "I understood"
-// from "I recognised one word" (claude/diagnosis.md, 21 October).
+// Four principles decide every turn (21 October). Each rule below follows from one of them; a case
+// that fits none goes to the inbox, not into this file.
+//  1. Act only on what the skill was taught. A skill that changes something (acts: yes) acts when
+//     the model is sure enough AND every word that isn't a value is one its examples use; otherwise
+//     it asks "Do you want me to …?" first, and below ASK the agent abstains. The model counts
+//     evidence for a skill, never against, so its confidence alone can't tell "I understood" from
+//     "I recognised one word". The same test says when a sentence is a command at all: when a
+//     sentence splits into commands, and when an answer to a question is really a new command.
+//  2. Never drop what was heard. A value the skill can't take, or a new word, is named in a question.
+//  3. Values are read for one skill and checked by their type. The slot model only marks the kinds
+//     of values the chosen skill uses; an answer is read for the skill that asked; a folder, a date,
+//     a place, a list value each have their own check.
+//  4. The skill's own words come first: its questions and replies; the core's are defaults.
+// Two numbers, both on the model's confidence:
 const THRESHOLD = 0.45;        // at or above this, with no unknown word, the agent acts
 const ASK = 0.25;              // below this a skill that acts abstains (one that answers: below THRESHOLD)
-const SURE = 0.7;              // below this a sentence isn't split into commands
 const ENT = typeof NLUEntities !== "undefined" ? NLUEntities : require("./entities.js");
 const SV = typeof NLUServices !== "undefined" ? NLUServices : require("./services.js");
 const SKILLS = (typeof SKILLS_DATA !== "undefined" ? SKILLS_DATA : require("./skills.json")).skills;
@@ -145,21 +153,22 @@ class Agent {
   }
 
   // ---------- several commands in one sentence ----------
-  // Split on and / then / ; only when every part is confidently a command on its own, so
-  // "a folder called salt and pepper" stays whole. A part without a verb borrows the previous one.
+  // Split on and / then / ; only when every part is a command the agent would act on by itself
+  // (principle 1), so "a folder called salt and pepper" stays whole. A part without a verb borrows
+  // the previous one.
   splitCommands(text) {
     if (this.pending) return null;
     const parts = text.split(/\s*(?:,\s*)?\b(?:and then|and also|then|and)\b\s*|\s*;\s*/i).map(p => p.trim()).filter(Boolean);
     if (parts.length < 2 || parts.length > 4) return null;
-    const ok = r => ACTIONABLE.has(r.intent) && r.confidence >= SURE;
+    const ok = (r, t) => ACTIONABLE.has(r.intent) && decide(this.nlu, r, t).act === "act";
     const rs = parts.map(p => this.parse(p));
     for (let i = 1; i < parts.length; i++) {
-      if (ok(rs[i])) continue;
+      if (ok(rs[i], parts[i])) continue;
       const verb = parts[i - 1].split(/\s+/)[0];
       const r = this.parse(verb + " " + parts[i]);
-      if (ok(r) && r.intent === rs[i - 1].intent) { parts[i] = verb + " " + parts[i]; rs[i] = r; }
+      if (ok(r, verb + " " + parts[i]) && r.intent === rs[i - 1].intent) { parts[i] = verb + " " + parts[i]; rs[i] = r; }
     }
-    if (!rs.every(ok)) return null;
+    if (!rs.every((r, i) => ok(r, parts[i]))) return null;
     // one skill with all its values in the whole sentence ("I live in Munich and my name is Gab"): keep it whole
     const whole = this.parse(text);
     if (rs.every(r => r.intent === whole.intent) && Object.keys(whole.slots).length >= rs.reduce((n, r) => n + Object.keys(r.slots).length, 0)) return null;
@@ -208,41 +217,7 @@ class Agent {
     this.lastText = text;
     const r = this.parse(text);
     trace.push({ type: "nlu", r });
-    const p = this.pending, t = text.trim();
-    const no = NO_RE.test(t) || (r.intent === ROLE.no && r.confidence >= 0.5);
-    const drop = why => { this.dropQueue = true; this.pending = null; trace.push({ type: "state", text: why }); };
-
-    if (p && p.type === "confirm") {
-      this.pending = null;
-      const yes = YES_RE.test(t) || (r.intent === ROLE.yes && r.confidence >= 0.5);
-      if (yes && !no) {
-        trace.push({ type: "state", text: "confirmed " + p.what });
-        if (p.sentence) { this.lastText = p.sentence; return this.run(p.intent, p.slots, trace); }
-        return this.resume(p, p.then, trace);
-      }
-      if (no) { drop("declined " + p.what); return { trace, reply: fill(has(p.intent + ".declined") ? p.intent + ".declined" : "declined") }; }
-      trace.push({ type: "state", text: "no clear yes, dropped " + p.what + " and read this as a new command" });
-    } else if (p && p.type === "choose") {
-      this.pending = null;
-      const i = no ? -2 : pickOption(text, p.options);
-      if (i >= 0) { trace.push({ type: "state", text: "picked “" + p.options[i].label + "”" }); return this.resume(p, p.options[i].then, trace); }
-      if (i === -2) { drop("declined, nothing done"); return { trace, reply: fill("cancel") }; }
-      trace.push({ type: "state", text: "answer matched no option, read it as a new command" });
-    } else if (p) {
-      if (no) { drop("cancelled pending " + p.intent); return { trace, reply: fill("cancel") }; }
-      const asked = ((SKILLS[p.intent] && SKILLS[p.intent].slots) || {})[p.need];
-      if (asked && asked.type === "secret" && /\s/.test(t)) drop("a sentence, not a key or an address: dropped the question");
-      else if (ACTIONABLE.has(r.intent) && r.intent !== p.intent && r.confidence >= 0.9) drop("clearly " + r.intent + ": dropped the question");
-      else if (r.intent === p.intent && r.slots[p.need]) {
-        this.pending = null;
-        trace.push({ type: "state", text: "same skill with " + p.need + ", merged into the question" });
-        return this.run(p.intent, { ...p.slots, ...r.slots }, trace);
-      }
-      else if (r.intent === ROLE.fallback && r.confidence >= 0.55 && t.split(/\s+/).length >= 4) drop("off-topic sentence, dropped the question");
-      else if (ACTIONABLE.has(r.intent) && r.confidence >= 0.8 && Object.keys(r.slots).length) drop("new command, dropped the question");
-      else return this.answer(p, r, text, trace);
-    }
-
+    if (this.pending) { const out = this.reply(this.pending, r, text, trace); if (out) return out; }
     const sk = SKILLS[r.intent];
     const d = decide(this.nlu, r, text, !!(sk && sk.slots && this.fillSlots(sk, r.slots, []).ask));
     if (d.act === "abstain") {
@@ -287,21 +262,62 @@ class Agent {
     }
   }
 
-  // the answer to "what should I call it?": the needed value, minus any other value it carries
-  // ("drafts in documents" → name "drafts", location "documents")
-  answer(p, r, text, trace) {
+  // The turn as an answer to the question waiting: a yes or no, a choice, or the value asked for.
+  // null when it isn't one: the question is dropped and the turn is read as a new command.
+  reply(p, r, text, trace) {
+    const t = text.trim();
+    const said = role => r.intent === ROLE[role] && decide(this.nlu, r, text).act === "act";
+    const no = NO_RE.test(t) || said("no"), yes = !no && (YES_RE.test(t) || said("yes"));
+    const drop = why => { this.dropQueue = true; trace.push({ type: "state", text: why }); };
+    this.pending = null;
+    if (p.type === "confirm") {
+      if (yes) {
+        trace.push({ type: "state", text: "confirmed " + p.what });
+        if (p.sentence) { this.lastText = p.sentence; return this.run(p.intent, p.slots, trace); }
+        return this.resume(p, p.then, trace);
+      }
+      if (no) { drop("declined " + p.what); return { trace, reply: fill(has(p.intent + ".declined") ? p.intent + ".declined" : "declined") }; }
+      trace.push({ type: "state", text: "no clear yes, dropped " + p.what + " and read this as a new command" });
+      return null;
+    }
+    if (no) { drop("cancelled, nothing done"); return { trace, reply: fill("cancel") }; }
+    if (p.type === "choose") {
+      const i = pickOption(text, p.options);
+      if (i >= 0) { trace.push({ type: "state", text: "picked “" + p.options[i].label + "”" }); return this.resume(p, p.options[i].then, trace); }
+      trace.push({ type: "state", text: "answer matched no option, read it as a new command" });
+      return null;
+    }
+    // a value was asked for: read the answer for the skill that asked (principle 3)
+    const own = this.nlu.values(text, p.intent), sk = SKILLS[p.intent];
+    const asked = ((sk && sk.slots) || {})[p.need];
+    if (asked && asked.type === "secret" && /\s/.test(t)) { drop("a sentence, not a key or an address: dropped the question"); return null; }
+    // a new command, by principle 1: words the asking skill wasn't taught, in a sentence another skill
+    // would act on or ask about. Anything else is the value: a text value can be any words.
+    const strange = this.nlu.unknownWords(text, p.intent, own.labels, dateSpans(text));
+    if (strange.length && r.intent !== p.intent && ACTIONABLE.has(r.intent) && decide(this.nlu, r, text).act !== "abstain") {
+      drop(r.intent + ", with words " + p.intent + " wasn't taught: dropped the question");
+      return null;
+    }
+    // the same command again, now with the value ("create a folder called drafts")
+    if (r.intent === p.intent && own.slots[p.need]) {
+      trace.push({ type: "state", text: "same skill with " + p.need + ", merged into the question" });
+      return this.run(p.intent, { ...p.slots, ...own.slots }, trace);
+    }
+    return this.answer(p, own, text, trace);
+  }
+
+  // the answer to "what should I call it?": the needed value, minus any other value of the asking
+  // skill it carries ("drafts in documents" → name "drafts", location "documents")
+  answer(p, own, text, trace) {
     let rest = text;
     const extra = {};
-    // only values the asking skill uses are split off: "Cookie" read as another skill's name stays in
-    const own = (SKILLS[p.intent] && SKILLS[p.intent].slots) || null;
-    for (const [k, v] of Object.entries(r.slots)) {
-      if (k === p.need || (own && !own[k])) continue;
+    for (const [k, v] of Object.entries(own.slots)) {
+      if (k === p.need) continue;
       const at = rest.toLowerCase().lastIndexOf(v.toLowerCase());
       if (at > 0) { rest = rest.slice(0, at).replace(/\s+(in|inside|on|under|within|to|at)(\s+(the|my))?\s*$/i, ""); extra[k] = v; }
     }
     const value = cleanValue(rest.replace(/^(please\s+)?(call it|name it|let'?s call it|it'?s|it is|its|name|called|named|use|make it|open|launch|start|run|fire up|i('?m| am)? (start(ing)? |leav(e|ing) |going |coming )?(from|at|to)|start(ing)? from|from|to)\s+/i, ""));
-    if (!value) { trace.push({ type: "state", text: "still waiting for " + p.need }); return { trace, reply: fill("empty_value") }; }
-    this.pending = null;
+    if (!value) { this.pending = p; trace.push({ type: "state", text: "still waiting for " + p.need }); return { trace, reply: fill("empty_value") }; }
     const secret = SKILLS[p.intent] && SKILLS[p.intent].slots && (SKILLS[p.intent].slots[p.need] || {}).type === "secret";
     trace.push({ type: "state", text: "filled " + p.need + " ← " + (secret ? "••• (kept on this device)" : "“" + value + "”") });
     return this.run(p.intent, { ...p.slots, ...extra, [p.need]: value }, trace);
@@ -538,7 +554,9 @@ class Agent {
   parse(text) {
     const r = this.nlu.parse(text), k = templateIntent(text);
     if (!k) return r;
-    return Object.assign({}, r, { intent: k, confidence: 1, template: true, ranking: [[k, 1]].concat(r.ranking.filter(([i]) => i !== k)).slice(0, 3) });
+    // the values are read again for the skill the line belongs to (principle 3)
+    return Object.assign({}, r, k === r.intent ? {} : this.nlu.values(text, k),
+      { intent: k, confidence: 1, template: true, ranking: [[k, 1]].concat(r.ranking.filter(([i]) => i !== k)).slice(0, 3) });
   }
   secret(k) { return SV.secrets.get(this.store, this, k); }
   setSecret(k, v) { SV.secrets.set(this.store, this, k, v); }

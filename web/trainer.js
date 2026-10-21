@@ -305,8 +305,12 @@ const NLUTrainer = (() => {
 
     // the words each skill was taught, its values aside: the agent acts only when every other word
     // of a sentence is one of them, and asks first otherwise (web/agent.js)
-    const known = {};
+    const known = {}, valuesOf = {};
     for (const e of examples) {
+      // the kinds of values each skill's examples mark: the slot model may only use those once the
+      // skill is chosen ("doc" can't be a name in a sentence about files if files have no "name")
+      const kinds = valuesOf[e.intent] || (valuesOf[e.intent] = new Set());
+      for (const [, , name] of e.spans) kinds.add(name);
       const words = known[e.intent] || (known[e.intent] = new Set());
       for (const [t, s, end] of tokenize(e.text))
         if (/^[A-Za-z]/.test(t) && !e.spans.some(([a, b]) => s >= a && end <= b)) words.add((lexicon && lexicon[t.toLowerCase()]) || t.toLowerCase());
@@ -327,6 +331,7 @@ const NLUTrainer = (() => {
       state: tag.state,
       trans: tag.trans,
       known: Object.fromEntries(Object.entries(known).map(([k, s]) => [k, [...s].sort().join(" ")])),
+      values_of: Object.fromEntries(Object.entries(valuesOf).map(([k, s]) => [k, [...s].sort().join(" ")])),
       stats: { examples: examples.length, features: keep.length, weights_kept: kept, weights_total: K * nf,
         prune, slot_prune: slotPrune, lbfgs_iterations: lr.iterations, slot_iterations: tag.iterations, train_seconds: Math.round((tIntent + tSlots) / 100) / 10,
         intent_seconds: Math.round(tIntent / 100) / 10, slot_seconds: Math.round(tSlots / 100) / 10 },

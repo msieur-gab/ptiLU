@@ -121,6 +121,8 @@ const NLURuntime = (() => {
       this.nf = m.vocab.length;
       this.coef = m.format === 2 ? unpack(m, this.nf) : f32(m.coef);
       this.L = m.labels.length;
+      // the kinds of values each skill marks; an older model has none and the slot model is free
+      this.valuesOf = m.values_of ? Object.fromEntries(Object.entries(m.values_of).map(([k, w]) => [k, new Set(w ? w.split(" ") : [])])) : null;
       this.known = m.known ? Object.fromEntries(Object.entries(m.known).map(([k, w]) => [k, new Set(w.split(" "))])) : null;
     }
     // words of a sentence the skill was never taught, leaving out values (tagged by the slot
@@ -152,14 +154,19 @@ const NLURuntime = (() => {
       const sum = ex.reduce((a, b) => a + b, 0);
       return ex.map((e, i) => [this.m.intents[i], e / sum]).sort((a, b) => b[1] - a[1]);
     }
-    tag(text, toks) {
+    // the values in a sentence, marked by the slot model. Given a skill, only the kinds of values that
+    // skill's examples mark are allowed: the choice of skill and the values can't disagree.
+    tag(text, toks, intent) {
       const L = this.L, st = this.m.state, tr = this.m.trans;
+      const kinds = intent && this.valuesOf && this.valuesOf[intent];
+      const banned = kinds ? this.m.labels.map(l => l !== "O" && !kinds.has(l.slice(2))) : null;
       const em = tokenFeatures(text, toks).map(feats => {
         const row = new Array(L).fill(0);
         for (const f of feats) {
           const w = st[f];
           if (w) for (let q = 0; q < w.length; q += 2) row[w[q]] += w[q + 1];
         }
+        if (banned) for (let y = 0; y < L; y++) if (banned[y]) row[y] = -1e9;
         return row;
       });
       if (!em.length) return [];
@@ -180,15 +187,18 @@ const NLURuntime = (() => {
       for (let i = back.length - 1; i >= 0; i--) path.push(back[i][path[path.length - 1]]);
       return path.reverse().map(i => this.m.labels[i]);
     }
+    // the values of a sentence read for one skill (the chosen one, or the one waiting for an answer)
+    values(text, intent) {
+      const toks = tokenize(text), labels = this.tag(text, toks, intent);
+      const slots = {}, extra = []; // extra: a second value for a slot already filled ("…Testing inside the Document folder")
+      for (const { name, value } of spansFromLabels(text, toks, labels)) if (!(name in slots)) slots[name] = value; else extra.push({ name, value });
+      return { slots, extra, labels };
+    }
     parse(text) {
       const t0 = performance.now();
       const ranked = this.classify(text);
-      const toks = tokenize(text);
-      const labels = this.tag(text, toks);
-      const slots = {}, extra = []; // extra: a second value for a slot already filled ("…Testing inside the Document folder")
-      for (const { name, value } of spansFromLabels(text, toks, labels)) if (!(name in slots)) slots[name] = value; else extra.push({ name, value });
       return { intent: ranked[0][0], confidence: ranked[0][1], ranking: ranked.slice(0, 3),
-        slots, extra, labels, ms: performance.now() - t0 };
+        ...this.values(text, ranked[0][0]), ms: performance.now() - t0 };
     }
   }
   return { NLU, tokenize, intentFeatures, tokenFeatures, setValueTypes };

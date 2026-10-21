@@ -268,7 +268,7 @@
   $ GET geocoding-api.open-meteo.com/v1/search?name=munich
 
 > open the terminal and set a timer for 10 minutes
-  [set_timer {"app":"terminal"} · duration 10 min]
+  [set_timer · duration 10 min]
   Opening the terminal.
 Timer set for 10 minutes. It rings at 20:24.
   $ x-terminal-emulator & | systemd-run --user --on-active=600s notify-send Timer '10 minutes is up'
@@ -296,7 +296,7 @@ Opening the Firefox browser.
   Cancelled.
 
 > create a folder called reports and open the browser
-  [create_folder {"name":"reports","app":"browser"}]
+  [create_folder {"name":"reports"}]
   Done. “reports” is now in your home folder.
 Opening the browser.
   $ mkdir -p $HOME/reports | x-www-browser &
@@ -360,7 +360,7 @@ Opening the browser.
   [adjust_volume]
   Up or down? You can also give a level, like 40%.
 > up
-  [greet {"direction":"up"}]
+  [greet]
   Volume up to 60%.
   $ pactl set-sink-volume @DEFAULT_SINK@ +10%
 
@@ -512,7 +512,7 @@ Uptime: 3 hours 12 minutes.
   Which file or folder should I open?
 
 > delete the reports folder
-  [out_of_scope {"name":"reports"}]
+  [out_of_scope]
   I didn't understand that. Say help to see what I can do.
 
 > what's the date
@@ -555,7 +555,7 @@ Uptime: 3 hours 12 minutes.
   [send_to_phone]
   What should I send to your phone?
 > I love Cookie 🍪
-  [out_of_scope {"name":"Cookie 🍪"}]
+  [out_of_scope]
   Sending it to your phone…
   → Sent to your phone: “I love Cookie 🍪”.
   $ POST ntfy.sh/ {"topic":"•••","title":"ptiLU","message":"I love Cookie 🍪"}
