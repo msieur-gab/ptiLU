@@ -341,6 +341,24 @@ class Agent {
     trace.push({ type: "state", text: name + " “" + raw + "” isn't a known folder" + (near ? ", close to " + near : "") + ": asking" });
     return { trace, reply: fill(has(intent + "." + key) ? intent + "." + key : key, vars) };
   }
+  // a place the slot model didn't mark: words the skill was never taught, together, right after
+  // in / at / of / for / near / is… ("where is innsbruck on the map"). Names are what no example
+  // teaches; the place lookup then checks it, and says when it finds nothing.
+  placeGuess(sk, text) {
+    const skill = sk.params.skill, own = this.nlu.values(text, skill);
+    const strange = new Set(this.nlu.unknownWords(text, skill, own.labels, dateSpans(text)));
+    if (!strange.size) return null;
+    const w = [...text.matchAll(/[\p{L}][\p{L}'\-]*/gu)].map(m => m[0]);
+    let found = null;
+    for (let i = 0; i < w.length; i++) {
+      if (!strange.has(w[i].toLowerCase()) || !/^(in|at|of|for|near|around|is|see|locate|find|to)$/i.test(w[i - 1] || "")) continue;
+      let j = i;
+      while (j + 1 < w.length && strange.has(w[j + 1].toLowerCase())) j++;
+      found = w.slice(i, j + 1).join(" ");
+      i = j;
+    }
+    return found;
+  }
   // the folders the agent knows beyond the standard ones: those the device lists, those said yes to
   folderNames() { return [...(this.folders || []), ...SV.files.folders.get(this.store, this)]; }
 
@@ -414,7 +432,7 @@ class Agent {
       const list = sk.values[slot.list];
       let v = null;
       if (slot.type === "text") v = raw;
-      else if (slot.type === "place") v = raw && SV.places.placeIn(text, raw);
+      else if (slot.type === "place") v = SV.places.placeIn(text, raw || this.placeGuess(sk, text));
       else if (slot.type === "folder" && raw) { // checked against the folders this device knows
         const f = SV.files.folder(raw, this.folderNames());
         if (!f.known) return { check: [name, raw, f.near], values };
