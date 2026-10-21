@@ -254,6 +254,42 @@ The slot model had read "Document" as a second name and the agent kept only the 
 **Open:** the Python runtime ignores `known` (it has no dialogue yet); value typing on its
 own was not measured; "answered wrong" is mostly get_date ↔ get_weather and help ↔ recall_me.
 
+## Principles (21 October, branch `principles`, from `act-ask-abstain`)
+
+After a morning of phone tests, each fix was one more rule; Gab: "I have the feeling that all of
+this will become like incremental patches". Assessment: the model is fine (skill right 97.5% on
+handwritten sentences, folders found 99%); the patches came from two structural causes. The
+value model read values for all skills at once, without knowing the skill chosen, and the
+dialogue had grown one threshold per surprise (seven confidence numbers). No blank slate: the
+skill files, compiler, model, inbox and measurements hold. Rebuilt instead:
+- **Four principles**, at the top of `web/agent.js`: act only on what the skill was taught;
+  never drop what was heard; values read for one skill and checked by their type; the skill's
+  own words come first. A case that fits none goes to the inbox, not into the code.
+- **Values read for the chosen skill.** The trainer stores the kinds of values each skill's
+  examples mark (`values_of`); the slot model may only use those once the skill is chosen
+  (`NLU.values(text, skill)`). Template matches and answers to a question are read for their
+  own skill.
+- **Turn logic on the act rule.** Splitting into commands and telling an answer from a new
+  command now use `decide()`. Five numbers gone (0.5, 0.55, 0.7, 0.8, 0.9); two remain: 0.45
+  (act) and 0.25 (worth asking about). All 105 dialogue conversations unchanged.
+- **Places.** The tokenizer reads letters of any alphabet (Kraków, Tübingen), in JS and Python.
+  An unmarked place is taken from words the skill was never taught, right after in / at / of /
+  for / near / is; the place lookup checks it.
+
+| Strict CV (7,108, by example line) | act-ask-abstain | principles |
+|---|---|---|
+| acted wrong without asking | 24 | 21 |
+| answered wrong | 89 | 89 |
+| asked (right skill) | 965 (776) | 1,015 (820) |
+| value errors where the skill was right | 321 | 308 |
+| of which a value of the wrong kind | 29 | 16 |
+| place errors | 40 | 31 |
+
+Held-out slot F1 0.91 → 0.94 (places 2 errors → 0). Decisions on held-out and boundary are the
+same as before. The gain is mostly in the code: one rule per principle instead of one per case.
+List values and system words still miss 10–20% in the model alone; the agent's readers (`guess`
+for lists, the system_status script, folders, places) recover many of them, not measured yet.
+
 ## Branches
 
 All merged into `main`, safe to delete (their commits are all on `main`): `time-skills`, `js-trainer`, `inbox`,
