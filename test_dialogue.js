@@ -70,6 +70,8 @@ const CONVERSATIONS = [
   // action + object: the object comes from the sentence's shape, the place is set aside
   ["please create a new seed.md inside ideas folder"],
   ["make a new folder named seeds in the ideas folder"],
+  ["please create a new seed.md inside Ideas folder"],
+  ["please create a new seed.md inside the ideas folder"],
   ["create settings.json in this directory"],
   // a value that only points names nothing the agent can see: it asks
   ["create settings.json in this directory", "documents"],

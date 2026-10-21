@@ -3981,6 +3981,8 @@ function loadScript(name, sk) {
 // which object). No cue, or the same skill: the model's reading stands.
 const DOES = Object.fromEntries(Object.entries(SKILLS).filter(([, s]) => s.params.does)
   .map(([k, s]) => { const [action, ...objects] = s.params.does.trim().split(/\s+/); return [k, { action, objects }]; }));
+// "in / inside / into (the|my) X folder", X one to three words that aren't verbs or articles
+const PLACE_SAID = /\b(?:in|inside|into|under|within)\s+(?:the\s+|my\s+)?((?:(?!(?:a|an|the|make|create|open|view|new|called|named)\b)[\p{L}\p{N}][\p{L}\p{N}_-]*\s+){1,3}?)(?:folder|directory|dir)\b/iu;
 const PLACE_RE = /(^|\s+)(in|inside|into|under|within|on|to|from)\s+(this|that|the|my|a)?\s*(\S+\s+)?(folder|directory|dir)\b|\s+(in|inside|into|under|within|on|to|from)\s+.*$/gi;
 // strongest cue first: a name shaped like a file, then an app's name, then the words folder / file
 const FILE_SHAPE = /^[\w-]+\.[a-z0-9]{1,5}$/i, FOLDER_WORD = /^(folder|folders|directory|dir|subfolder)$/i, FILE_WORD = /^(file|document|doc)$/i;
@@ -4043,6 +4045,7 @@ class Agent {
     this.lastText = text;
     const r = this.parse(text);
     trace.push({ type: "nlu", r });
+    if (r.placeRead) trace.push({ type: "state", text: "location “" + r.slots.location + "” read from “… folder”" });
     if (r.composed) trace.push({ type: "state", text: "action " + DOES[r.intent].action + ", object " + r.object + " (from the sentence's shape): " + r.composed });
     const p = this.pending, t = text.trim();
     const no = NO_RE.test(t) || (r.intent === ROLE.no && r.confidence >= 0.5);
@@ -4098,7 +4101,16 @@ class Agent {
     return this.run(r.intent, r.slots, trace);
   }
 
-  parse(text) { return compose(this.nlu, this.nlu.parse(text), text); }
+  parse(text) {
+    const r = compose(this.nlu, this.nlu.parse(text), text);
+    // a place said as "in / inside / into (the|my) X folder" is read by its shape when the slot
+    // model missed it ("inside Ideas folder", "in the ideas folder"): never dropped in silence
+    const sk = SKILLS[r.intent], m = PLACE_SAID.exec(text), place = m && m[1].trim();
+    // never words the slot model already gave to another value ("the work in progress folder")
+    const taken = place && Object.values(r.slots).some(v => typeof v === "string" && v.toLowerCase().includes(place.toLowerCase()));
+    if (place && !taken && sk && sk.slots && sk.slots.location && !r.slots.location) return { ...r, slots: { ...r.slots, location: place }, placeRead: true };
+    return r;
+  }
 
   // decide() for this sentence, knowing whether the skill would ask for a missing value
   decision(r) {

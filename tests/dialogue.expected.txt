@@ -279,9 +279,19 @@
   $ mkdir -p $HOME/ideas && touch $HOME/ideas/seed.md
 
 > make a new folder named seeds in the ideas folder
-  [create_folder {"name":"seeds"}]
-  Done. “seeds” is now in your home folder.
-  $ mkdir -p $HOME/seeds
+  [create_folder {"name":"seeds","location":"ideas"}]
+  Done. “seeds” is now in ideas.
+  $ mkdir -p $HOME/ideas/seeds
+
+> please create a new seed.md inside Ideas folder
+  [create_file {"name":"seed.md","location":"Ideas"}]
+  Created “seed.md” in Ideas.
+  $ mkdir -p $HOME/Ideas && touch $HOME/Ideas/seed.md
+
+> please create a new seed.md inside the ideas folder
+  [create_file {"name":"seed.md","location":"ideas"}]
+  Created “seed.md” in ideas.
+  $ mkdir -p $HOME/ideas && touch $HOME/ideas/seed.md
 
 > create settings.json in this directory
   [create_file {"name":"settings.json","location":"this directory"}]

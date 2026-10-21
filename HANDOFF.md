@@ -234,3 +234,12 @@ Gab: it "should not create a folder named this nor that". Any text value that is
 no value; a slot with a question asks it ("In which folder? Say its name, for example Documents.").
 The old "here = the current folder", which really meant the home folder, is removed. 4 dialogue
 conversations added; the rest unchanged. Edge: "create a folder called this" asks for the name.
+
+**Place read by its shape** (same branch, after Gab's phone test: "please create a new seed.md
+inside ideas folder" → "Done. seed.md is in your home folder"). The slot model misses the place
+when it's capitalised ("Ideas") or after "the"; the folder was then dropped in silence. When a
+file skill's location is empty, "in / inside / into / under / within (the|my) X folder" fills it
+(X: one to three words, no verbs or articles, not part of another value). On every training,
+test and probe sentence it fills a missed place 12 times, none wrong (10 are "in this directory",
+which then asks). 2 dialogue conversations added. Note: "Ideas" and "ideas" are different folders
+on Linux; the agent has no picture of the disk to tell which exists.
