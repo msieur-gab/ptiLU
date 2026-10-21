@@ -212,3 +212,17 @@ Measured with `tools/measure.js --cv --group` against `main-fixes` (same folds),
 
 Found behind it, not fixed (values, not routing): "make a new folder named seeds in the ideas
 folder" loses the location; "create settings.json in this directory" makes a folder called "this".
+
+## Lexicon and taught-words check on action-object (21 October, late, branch `action-object-plus`)
+
+Each added alone and measured; only what paid for itself is kept.
+- **Lexicon** (skills/lexicon.md from principles, ~30 lines): kept. On 315 handwritten sentences
+  no branch trained on: right 266 → 280, none worse, silent wrong actions 3 → 3. Grouped CV:
+  acted right 4663 → 4697, silent wrong actions 32 → 35. (The probes were written before the
+  lexicon grew, so part of the gain may be tuning.) Score on those 315: main 265, principles 276,
+  this branch 280; silent wrong actions main 3, principles 7, this branch 3.
+- **Taught-words check** (~25 lines, +14 KB): not kept. Replacing the 0.7 rule (as on principles):
+  silent wrong actions 35 → 47, wrong-skill questions 39 → 108. On top of the 0.7 rule: silent
+  wrong actions 35 → 23 but 252 right actions became questions (about 21 per error avoided), and
+  on the 315 sentences it avoided none. It looked good on principles because it replaced a weaker
+  rule there. Code is in this session's history if ever wanted.
