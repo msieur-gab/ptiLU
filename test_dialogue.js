@@ -71,6 +71,11 @@ const CONVERSATIONS = [
   ["please create a new seed.md inside ideas folder"],
   ["make a new folder named seeds in the ideas folder"],
   ["create settings.json in this directory"],
+  // a value that only points names nothing the agent can see: it asks
+  ["create settings.json in this directory", "documents"],
+  ["make a folder called drafts in that folder", "projects"],
+  ["create a folder called this"],
+  ["open this file", "budget.csv"],
   // the rest of the original skills
   ["shut down", "yes"],
   ["restart the pi", "no"],

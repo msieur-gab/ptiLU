@@ -9,12 +9,13 @@ does: create folder
 # Create a folder
 
 Makes a folder, in your home folder unless you say where. "documents", "downloads" and the other
-standard folders map to their real names; "here" means the current folder. The name is quoted
+standard folders map to their real names. "Here" or "this folder" names nothing the agent can see
+(it acts on top of a screen it doesn't know), so it asks which folder. The name is quoted
 before it reaches the command line.
 
 ## Slots
 - name: text, required, ask: ask_name
-- location: text
+- location: text, ask: ask_where
 
 ## Examples
 - {please |}{create|make|add|set up|build} {a |a new |}{folder|directory|dir} {called|named} [{folder}](name)
@@ -128,5 +129,6 @@ before it reaches the command line.
 - inbox
 
 ## Replies
+- ask_where: In which folder? Say its name, for example Documents.
 - done: Done. {name} is now in {where}. | Created the folder {name} in {where}. | Folder {name} created in {where}.
 - ask_name: What should I call the folder? | Sure. What name do you want for the folder?

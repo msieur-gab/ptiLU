@@ -285,8 +285,35 @@
 
 > create settings.json in this directory
   [create_file {"name":"settings.json","location":"this directory"}]
-  Created “settings.json” in this.
-  $ mkdir -p $HOME/this && touch $HOME/this/settings.json
+  In which folder? Say its name, for example Documents.
+
+> create settings.json in this directory
+  [create_file {"name":"settings.json","location":"this directory"}]
+  In which folder? Say its name, for example Documents.
+> documents
+  [out_of_scope {"location":"documents"}]
+  Created “settings.json” in Documents.
+  $ mkdir -p $HOME/Documents && touch $HOME/Documents/settings.json
+
+> make a folder called drafts in that folder
+  [create_folder {"name":"drafts","location":"that"}]
+  In which folder? Say its name, for example Documents.
+> projects
+  [out_of_scope]
+  Done. “drafts” is now in projects.
+  $ mkdir -p $HOME/projects/drafts
+
+> create a folder called this
+  [create_folder {"name":"this"}]
+  What should I call the folder?
+
+> open this file
+  [open_file]
+  Which file or folder should I open?
+> budget.csv
+  [open_file {"name":"budget.csv"}]
+  Opening “budget.csv”.
+  $ xdg-open $HOME/budget.csv
 
 > shut down
   [power {"power_action":"shut down"}]

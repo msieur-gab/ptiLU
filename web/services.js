@@ -48,13 +48,11 @@ const NLUServices = (() => {
   // ---------- folders ----------
   const XDG = { desktop: "Desktop", documents: "Documents", downloads: "Downloads", music: "Music",
     pictures: "Pictures", videos: "Videos", templates: "Templates", public: "Public" };
-  const HERE = /^(here|this (folder|directory|dir)|(the )?current (folder|directory|dir)|cwd|current)$/i;
   // what people call a place on disk → { path, label }
   function where(raw) {
     if (!raw) return { path: "$HOME", label: "your home folder" };
     const v = raw.replace(/^the\s+/i, "").replace(/\s+(folder|directory|dir)$/i, "");
     const low = v.toLowerCase();
-    if (HERE.test(low)) return { path: "$HOME", label: "the current folder" };
     if (low === "home" || low === "~") return { path: "$HOME", label: "your home folder" };
     if (XDG[low]) return { path: "$HOME/" + XDG[low], label: XDG[low] };
     return { path: "$HOME/" + v, label: v };

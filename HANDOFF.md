@@ -226,3 +226,11 @@ Each added alone and measured; only what paid for itself is kept.
   wrong actions 35 → 23 but 252 right actions became questions (about 21 per error avoided), and
   on the 315 sentences it avoided none. It looked good on principles because it replaced a weaker
   rule there. Code is in this session's history if ever wanted.
+
+**Values that only point** (same branch). "in this directory", "that folder", "here": the agent
+acts on top of a screen it doesn't see and keeps no picture of the device, so these name nothing.
+Gab: it "should not create a folder named this nor that". Any text value that is only a pointer
+(this, that, here, there, it, current, with or without folder / directory / file) is treated as
+no value; a slot with a question asks it ("In which folder? Say its name, for example Documents.").
+The old "here = the current folder", which really meant the home folder, is removed. 4 dialogue
+conversations added; the rest unchanged. Edge: "create a folder called this" asks for the name.

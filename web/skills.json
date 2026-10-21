@@ -495,6 +495,9 @@
    "request": null,
    "answer": {},
    "replies": {
+    "ask_where": [
+     "In which folder? Say its name, for example Documents."
+    ],
     "done": [
      "Created {file} in {where}.",
      "Done. {file} is in {where}.",
@@ -534,7 +537,7 @@
      "list": null,
      "required": false,
      "guess": false,
-     "ask": null,
+     "ask": "ask_where",
      "invalid": null,
      "default": null,
      "ignore": []
@@ -664,6 +667,9 @@
    "request": null,
    "answer": {},
    "replies": {
+    "ask_where": [
+     "In which folder? Say its name, for example Documents."
+    ],
     "done": [
      "Done. {name} is now in {where}.",
      "Created the folder {name} in {where}.",
@@ -690,7 +696,7 @@
      "list": null,
      "required": false,
      "guess": false,
-     "ask": null,
+     "ask": "ask_where",
      "invalid": null,
      "default": null,
      "ignore": []
@@ -1491,6 +1497,12 @@
    "request": null,
    "answer": {},
    "replies": {
+    "ask_which": [
+     "Which file or folder? Say its name."
+    ],
+    "ask_where": [
+     "In which folder? Say its name, for example Documents."
+    ],
     "done": [
      "Opening {target}.",
      "Here's {target}."
@@ -1505,7 +1517,7 @@
      "list": null,
      "required": false,
      "guess": false,
-     "ask": null,
+     "ask": "ask_which",
      "invalid": null,
      "default": null,
      "ignore": []
@@ -1515,7 +1527,7 @@
      "list": null,
      "required": false,
      "guess": false,
-     "ask": null,
+     "ask": "ask_where",
      "invalid": null,
      "default": null,
      "ignore": []

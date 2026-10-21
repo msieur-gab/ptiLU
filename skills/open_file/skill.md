@@ -12,8 +12,8 @@ Opens a file or a folder with its default app. If what you named is actually an 
 ("open the terminal"), it hands over to open_app.
 
 ## Slots
-- name: text
-- location: text
+- name: text, ask: ask_which
+- location: text, ask: ask_where
 
 ## Examples
 - {open|show|show me|display|view|pull up|bring up} {[{fext}](name)|[{fext}](name)|the [{fname}](name) file|the [{folder}](name) folder}
@@ -177,5 +177,7 @@ Opens a file or a folder with its default app. If what you named is actually an 
 - inbox
 
 ## Replies
+- ask_which: Which file or folder? Say its name.
+- ask_where: In which folder? Say its name, for example Documents.
 - done: Opening {target}. | Here's {target}.
 - ask_name: Which file or folder should I open?

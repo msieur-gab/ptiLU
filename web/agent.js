@@ -31,6 +31,9 @@ const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const fill = (key, vars = {}) => pick(RESPONSES[key]).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 const has = key => key in RESPONSES;
 const cleanValue = v => v.trim().replace(/^["'“”‘’`]+|["'“”‘’`.!?,]+$/g, "").trim();
+// a value that only points ("this", "that folder", "here", "the current directory") names nothing
+// the agent can see: it acts on top of a screen it doesn't know, so it asks rather than guess
+const POINTER_RE = /^(the )?(this|that|these|those|here|there|it|current|this one|that one)( (folder|directory|dir|file|one|place))?$/i;
 const YES_RE = /^(y|yes|yeah|yep|yup|sure|ok|okay|confirm|do it|go|go ahead|please do|absolutely|of course)\b/i;
 const NO_RE = /^(n|no|nope|nah|nvm|cancel|stop|don'?t|never ?mind|abort|not now)\b/i;
 const stripVerb = t => t.replace(/^(please\s+)?((can|could|would) you\s+)?/i, "")
@@ -308,7 +311,9 @@ class Agent {
       const raw = slots[name] ? cleanValue(slots[name]) : null;
       const list = sk.values[slot.list];
       let v = null;
-      if (slot.type === "text") v = raw;
+      const pointer = raw && POINTER_RE.test(raw);
+      if (pointer) trace.push({ type: "state", text: name + " “" + raw + "” only points: asking which" });
+      if (slot.type === "text") v = pointer ? null : raw;
       else if (slot.type === "place") v = raw && SV.places.placeIn(text, raw);
       else if (slot.type === "list") v = raw ? findValue(list, raw, slot.ignore) : slot.guess ? guessValue(list, text) : null;
       else if (slot.type === "secret") { const k = sk.params.skill + "." + name; v = raw || this.secret(k); if (raw) this.setSecret(k, raw); } // asked once per skill, kept on the device
@@ -320,7 +325,7 @@ class Agent {
       if (v && (slot.type === "datetime" || slot.type === "duration")) trace.push({ type: "entity", e: v });
       if (v && slot.type === "list" && !raw) trace.push({ type: "state", text: name + " found in the sentence ← " + v.key });
       if (!v && slot.default === "home") { const me = this.mem(); v = (me.place && me.place.name) || null; }
-      if (!v && slot.required) {
+      if (!v && (slot.required || (pointer && slot.ask))) {
         const wrong = raw && slot.invalid;
         trace.push({ type: wrong ? "abstain" : "state", text: wrong ? name + " “" + raw + "” isn't a known " + (slot.list || slot.type) : "missing " + name });
         // what's filled so far waits with the question: a date read from the first sentence isn't lost
