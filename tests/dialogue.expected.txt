@@ -152,7 +152,7 @@
 
 > launch the thing
   [open_app]
-  Which app? I can open the terminal, browser, Firefox browser, Chromium browser, file manager, text editor, calculator or settings.
+  I don't know “thing” yet. Which app? I can open the terminal, browser, Firefox browser, Chromium browser, file manager, text editor, calculator or settings.
 
 > open an app
   [open_app]
@@ -601,7 +601,7 @@ Uptime: 3 hours 12 minutes.
   What should I send to your phone?
 > send me telegram messages
   [send_telegram]
-  What should I send on Telegram?
+  I don't know “messages” yet. What should I send on Telegram?
 > the bus is late
   [out_of_scope]
   Sending it on Telegram…
@@ -613,7 +613,7 @@ Uptime: 3 hours 12 minutes.
   What should I send on Telegram?
 > please send it to my phone instead
   [send_to_phone]
-  What should I send to your phone?
+  I don't know “instead” yet. What should I send to your phone?
 > the oven is hot
   [out_of_scope]
   Sending it to your phone…

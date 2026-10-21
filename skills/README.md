@@ -127,8 +127,8 @@ sure *and* every word of the sentence that isn't a value is a word this skill's 
 word: “I don't know “fresh” yet. Do you want me to create a file?” (the skill's `unsure` reply
 or the generic “Do you want me to {help line}?”); below 0.25 it abstains. The sentence
 goes to the inbox, where the word can be taught: an example line that uses it. A sentence that
-matches an example line exactly acts at once. No question when the skill is about to ask for a
-missing value anyway. Skills that only answer (time, weather, help) answer at 0.45 or abstain:
+matches an example line exactly acts at once. When the skill is about to ask for a
+missing value anyway, that question names the new word instead (“I don't know “thing” yet. Which app?”). Skills that only answer (time, weather, help) answer at 0.45 or abstain:
 a wrong answer shows what was understood. Leave it off a skill that already confirms every
 time (power).
 

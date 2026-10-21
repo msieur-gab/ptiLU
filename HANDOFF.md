@@ -204,7 +204,8 @@ More contrast lines mostly trade abstentions for false yeses.
 word that isn't a value (slot tag or date) is a word that skill's examples use, grammar words
 aside. Otherwise it asks, naming the word: "I don't know “pepper” yet. Do you want me to
 create folders?"; below 0.25 it abstains. Skills that only answer act at 0.45 or abstain. Authored
-`ask:` replies come first: no question when a value is missing anyway. Matching an example
+`ask:` replies come first: when a value is missing anyway, that question names the new word
+("I don't know “thing” yet. Which app?"), so a new word is never skipped. Matching an example
 line exactly acts at once. Asked sentences go to the inbox.
 - `web/trainer.js` stores each skill's words in the model (`known`, +34 KB → 443 KB); older
   models have none and the rule is off. `web/runtime.js` `unknownWords()`, `web/agent.js`

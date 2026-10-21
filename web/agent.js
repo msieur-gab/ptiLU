@@ -53,12 +53,14 @@ function decide(nlu, r, text, missing = false) {
     if (free && dropped.length === 1) { slots[free] = dropped[0].value; dropped = []; }
     dropped = dropped.map(d => d.value);
   }
-  // no question when the skill is about to ask for a missing value anyway: nothing happens without the answer
-  const unknown = r.template || !acts || missing ? [] : nlu.unknownWords(text, r.intent, r.labels, dateSpans(text));
+  // a new word is always named. When the skill is about to ask for a missing value anyway, that
+  // question carries it ("I don't know “thing” yet. Which app?"): one question, nothing done before the answer
+  const unknown = r.template || !acts ? [] : nlu.unknownWords(text, r.intent, r.labels, dateSpans(text));
+  if (missing) return { act: "act", unknown, dropped, slots };
   const quoted = ws => ws.map(w => "“" + w + "”").join(", ");
   if (dropped.length) return { act: "ask", unknown, dropped, slots, why: quoted(dropped) + " marked but not usable by " + r.intent + ": asking first" };
   if (unknown.length) return { act: "ask", unknown, dropped, slots, why: quoted(unknown) + " never taught to " + r.intent + ": asking first" };
-  if (r.confidence < THRESHOLD && !missing) return { act: "ask", unknown, dropped, slots, why: "confidence " + r.confidence.toFixed(2) + " < " + THRESHOLD + ": asking first" };
+  if (r.confidence < THRESHOLD) return { act: "ask", unknown, dropped, slots, why: "confidence " + r.confidence.toFixed(2) + " < " + THRESHOLD + ": asking first" };
   return { act: "act", unknown, dropped, slots };
 }
 const dateSpans = text => { try { return ENT.parse(text).filter(e => e.start != null).map(e => [e.start, e.end]); } catch (e) { return []; } };
@@ -261,7 +263,10 @@ class Agent {
       return { trace, reply: (d.dropped.length ? fill("dropped", { words: words(d.dropped) }) + " " : "")
         + (d.unknown.length ? fill("new_words", { words: words(d.unknown) }) + " " : "") + ask, unknown: true };
     }
-    return this.run(r.intent, slots, trace);
+    const out = this.run(r.intent, slots, trace);
+    if (!d.unknown.length) return out;
+    trace.push({ type: "state", text: d.unknown.map(w => "“" + w + "”").join(", ") + " never taught to " + r.intent + ", named in its question" });
+    return { ...out, reply: fill("new_words", { words: d.unknown.map(w => "“" + w + "”").join(", ") }) + " " + out.reply, unknown: true };
   }
 
   // Skills taught in the inbox ({ name: { answer, slots, needed } }) answer like a skill.md with
