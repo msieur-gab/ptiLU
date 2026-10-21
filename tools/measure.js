@@ -19,7 +19,7 @@ const R = require("../web/runtime.js");
 const S = require("../skills.js");
 const A = require("../web/agent.js");
 
-const { skills, groups } = S.compile("skills", false);
+const { skills, groups, lexicon } = S.compile("skills", false);
 const manifest = JSON.parse(fs.readFileSync("data/manifest.json", "utf8"));
 const examples = manifest.train.flatMap(f => T.parseDataset(fs.readFileSync(f, "utf8")));
 const norm = t => t.toLowerCase().replace(/[?!.,]/g, "").split(/\s+/).filter(Boolean).join(" ");
@@ -45,7 +45,7 @@ function score(nlu, set, errs) {
   return dec;
 }
 
-const model = T.train(examples, { prune: 0.2, ...quiet });
+const model = T.train(examples, { prune: 0.2, lexicon, ...quiet });
 const nlu = new R.NLU(model);
 const seen = new Set(examples.map(e => norm(e.text)));
 const load = f => T.parseDataset(fs.readFileSync(f, "utf8")).filter(e => !seen.has(norm(e.text)) && skills[e.intent]);
@@ -69,7 +69,7 @@ if (args.includes("--cv")) {
   const dec = {}, errs = [];
   for (let k = 0; k < 5; k++) {
     const test = examples.filter(e => foldOf(e) === k);
-    const fn = new R.NLU(T.train(examples.filter(e => foldOf(e) !== k), { prune: 0.2, ...quiet }));
+    const fn = new R.NLU(T.train(examples.filter(e => foldOf(e) !== k), { prune: 0.2, lexicon, ...quiet }));
     const d = score(fn, test, errs);
     for (const [o, n] of Object.entries(d)) dec[o] = (dec[o] || 0) + n;
     process.stderr.write(`fold ${k + 1}/5\n`);

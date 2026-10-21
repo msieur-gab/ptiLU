@@ -13,8 +13,11 @@ const NLURuntime = (() => {
     return out;
   }
 
-  function intentFeatures(text) {
-    const toks = tokenize(text).map(t => t[0]).filter(t => WORD_RE.test(t)).map(t => t.toLowerCase());
+  // lex: word → family (skills/lexicon.md). A word of a family is read as the family's word, so
+  // examples that teach one word teach them all.
+  function intentFeatures(text, lex) {
+    const toks = tokenize(text).map(t => t[0]).filter(t => WORD_RE.test(t)).map(t => t.toLowerCase())
+      .map(t => (lex && lex[t]) || t);
     const feats = [];
     let prev = "<s>";
     for (const t of toks) {
@@ -100,8 +103,9 @@ const NLURuntime = (() => {
   }
 
   class NLU {
-    constructor(m) {
+    constructor(m, lexicon) {
       this.m = m;
+      this.lex = lexicon || m.lexicon || null; // a newer lexicon works without retraining
       this.vocab = new Map(m.vocab.map((f, i) => [f, i]));
       this.idf = f32(m.idf);
       this.nf = m.vocab.length;
@@ -110,7 +114,7 @@ const NLURuntime = (() => {
     }
     classify(text) {
       const counts = new Map();
-      for (const f of intentFeatures(text)) {
+      for (const f of intentFeatures(text, this.lex)) {
         const j = this.vocab.get(f);
         if (j !== undefined) counts.set(j, (counts.get(j) || 0) + 1);
       }

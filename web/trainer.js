@@ -54,8 +54,8 @@ const NLUTrainer = (() => {
   const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
   // ---------- intent: TF-IDF ----------
-  function tfidf(texts, minDf = 2) {
-    const docs = texts.map(t => { const c = new Map(); for (const f of intentFeatures(t)) c.set(f, (c.get(f) || 0) + 1); return c; });
+  function tfidf(texts, lex, minDf = 2) {
+    const docs = texts.map(t => { const c = new Map(); for (const f of intentFeatures(t, lex)) c.set(f, (c.get(f) || 0) + 1); return c; });
     const df = new Map();
     for (const d of docs) for (const f of d.keys()) df.set(f, (df.get(f) || 0) + 1);
     const vocab = [...df.keys()].filter(f => df.get(f) >= minDf).sort();
@@ -254,14 +254,14 @@ const NLUTrainer = (() => {
 
   // ---------- train + export ----------
   function train(examples, opts = {}) {
-    const { prune = 0.2, C = 8, c2 = 0.05, slotPrune = 0.2, slotIter = 150, log = () => {} } = opts;
+    const { prune = 0.2, C = 8, c2 = 0.05, slotPrune = 0.2, slotIter = 150, lexicon = null, log = () => {} } = opts;
     const t0 = now();
     const intents = [...new Set(examples.map(e => e.intent))].sort();
     const K = intents.length;
     const y = examples.map(e => intents.indexOf(e.intent));
     log(`${examples.length} sentences, ${K} intents`);
 
-    const { vocab, idf, rows } = tfidf(examples.map(e => e.text));
+    const { vocab, idf, rows } = tfidf(examples.map(e => e.text), lexicon);
     const nf = vocab.length;
     log(`intent features: ${nf}`);
     const lr = logreg(rows, y, K, nf, { C, onStep: (it, f) => log(`intent model: step ${it}, loss ${f.toFixed(1)}`) });
@@ -308,6 +308,7 @@ const NLUTrainer = (() => {
       format: 2,
       trainer: "js",
       intents,
+      lexicon,
       vocab: keep.map(j => vocab[j]),
       idf: b64(new Uint8Array(Float32Array.from(keep, j => idf[j]).buffer)),
       scale,

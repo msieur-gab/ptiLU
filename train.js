@@ -2,7 +2,7 @@
 // Trains the shipped model from the files listed in data/manifest.json. No dependencies.
 const fs = require("fs");
 const T = require("./web/trainer.js");
-require("./skills.js").compile(); // skills/*.md → data/skills.md + web/skills.json
+const { lexicon } = require("./skills.js").compile(); // skills/*.md → data/skills.md + web/skills.json
 const R = require("./web/runtime.js");
 
 const args = process.argv.slice(2);
@@ -13,7 +13,7 @@ const out = args.find(a => !a.startsWith("-")) || "models/model.json";
 const manifest = JSON.parse(fs.readFileSync("data/manifest.json", "utf8"));
 
 const examples = manifest.train.flatMap(f => T.parseDataset(fs.readFileSync(f, "utf8")));
-const model = T.train(examples, { prune, log: m => process.stdout.write("  " + m + "\n") });
+const model = T.train(examples, { prune, lexicon, log: m => process.stdout.write("  " + m + "\n") });
 // held-out: only test sentences that appear in no training file (same rule as retraining on the phone)
 const norm = t => t.toLowerCase().replace(/\?/g, "").split(/\s+/).filter(Boolean).join(" ");
 const seen = new Set(examples.map(e => norm(e.text)));
