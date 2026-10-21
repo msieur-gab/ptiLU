@@ -273,6 +273,21 @@
   Done. “salt” is now in your home folder.
   $ mkdir -p $HOME/salt
 
+> please create a new seed.md inside ideas folder
+  [create_file {"name":"seed.md","location":"ideas"}]
+  Created “seed.md” in ideas.
+  $ mkdir -p $HOME/ideas && touch $HOME/ideas/seed.md
+
+> make a new folder named seeds in the ideas folder
+  [create_folder {"name":"seeds"}]
+  Done. “seeds” is now in your home folder.
+  $ mkdir -p $HOME/seeds
+
+> create settings.json in this directory
+  [create_file {"name":"settings.json","location":"this directory"}]
+  Created “settings.json” in this.
+  $ mkdir -p $HOME/this && touch $HOME/this/settings.json
+
 > shut down
   [power {"power_action":"shut down"}]
   Shut down the device now? Say yes to confirm or no to cancel.

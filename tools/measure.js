@@ -38,7 +38,7 @@ function score(nlu, set, errs) {
   const dec = {}, agent = new A.Agent(nlu);
   for (const e of set) {
     agent.lastText = e.text; agent.pending = null;
-    const r = nlu.parse(e.text), o = outcome(e.intent, r, agent);
+    const r = agent.parse(e.text), o = outcome(e.intent, r, agent);
     dec[o] = (dec[o] || 0) + 1;
     if (errs && o !== "acted right" && o !== "abstained, right") errs.push(`  ${o.padEnd(18)} ${e.text}  (want ${e.intent}, got ${r.intent} ${r.confidence.toFixed(2)})`);
   }

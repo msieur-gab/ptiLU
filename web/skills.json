@@ -489,7 +489,8 @@
     "help": "create files (“new markdown file called notes”)",
     "samples": "12",
     "train_only": "fname, fext, type, loc",
-    "acts": "yes"
+    "acts": "yes",
+    "does": "create file"
    },
    "request": null,
    "answer": {},
@@ -657,7 +658,8 @@
     "help": "create folders (“make a folder called drafts in documents”)",
     "samples": "14",
     "train_only": "folder, loc",
-    "acts": "yes"
+    "acts": "yes",
+    "does": "create folder"
    },
    "request": null,
    "answer": {},
@@ -1303,7 +1305,8 @@
     "action": "run",
     "command": "{app} &",
     "samples": "16",
-    "acts": "yes"
+    "acts": "yes",
+    "does": "open app"
    },
    "request": null,
    "answer": {},
@@ -1482,7 +1485,8 @@
     "help": "open files and folders (“open budget.csv”)",
     "samples": "22",
     "train_only": "fname, fext, folder, loc",
-    "acts": "yes"
+    "acts": "yes",
+    "does": "open file folder"
    },
    "request": null,
    "answer": {},

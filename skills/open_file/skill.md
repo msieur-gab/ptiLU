@@ -4,6 +4,7 @@ help: open files and folders (“open budget.csv”)
 samples: 22
 train_only: fname, fext, folder, loc
 acts: yes
+does: open file folder
 ---
 # Open a file or folder
 

@@ -1566,7 +1566,8 @@ if (typeof module !== "undefined") module.exports = NLUServices;
     "help": "create files (“new markdown file called notes”)",
     "samples": "12",
     "train_only": "fname, fext, type, loc",
-    "acts": "yes"
+    "acts": "yes",
+    "does": "create file"
    },
    "request": null,
    "answer": {},
@@ -1734,7 +1735,8 @@ if (typeof module !== "undefined") module.exports = NLUServices;
     "help": "create folders (“make a folder called drafts in documents”)",
     "samples": "14",
     "train_only": "folder, loc",
-    "acts": "yes"
+    "acts": "yes",
+    "does": "create folder"
    },
    "request": null,
    "answer": {},
@@ -2380,7 +2382,8 @@ if (typeof module !== "undefined") module.exports = NLUServices;
     "action": "run",
     "command": "{app} &",
     "samples": "16",
-    "acts": "yes"
+    "acts": "yes",
+    "does": "open app"
    },
    "request": null,
    "answer": {},
@@ -2559,7 +2562,8 @@ if (typeof module !== "undefined") module.exports = NLUServices;
     "help": "open files and folders (“open budget.csv”)",
     "samples": "22",
     "train_only": "fname, fext, folder, loc",
-    "acts": "yes"
+    "acts": "yes",
+    "does": "open file folder"
    },
    "request": null,
    "answer": {},
@@ -3913,6 +3917,41 @@ function loadScript(name, sk) {
   return require(require("path").join(__dirname, "..", "skills", from, "skill.js"));
 }
 
+// Action + object (21 October). Skills that declare `does: <action> <object…>` share an action:
+// create_file and create_folder are both "create". The object is read from the sentence's shape,
+// not its words: the place ("inside the ideas folder") is set aside, then a name shaped like a file
+// ("seed.md"), an app's name, or the word folder / file decides. When that moves the sentence to a
+// sibling skill, its confidence is the model's score for the whole action (sure of "create", not of
+// which object). No cue, or the same skill: the model's reading stands.
+const DOES = Object.fromEntries(Object.entries(SKILLS).filter(([, s]) => s.params.does)
+  .map(([k, s]) => { const [action, ...objects] = s.params.does.trim().split(/\s+/); return [k, { action, objects }]; }));
+const PLACE_RE = /(^|\s+)(in|inside|into|under|within|on|to|from)\s+(this|that|the|my|a)?\s*(\S+\s+)?(folder|directory|dir)\b|\s+(in|inside|into|under|within|on|to|from)\s+.*$/gi;
+// strongest cue first: a name shaped like a file, then an app's name, then the words folder / file
+const FILE_SHAPE = /^[\w-]+\.[a-z0-9]{1,5}$/i, FOLDER_WORD = /^(folder|folders|directory|dir|subfolder)$/i, FILE_WORD = /^(file|document|doc)$/i;
+function objectOf(text, action) {
+  const head = text.replace(/["“][^"”]*["”]/g, m => m.includes(".") ? "x.md" : " ").replace(PLACE_RE, " ");
+  const ws = head.split(/\s+/).map(w => w.replace(/^["'“‘(]+|["'”’).,!?]+$/g, "")).filter(Boolean);
+  if (ws.some(w => FILE_SHAPE.test(w))) return "file";
+  const appSkill = Object.keys(DOES).find(k => DOES[k].action === action && DOES[k].objects.includes("app"));
+  const slot = appSkill && Object.values(SKILLS[appSkill].slots || {}).find(s => s.list);
+  // an app named as whole words ("the file manager"), never inside a name ("tmp_files")
+  if (slot && !ws.some(w => /[_]/.test(w)) && guessValue(SKILLS[appSkill].values[slot.list], ws.join(" "))) return "app";
+  for (const w of ws) { if (FOLDER_WORD.test(w)) return "folder"; if (FILE_WORD.test(w)) return "file"; }
+  return null;
+}
+function compose(nlu, r, text) {
+  const top = DOES[r.intent];
+  if (!top) return r;
+  const object = objectOf(text, top.action);
+  const target = object && Object.keys(DOES).find(k => DOES[k].action === top.action && DOES[k].objects.includes(object));
+  if (!target) return r;
+  if (target === r.intent) return Object.assign({}, r, { object });
+  // the object moved the sentence to a sibling skill: the model was sure of the action, not the object
+  const scores = nlu.classify(text);
+  const action = scores.filter(([k]) => DOES[k] && DOES[k].action === top.action).reduce((a, [, p]) => a + p, 0);
+  return Object.assign({}, r, { intent: target, confidence: action, object, composed: r.intent !== target ? r.intent + " → " + target : null });
+}
+
 // act, ask or abstain, from the model's reading alone. Below THRESHOLD, or out of scope: abstain.
 // A skill that changes something (acts: yes) asks first below SURE, unless it's about to ask for a
 // missing value anyway (nothing happens without that answer). tools/measure.js scores this same rule.
@@ -3946,8 +3985,9 @@ class Agent {
   handle(text) {
     const trace = [];
     this.lastText = text;
-    const r = this.nlu.parse(text);
+    const r = this.parse(text);
     trace.push({ type: "nlu", r });
+    if (r.composed) trace.push({ type: "state", text: "action " + DOES[r.intent].action + ", object " + r.object + " (from the sentence's shape): " + r.composed });
     const p = this.pending, t = text.trim();
     const no = NO_RE.test(t) || (r.intent === ROLE.no && r.confidence >= 0.5);
     const drop = why => { this.pending = null; trace.push({ type: "state", text: why }); };
@@ -4001,6 +4041,8 @@ class Agent {
     }
     return this.run(r.intent, r.slots, trace);
   }
+
+  parse(text) { return compose(this.nlu, this.nlu.parse(text), text); }
 
   // decide() for this sentence, knowing whether the skill would ask for a missing value
   decision(r) {

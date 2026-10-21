@@ -67,6 +67,10 @@ const CONVERSATIONS = [
   // several commands in one sentence
   ["i live in munich and my name is gab"],
   ["make a folder called salt and pepper"],
+  // action + object: the object comes from the sentence's shape, the place is set aside
+  ["please create a new seed.md inside ideas folder"],
+  ["make a new folder named seeds in the ideas folder"],
+  ["create settings.json in this directory"],
   // the rest of the original skills
   ["shut down", "yes"],
   ["restart the pi", "no"],

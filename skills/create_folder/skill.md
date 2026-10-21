@@ -4,6 +4,7 @@ help: create folders (“make a folder called drafts in documents”)
 samples: 14
 train_only: folder, loc
 acts: yes
+does: create folder
 ---
 # Create a folder
 

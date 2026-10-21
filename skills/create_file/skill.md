@@ -4,6 +4,7 @@ help: create files (“new markdown file called notes”)
 samples: 12
 train_only: fname, fext, type, loc
 acts: yes
+does: create file
 ---
 # Create a file
 

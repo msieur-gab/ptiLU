@@ -85,6 +85,8 @@ section in both, and on a reply that uses a `{value}` that is no slot and no Ans
 ---
 skill: set_reminder
 acts: yes            # it changes something: when the model isn't clearly sure, ask “Do you want…?” first
+does: create file    # optional: action + object(s). Skills sharing an action are told apart by the
+                     # sentence's shape (a file name, an app name, the word folder), not by the model
 uses: network        # only for skills that can't answer anything offline (get_weather)
 ---
 ## Slots

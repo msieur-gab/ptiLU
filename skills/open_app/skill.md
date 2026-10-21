@@ -5,6 +5,7 @@ action: run
 command: "{app} &"
 samples: 16
 acts: yes
+does: open app
 ---
 # Open an app
 

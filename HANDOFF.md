@@ -194,3 +194,21 @@ outside ptiLU.
 All merged into `main`, safe to delete (their commits are all on `main`): `time-skills`, `js-trainer`, `inbox`,
 `skill-files`, `multi-intent`, `core-split`, `place-names`, `dates`, `typed-slots`,
 `inbox-slots`, `time-values`, `cleanup`.
+
+## Action + object (21 October, evening, branch `action-object`, from `main-fixes`)
+
+Gab had asked since 20 October for action + intent + slot; it was dismissed on 15 October by an
+estimate and never tried. Tried now, smallest form: `does: create file` in a skill's front matter.
+Skills that share an action are told apart by the sentence's shape (a name like seed.md, an app's
+name, the word folder / file, with the place "inside the ideas folder" set aside), not by the model.
+About 40 lines in `web/agent.js` (`compose`, `objectOf`); the model and training are unchanged.
+
+Measured with `tools/measure.js --cv --group` against `main-fixes` (same folds), and on
+`data/probes-files.md` (24 handwritten sentences written before the change):
+- file / folder probes: acted right 18 → 20, asked about the wrong skill 3 → 0.
+- grouped CV: silent wrong actions 34 → 32 (none new; settings.json and styles.css fixed),
+  asked about the wrong skill 53 → 42. Held-out, boundary and other probes unchanged.
+- "please create a new seed.md inside ideas folder" → create_file, seed.md in ideas.
+
+Found behind it, not fixed (values, not routing): "make a new folder named seeds in the ideas
+folder" loses the location; "create settings.json in this directory" makes a folder called "this".
