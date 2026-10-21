@@ -2,10 +2,11 @@
 import math
 import re
 
-TOKEN_RE = re.compile(r"[A-Za-z0-9_](?:[A-Za-z0-9_.\-]*[A-Za-z0-9_])?|[^\sA-Za-z0-9_]")
-WORD_RE = re.compile(r"^[A-Za-z0-9_]")
+# letters of any alphabet, as web/runtime.js: "Kraków", "Tübingen" are one word each
+TOKEN_RE = re.compile(r"\w(?:[\w.\-]*\w)?|[^\s\w]")
+WORD_RE = re.compile(r"^\w")
 QUOTES = set("'\"‘’“”`")
-ALNUM = re.compile(r"[A-Za-z0-9]")
+ALNUM = re.compile(r"[^\W_]")
 EXT_RE = re.compile(r"[a-z0-9_]\.[a-z0-9]{1,5}$")
 
 

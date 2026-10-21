@@ -1,8 +1,9 @@
 // Dependency-free NLU runtime. Mirrors nlu/features.py + nlu/runtime.py exactly.
 const NLURuntime = (() => {
-  const TOKEN_RE = /[A-Za-z0-9_](?:[A-Za-z0-9_.\-]*[A-Za-z0-9_])?|[^\sA-Za-z0-9_]/g;
-  const WORD_RE = /^[A-Za-z0-9_]/;
-  const ALNUM = /^[A-Za-z0-9]/;
+  // letters of any alphabet: "Kraków", "Tübingen" are one word each (they were cut at ó and ü)
+  const TOKEN_RE = /[\p{L}\p{N}_](?:[\p{L}\p{N}_.\-]*[\p{L}\p{N}_])?|[^\s\p{L}\p{N}_]/gu;
+  const WORD_RE = /^[\p{L}\p{N}_]/u;
+  const ALNUM = /^[\p{L}\p{N}]/u;
   const EXT_RE = /[a-z0-9_]\.[a-z0-9]{1,5}$/;
   const QUOTES = new Set(["'", '"', "‘", "’", "“", "”", "`"]);
 

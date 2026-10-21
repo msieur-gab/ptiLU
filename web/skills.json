@@ -500,7 +500,7 @@
      "{file} created in {where}."
     ],
     "default_type": [
-     "You didn't say which type, so I made a plain text file."
+     "You didn't say which type, so I made a Markdown file."
     ],
     "ask_name": [
      "What should I call the file?",

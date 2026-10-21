@@ -1,10 +1,10 @@
 // Dialogue core. It knows no skill by name: it routes what the model understood to the skill
-// folders (skills/<name>/), keeps the conversation going (missing values, confirmations, choices,
-// several commands in one sentence) and hands each skill a toolbox (ctx) of shared services.
+// folders (skills/<name>/), keeps the conversation going (missing values, confirmations, choices)
+// and hands each skill a toolbox (ctx) of shared services. One command per sentence.
 // Commands are simulated: the trace shows what would run on the device.
 
 const THRESHOLD = 0.45;        // below this the agent abstains
-const SURE = 0.7;              // below this, a skill that acts asks first, and a sentence isn't split into commands
+const SURE = 0.7;              // below this, a skill that acts asks first
 const ENT = typeof NLUEntities !== "undefined" ? NLUEntities : require("./entities.js");
 const SV = typeof NLUServices !== "undefined" ? NLUServices : require("./services.js");
 const SKILLS = (typeof SKILLS_DATA !== "undefined" ? SKILLS_DATA : require("./skills.json")).skills;
@@ -70,6 +70,16 @@ function loadScript(name, sk) {
   return require(require("path").join(__dirname, "..", "skills", from, "skill.js"));
 }
 
+// act, ask or abstain, from the model's reading alone. Below THRESHOLD, or out of scope: abstain.
+// A skill that changes something (acts: yes) asks first below SURE, unless it's about to ask for a
+// missing value anyway (nothing happens without that answer). tools/measure.js scores this same rule.
+function decide(r, missing = false) {
+  if (r.confidence < THRESHOLD || r.intent === ROLE.fallback) return "abstain";
+  const sk = SKILLS[r.intent];
+  if (sk && sk.params.acts === "yes" && r.confidence < SURE && !missing) return "ask";
+  return "act";
+}
+
 class Agent {
   constructor(nlu, store) {
     this.nlu = nlu;
@@ -78,7 +88,7 @@ class Agent {
     this.reset();
   }
   reset() {
-    this.pending = null; this.queue = null; this.levels = {};
+    this.pending = null; this.levels = {};
     for (const t of this.timers || []) clearTimeout(t);
     this.timers = [];
   }
@@ -89,73 +99,15 @@ class Agent {
     if (this.onAlert && ms > 0 && ms < 2 ** 31 - 1) this.timers.push(setTimeout(() => this.onAlert(message), ms));
   }
 
-  // ---------- several commands in one sentence ----------
-  // Split on and / then / ; only when every part is confidently a command on its own, so
-  // "a folder called salt and pepper" stays whole. A part without a verb borrows the previous one.
-  splitCommands(text) {
-    if (this.pending) return null;
-    const parts = text.split(/\s*(?:,\s*)?\b(?:and then|and also|then|and)\b\s*|\s*;\s*/i).map(p => p.trim()).filter(Boolean);
-    if (parts.length < 2 || parts.length > 4) return null;
-    const ok = r => ACTIONABLE.has(r.intent) && r.confidence >= SURE;
-    const rs = parts.map(p => this.nlu.parse(p));
-    for (let i = 1; i < parts.length; i++) {
-      if (ok(rs[i])) continue;
-      const verb = parts[i - 1].split(/\s+/)[0];
-      const r = this.nlu.parse(verb + " " + parts[i]);
-      if (ok(r) && r.intent === rs[i - 1].intent) { parts[i] = verb + " " + parts[i]; rs[i] = r; }
-    }
-    if (!rs.every(ok)) return null;
-    // one skill with all its values in the whole sentence ("I live in Munich and my name is Gab"): keep it whole
-    const whole = this.nlu.parse(text);
-    if (rs.every(r => r.intent === whole.intent) && Object.keys(whole.slots).length >= rs.reduce((n, r) => n + Object.keys(r.slots).length, 0)) return null;
-    return parts;
-  }
-
-  handle(text) {
-    const parts = this.splitCommands(text);
-    if (parts) return this.runSequence(parts, text);
-    this.dropQueue = false;
-    const out = this.handleOne(text);
-    if (this.queue && !this.pending) { // an answer to a question asked mid-sequence: carry on
-      const rest = this.queue;
-      this.queue = null;
-      if (!this.dropQueue) return this.runSequence(rest, text, out);
-      out.trace.push({ type: "state", text: "dropped the rest: " + rest.map(p => "“" + p + "”").join(", ") });
-    }
-    return out;
-  }
-
-  runSequence(parts, text, first = null) {
-    const outs = first ? [first] : [];
-    let i = 0;
-    for (; i < parts.length; i++) {
-      outs.push(this.handleOne(parts[i]));
-      if (this.pending) { i++; break; } // a part asked a question: the rest waits for the answer
-    }
-    this.queue = i < parts.length ? parts.slice(i) : null;
-    const trace = [{ type: "nlu", r: first ? first.trace[0].r : this.nlu.parse(text) },
-      { type: "state", text: (first ? "answer received, continuing with " : "split into commands: ") + parts.map(p => "“" + p + "”").join(" + ") }];
-    outs.forEach((o, k) => {
-      trace.push({ type: "state", text: "→ " + (k + 1) + ". " + o.trace[0].r.intent + " " + o.trace[0].r.confidence.toFixed(2) });
-      trace.push(...o.trace.slice(1));
-    });
-    if (this.queue) trace.push({ type: "state", text: "waiting for an answer; then: " + this.queue.map(p => "“" + p + "”").join(", ") });
-    const reply = outs.map(o => o.reply).join("\n");
-    if (!outs.some(o => o.later)) return { trace, reply };
-    const later = Promise.all(outs.map(o => o.later || Promise.resolve({ reply: o.reply, trace: [] })))
-      .then(rs => ({ reply: rs.map(r => r.reply).join("\n"), trace: rs.flatMap(r => r.trace || []) }));
-    return { trace, reply, later };
-  }
-
   // ---------- one command, or the answer to a question ----------
-  handleOne(text) {
+  handle(text) {
     const trace = [];
     this.lastText = text;
     const r = this.nlu.parse(text);
     trace.push({ type: "nlu", r });
     const p = this.pending, t = text.trim();
     const no = NO_RE.test(t) || (r.intent === ROLE.no && r.confidence >= 0.5);
-    const drop = why => { this.dropQueue = true; this.pending = null; trace.push({ type: "state", text: why }); };
+    const drop = why => { this.pending = null; trace.push({ type: "state", text: why }); };
 
     if (p && p.type === "confirm") {
       this.pending = null;
@@ -188,8 +140,9 @@ class Agent {
       else return this.answer(p, r, text, trace);
     }
 
-    const low = r.confidence < THRESHOLD;
-    if (low || r.intent === ROLE.fallback) {
+    const d = this.decision(r);
+    if (d === "abstain") {
+      const low = r.confidence < THRESHOLD;
       trace.push({ type: "abstain", text: low ? "confidence " + r.confidence.toFixed(2) + " < " + THRESHOLD + ", abstaining" : "out of scope, no action" });
       return { trace, reply: fill(has(ROLE.fallback + ".say") ? ROLE.fallback + ".say" : "fallback"), unknown: true };
     }
@@ -198,15 +151,18 @@ class Agent {
       trace.push({ type: "state", text: "learned skill " + r.intent + ", no skill folder" });
       return { trace, reply: fill("learned", { intent: r.intent.replace(/_/g, " "), got: got ? " (" + got + ")" : "" }) };
     }
-    // a skill that changes something (acts: yes) asks first when the model isn't clearly sure,
-    // unless it's about to ask for a missing value anyway (nothing happens without that answer)
-    const sk = SKILLS[r.intent];
-    if (sk.params.acts === "yes" && r.confidence < SURE && !(sk.slots && this.fillSlots(sk, r.slots, []).ask)) {
+    if (d === "ask") {
       this.pending = { type: "confirm", intent: r.intent, slots: r.slots, what: r.intent, sentence: text };
       trace.push({ type: "state", text: "confidence " + r.confidence.toFixed(2) + " < " + SURE + " for " + r.intent + ", which acts: asking first" });
       return { trace, reply: fill(has(r.intent + ".unsure") ? r.intent + ".unsure" : "unsure", { what: doing(SKILLS[r.intent]) }) };
     }
     return this.run(r.intent, r.slots, trace);
+  }
+
+  // decide() for this sentence, knowing whether the skill would ask for a missing value
+  decision(r) {
+    const sk = SKILLS[r.intent];
+    return decide(r, !!(sk && sk.slots && this.fillSlots(sk, r.slots, []).ask));
   }
 
   // Skills taught in the inbox ({ name: { answer, slots, needed } }) answer like a skill.md with
@@ -450,4 +406,4 @@ class Agent {
   setSecret(k, v) { SV.secrets.set(this.store, this, k, v); }
   setMem(m) { SV.me.set(this.store, this, m); }
 }
-if (typeof module !== "undefined") module.exports = { Agent };
+if (typeof module !== "undefined") module.exports = { Agent, decide };

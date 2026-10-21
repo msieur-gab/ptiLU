@@ -268,40 +268,6 @@
   → Nice to meet you, Gab. I'll remember your name, on this phone only. Found it: Munich, Bavaria, Germany. Saved on this phone, I'll use it for the weather and the time.
   $ GET geocoding-api.open-meteo.com/v1/search?name=munich
 
-> open the terminal and set a timer for 10 minutes
-  [set_timer {"app":"terminal"} · duration 10 min]
-  Opening the terminal.
-Timer set for 10 minutes. It rings at 20:24.
-  $ x-terminal-emulator & | systemd-run --user --on-active=600s notify-send Timer '10 minutes is up'
-
-> open the terminal and the browser
-  [open_app {"app":"terminal"}]
-  Opening the terminal.
-Opening the browser.
-  $ x-terminal-emulator & | x-www-browser &
-
-> set a timer and open firefox
-  [open_app {"app":"firefox"}]
-  How long? For example “10 minutes” or “1h30”.
-> 10 minutes
-  [set_timer · duration 10 min]
-  Timer set for 10 minutes. It rings at 20:24.
-Opening the Firefox browser.
-  $ systemd-run --user --on-active=600s notify-send Timer '10 minutes is up' | firefox &
-
-> set a timer and open firefox
-  [open_app {"app":"firefox"}]
-  How long? For example “10 minutes” or “1h30”.
-> cancel
-  [deny]
-  Cancelled.
-
-> create a folder called reports and open the browser
-  [create_folder {"name":"reports","app":"browser"}]
-  Done. “reports” is now in your home folder.
-Opening the browser.
-  $ mkdir -p $HOME/reports | x-www-browser &
-
 > make a folder called salt and pepper
   [create_folder {"name":"salt"}]
   Done. “salt” is now in your home folder.
@@ -441,8 +407,8 @@ Uptime: 3 hours 12 minutes.
 
 > new file called notes
   [create_file {"name":"notes"}]
-  Created “notes.txt” in your home folder. You didn't say which type, so I made a plain text file.
-  $ mkdir -p $HOME && touch $HOME/notes.txt
+  Created “notes.md” in your home folder. You didn't say which type, so I made a Markdown file.
+  $ mkdir -p $HOME && touch $HOME/notes.md
 
 > touch todo.txt
   [create_file {"name":"todo.txt"}]
@@ -512,7 +478,7 @@ Uptime: 3 hours 12 minutes.
   [send_to_phone]
   What should I send to your phone?
 > I love Cookie 🍪
-  [out_of_scope {"text":"Cookie 🍪"}]
+  [out_of_scope {"name":"Cookie 🍪"}]
   Sending it to your phone…
   → Sent to your phone: “I love Cookie 🍪”.
   $ POST ntfy.sh/ {"topic":"•••","title":"ptiLU","message":"I love Cookie 🍪"}
