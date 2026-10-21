@@ -137,7 +137,6 @@
 - how many files are in documents
 - tell me about yourself
 - can you code a website
-- move the photos to the archive
 - what's the meaning of life
 - show my calendar
 - close all windows
@@ -148,6 +147,10 @@
 - close the browser
 - shut the door please
 - my laptop has no space
+
+## intent: move_file
+<!-- was out of scope until the move skills (20 October) -->
+- move the [photos](name) to the [archive](location)
 
 ## intent: get_time
 - hey what's the time

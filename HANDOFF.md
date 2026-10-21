@@ -189,6 +189,46 @@ outside ptiLU.
   by `acts: yes` and one threshold (0.7, the same one that decides splitting a sentence).
 - **Several commands per sentence:** keep, don't extend (source of the "salt and pepper" gap).
 
+## Act, ask or "I can't" (21 October, branch `act-ask-cant`, from `value-types`)
+
+**Why errors wouldn't go down.** The model counts evidence for a skill, never against: words
+it doesn't know are ignored (TF-IDF is normalised over known words only). "xyzzy flurb remind
+me plonk" → set_reminder 0.99. Its confidence says which skill wins, not whether it
+understood, so no threshold separates the two. out_of_scope, trained as a skill, only learns
+the look-alikes written for it. And random cross-validation tests sentences against their twins
+from the same example line: holding out whole lines doubles the abstentions (value-types
+293 → 703), and main and value-types sit on the same curve (2.5% confident mistakes each).
+More contrast lines mostly trade abstentions for false yeses.
+
+**The rule.** A skill with `acts: yes` acts only when the model is ≥ 0.45 sure *and* every
+word that isn't a value (slot tag or date) is a word that skill's examples use, grammar words
+aside. Otherwise it asks, naming the word: "I don't know “pepper” yet. Do you want me to
+create folders?"; below 0.25 it can't. Skills that only answer act at 0.45 or abstain. Authored
+`ask:` replies come first: no question when a value is missing anyway. Matching an example
+line exactly acts at once. Asked sentences go to the inbox.
+- `web/trainer.js` stores each skill's words in the model (`known`, +34 KB → 443 KB); older
+  models have none and the rule is off. `web/runtime.js` `unknownWords()`, `web/agent.js`
+  `decide()` (one function, also used by `tools/measure.js`).
+- `tools/measure.js --group`: folds by example line; every set reports the decisions.
+- `data/test.md`: "move the photos to the archive" is move_file now (was out of scope).
+- Dialogue test: one reply changed ("salt and pepper" now asks instead of creating "salt").
+
+**Numbers** (`node tools/measure.js . skills/lexicon.md --templates --cv --group`):
+
+| | acted right | acted wrong | answered wrong | asked (right skill) | can't, right / missed |
+|---|---|---|---|---|---|
+| held-out (162) | 130 | 0 | 2 | 13 (12) | 17 / 0 |
+| boundary (64) | 40 | 0 | 0 | 12 (9) | 8 / 4 |
+| actions probes (21) | 18 | 0 | 0 | 3 (3) | 0 / 0 |
+| CV by example line (7,108) | 5,121 | 24 (0.3%) | 89 (1.3%) | 965 (776) | 358 / 551 |
+
+Before, on the same strict CV: 178 confident mistakes (2.5%), none of them asked first.
+Measure from now on: acted wrong (target ≤ 1%), questions, can't-missed. Teaching words
+lowers the questions.
+
+**Open:** the Python runtime ignores `known` (it has no dialogue yet); value typing on its
+own was not measured; "answered wrong" is mostly get_date ↔ get_weather and help ↔ recall_me.
+
 ## Branches
 
 All merged into `main`, safe to delete (their commits are all on `main`): `time-skills`, `js-trainer`, `inbox`,

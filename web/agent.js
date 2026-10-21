@@ -3,8 +3,14 @@
 // several commands in one sentence) and hands each skill a toolbox (ctx) of shared services.
 // Commands are simulated: the trace shows what would run on the device.
 
-const THRESHOLD = 0.45;        // below this the agent abstains
-const SURE = 0.7;              // below this, a skill that acts asks first, and a sentence isn't split into commands
+// Act, ask or "I can't": a skill that changes something (acts: yes) acts only when the model is
+// sure enough AND every word that isn't a value is a word the skill was taught. Otherwise it asks
+// "Do you want me to …?" first, and below ASK the agent says it can't. The model only counts evidence for a skill, never against:
+// words it doesn't know are invisible to it, so its confidence alone can't tell "I understood"
+// from "I recognised one word" (claude/diagnosis.md, 21 October).
+const THRESHOLD = 0.45;        // at or above this, with no unknown word, the agent acts
+const ASK = 0.25;              // below this a skill that acts abstains (one that answers: below THRESHOLD)
+const SURE = 0.7;              // below this a sentence isn't split into commands
 const ENT = typeof NLUEntities !== "undefined" ? NLUEntities : require("./entities.js");
 const SV = typeof NLUServices !== "undefined" ? NLUServices : require("./services.js");
 const SKILLS = (typeof SKILLS_DATA !== "undefined" ? SKILLS_DATA : require("./skills.json")).skills;
@@ -28,6 +34,22 @@ function templateIntent(text) {
   return hits.size === 1 ? [...hits][0] : null;
 }
 
+// act, ask or can't (see THRESHOLD above); tools/measure.js scores the same decision. Only a
+// skill that changes something (acts: yes) asks: one that answers (time, weather, hello) answers
+// at THRESHOLD or abstains, and a wrong answer shows what it understood.
+function decide(nlu, r, text, missing = false) {
+  if (r.intent === ROLE.fallback) return { act: "cant", why: "out of scope, no action" };
+  const acts = SKILLS[r.intent] && SKILLS[r.intent].params.acts === "yes";
+  const floor = acts ? ASK : THRESHOLD;
+  if (r.confidence < floor) return { act: "cant", why: "confidence " + r.confidence.toFixed(2) + " < " + floor + ", abstaining" };
+  // no question when the skill is about to ask for a missing value anyway: nothing happens without the answer
+  const unknown = r.template || !acts || missing ? [] : nlu.unknownWords(text, r.intent, r.labels, dateSpans(text));
+  if (unknown.length) return { act: "ask", unknown, why: unknown.map(w => "“" + w + "”").join(", ") + " never taught to " + r.intent + ": asking first" };
+  if (r.confidence < THRESHOLD && !missing) return { act: "ask", unknown, why: "confidence " + r.confidence.toFixed(2) + " < " + THRESHOLD + ": asking first" };
+  return { act: "act", unknown };
+}
+const dateSpans = text => { try { return ENT.parse(text).filter(e => e.start != null).map(e => [e.start, e.end]); } catch (e) { return []; } };
+
 // the dialogue's own replies; every skill brings its own as "<skill>.<name>"
 const RESPONSES = {
   cancel: ["Cancelled.", "OK, I dropped it."],
@@ -37,6 +59,7 @@ const RESPONSES = {
   learned: ["I recognise this as “{intent}”{got}, but no action is set up for it yet."],
   network: ["I need a network connection to {what}."],
   unsure: ["Do you want me to {what}?"],
+  new_words: ["I don't know {words} yet."],
   wait: ["One moment…"],
 };
 for (const [name, sk] of Object.entries(SKILLS)) for (const [k, v] of Object.entries(sk.replies)) RESPONSES[name + "." + k] = v;
@@ -202,9 +225,10 @@ class Agent {
       else return this.answer(p, r, text, trace);
     }
 
-    const low = r.confidence < THRESHOLD;
-    if (low || r.intent === ROLE.fallback) {
-      trace.push({ type: "abstain", text: low ? "confidence " + r.confidence.toFixed(2) + " < " + THRESHOLD + ", abstaining" : "out of scope, no action" });
+    const sk = SKILLS[r.intent];
+    const d = decide(this.nlu, r, text, !!(sk && sk.slots && this.fillSlots(sk, r.slots, []).ask));
+    if (d.act === "cant") {
+      trace.push({ type: "abstain", text: d.why });
       return { trace, reply: fill(has(ROLE.fallback + ".say") ? ROLE.fallback + ".say" : "fallback"), unknown: true };
     }
     if (!SKILLS[r.intent]) { // taught through the inbox: recognised, but no skill folder does it yet
@@ -212,13 +236,11 @@ class Agent {
       trace.push({ type: "state", text: "learned skill " + r.intent + ", no skill folder" });
       return { trace, reply: fill("learned", { intent: r.intent.replace(/_/g, " "), got: got ? " (" + got + ")" : "" }) };
     }
-    // a skill that changes something (acts: yes) asks first when the model isn't clearly sure,
-    // unless it's about to ask for a missing value anyway (nothing happens without that answer)
-    const sk = SKILLS[r.intent];
-    if (sk.params.acts === "yes" && r.confidence < SURE && !(sk.slots && this.fillSlots(sk, r.slots, []).ask)) {
+    if (d.act === "ask") {
       this.pending = { type: "confirm", intent: r.intent, slots: r.slots, what: r.intent, sentence: text };
-      trace.push({ type: "state", text: "confidence " + r.confidence.toFixed(2) + " < " + SURE + " for " + r.intent + ", which acts: asking first" });
-      return { trace, reply: fill(has(r.intent + ".unsure") ? r.intent + ".unsure" : "unsure", { what: doing(SKILLS[r.intent]) }) };
+      trace.push({ type: "state", text: d.why });
+      const ask = fill(has(r.intent + ".unsure") ? r.intent + ".unsure" : "unsure", { what: doing(SKILLS[r.intent]) });
+      return { trace, reply: (d.unknown.length ? fill("new_words", { words: d.unknown.map(w => "“" + w + "”").join(", ") }) + " " : "") + ask, unknown: true };
     }
     return this.run(r.intent, r.slots, trace);
   }
@@ -470,4 +492,4 @@ class Agent {
   setSecret(k, v) { SV.secrets.set(this.store, this, k, v); }
   setMem(m) { SV.me.set(this.store, this, m); }
 }
-if (typeof module !== "undefined") module.exports = { Agent, templateIntent };
+if (typeof module !== "undefined") module.exports = { Agent, templateIntent, decide };

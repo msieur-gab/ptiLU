@@ -303,6 +303,15 @@ const NLUTrainer = (() => {
     const tag = crf(seqs, labels, { c2, keep: slotPrune, maxIter: slotIter, onStep: (it, f) => log(`slot model: step ${it}, loss ${f.toFixed(1)}`) });
     const tSlots = now() - t1;
 
+    // the words each skill was taught, its values aside: the agent acts only when every other word
+    // of a sentence is one of them, and asks first otherwise (web/agent.js)
+    const known = {};
+    for (const e of examples) {
+      const words = known[e.intent] || (known[e.intent] = new Set());
+      for (const [t, s, end] of tokenize(e.text))
+        if (/^[A-Za-z]/.test(t) && !e.spans.some(([a, b]) => s >= a && end <= b)) words.add((lexicon && lexicon[t.toLowerCase()]) || t.toLowerCase());
+    }
+
     const model = {
       version: (d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`)(new Date()),
       format: 2,
@@ -317,6 +326,7 @@ const NLUTrainer = (() => {
       labels,
       state: tag.state,
       trans: tag.trans,
+      known: Object.fromEntries(Object.entries(known).map(([k, s]) => [k, [...s].sort().join(" ")])),
       stats: { examples: examples.length, features: keep.length, weights_kept: kept, weights_total: K * nf,
         prune, slot_prune: slotPrune, lbfgs_iterations: lr.iterations, slot_iterations: tag.iterations, train_seconds: Math.round((tIntent + tSlots) / 100) / 10,
         intent_seconds: Math.round(tIntent / 100) / 10, slot_seconds: Math.round(tSlots / 100) / 10 },

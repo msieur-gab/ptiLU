@@ -5,6 +5,12 @@ const NLURuntime = (() => {
   const ALNUM = /^[A-Za-z0-9]/;
   const EXT_RE = /[a-z0-9_]\.[a-z0-9]{1,5}$/;
   const QUOTES = new Set(["'", '"', "‘", "’", "“", "”", "`"]);
+  // words that carry no request on their own: an unknown one never makes the agent ask
+  const GRAMMAR = new Set(("a an the this that these those my your our its it me i you we us he she they them " +
+    "to in into inside on onto at for from with within about of by as up out off over under " +
+    "and or but so then also just please can could would will shall do does is are was be am " +
+    "some any all there here now s t m ll re ve d " +
+    "hi hey hello ok okay well oh thanks thank yes yeah").split(" "));
 
   function tokenize(text) {
     const out = [];
@@ -115,6 +121,15 @@ const NLURuntime = (() => {
       this.nf = m.vocab.length;
       this.coef = m.format === 2 ? unpack(m, this.nf) : f32(m.coef);
       this.L = m.labels.length;
+      this.known = m.known ? Object.fromEntries(Object.entries(m.known).map(([k, w]) => [k, new Set(w.split(" "))])) : null;
+    }
+    // words of a sentence the skill was never taught, leaving out values (tagged by the slot
+    // model, or in `skip` spans such as dates) and grammar words. An older model has no word lists.
+    unknownWords(text, intent, labels, skip = []) {
+      const k = this.known && this.known[intent];
+      if (!k) return [];
+      return tokenize(text).filter(([t, s, e], i) => WORD_RE.test(t) && !/^\d/.test(t) && (!labels || labels[i] === "O") && !skip.some(([a, b]) => s >= a && e <= b))
+        .map(([t]) => t.toLowerCase()).filter(w => !GRAMMAR.has(w) && !k.has((this.lex && this.lex[w]) || w));
     }
     classify(text) {
       const counts = new Map();

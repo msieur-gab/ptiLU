@@ -98,10 +98,10 @@
   [set_reminder {"task":"send the invoice"}]
   When should I remind you?
 > next week
-  [get_weather · range 2026-10-19/2026-10-25]
+  [move_event · range 2026-10-19/2026-10-25]
   Next week runs from Monday 19 October to Sunday 25 October. Which day?
 > wednesday at 10am
-  [out_of_scope · datetime 2026-10-14T10:00]
+  [move_event · datetime 2026-10-14T10:00]
   I'll remind you to send the invoice on Wednesday 14 October at 10:00.
   $ systemd-run --user --on-calendar="2026-10-14 10:00:00" notify-send Reminder 'send the invoice'
 
@@ -167,7 +167,7 @@
   [get_weather]
   Which city? Tip: say “I live in …” and I'll remember it for next time.
 > Munich
-  [out_of_scope {"place":"Munich"}]
+  [show_map {"place":"Munich"}]
   Checking the weather for Munich…
   → Munich right now: overcast, 11°C, wind 10 km/h.
   $ GET api.open-meteo.com/v1/forecast?latitude=48.13743&longitude=11.57549&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=16
@@ -304,8 +304,7 @@ Opening the browser.
 
 > make a folder called salt and pepper
   [create_folder {"name":"salt"}]
-  Done. “salt” is now in your home folder.
-  $ mkdir -p $HOME/salt
+  I don't know “pepper” yet. Do you want me to create folders?
 
 > shut down
   [power {"power_action":"shut down"}]
@@ -430,7 +429,7 @@ Uptime: 3 hours 12 minutes.
   [create_folder]
   What should I call the folder?
 > drafts in documents
-  [create_file {"name":"drafts","location":"documents"}]
+  [move_file {"name":"drafts","location":"documents"}]
   Done. “drafts” is now in Documents.
   $ mkdir -p $HOME/Documents/drafts
 
@@ -488,7 +487,7 @@ Uptime: 3 hours 12 minutes.
   [send_to_phone {"text":"buy milk"}]
   Which ntfy topic should I send to? Subscribe to it in the ntfy app first; I'll keep it on this device.
 > gab-workshop-7f3
-  [out_of_scope]
+  [affirm]
   Sending it to your phone…
   → Sent to your phone: “buy milk”.
   $ POST ntfy.sh/ {"topic":"•••","title":"ptiLU","message":"buy milk"}
@@ -503,7 +502,7 @@ Uptime: 3 hours 12 minutes.
   [send_to_phone]
   What should I send to your phone?
 > check the oven
-  [system_status]
+  [out_of_scope]
   Sending it to your phone…
   → Sent to your phone: “check the oven”.
   $ POST ntfy.sh/ {"topic":"•••","title":"ptiLU","message":"check the oven"}
@@ -512,7 +511,7 @@ Uptime: 3 hours 12 minutes.
   [send_to_phone]
   What should I send to your phone?
 > I love Cookie 🍪
-  [out_of_scope {"text":"Cookie 🍪"}]
+  [out_of_scope {"name":"Cookie 🍪"}]
   Sending it to your phone…
   → Sent to your phone: “I love Cookie 🍪”.
   $ POST ntfy.sh/ {"topic":"•••","title":"ptiLU","message":"I love Cookie 🍪"}

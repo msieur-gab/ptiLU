@@ -1,6 +1,11 @@
-// node tools/measure.js . skills/lexicon.md [--cv] [--probes file.md ...] [--types replace|add|places|folders] [--show file.md] [--errors out.tsv] [--predictions out.tsv] [--templates]
+// node tools/measure.js . skills/lexicon.md [--cv] [--group] [--probes file.md ...] [--types replace|add|places|folders] [--show file.md] [--errors out.tsv] [--predictions out.tsv] [--templates]
 // Held-out, boundary and extra probes (intent only, with errors listed), and optionally
 // 5-fold cross-validation over the training sentences: abstained / false yes / wrong skill.
+// --group: cross-validation holds out whole example lines (all sentences one line made), so a
+// sentence is never tested against its twin; random folds hide about half the abstentions.
+// Each set also gets the agent's own decision (web/agent.js decide): acted right, acted wrong
+// (a skill that changes something did the wrong thing without asking: the number that matters),
+// answered wrong (a skill that only answers), asked (right / wrong skill), can't (right / missed).
 const path = require("path");
 const fs = require("fs");
 const repo = path.resolve(process.argv[2]);
@@ -110,6 +115,17 @@ if (args.includes("--collide")) { // training sentences that look the same to th
 }
 
 const evalPreds = [];
+const A = require(path.join(repo, "web/agent.js"));
+const SK = JSON.parse(fs.readFileSync("web/skills.json", "utf8")).skills;
+const acts = k => SK[k] && SK[k].params.acts === "yes";
+function outcome(want, r, nlu, text) {
+  const d = A.decide(nlu, r, text);
+  if (d.act === "act") return r.intent === want ? "acted right" : acts(r.intent) ? "ACTED WRONG" : "answered wrong";
+  if (d.act === "ask") return r.intent === want ? "asked, right skill" : "asked, wrong skill";
+  return want === "out_of_scope" ? "can't, right" : "can't, missed";
+}
+const ORDER = ["acted right", "ACTED WRONG", "answered wrong", "asked, right skill", "asked, wrong skill", "can't, right", "can't, missed"];
+const decisions = c => ORDER.filter(k => c[k]).map(k => `${k} ${c[k]}`).join(" · ");
 // --templates: a sentence matching one skill's example lines exactly is that skill (web/agent.js)
 const tplIntent = args.includes("--templates") ? require(path.join(repo, "web/agent.js")).templateIntent : null;
 function parse(nlu, text) {
@@ -117,14 +133,15 @@ function parse(nlu, text) {
   return k ? Object.assign({}, r, { intent: k, confidence: 1, template: true }) : r;
 }
 function score(nlu, set) {
-  let ok = 0; const errs = [];
+  let ok = 0; const errs = [], dec = {};
   for (const e of set) {
     const r = parse(nlu, e.text);
+    const o = outcome(e.intent, r, nlu, e.text); dec[o] = (dec[o] || 0) + 1;
     const pred = r.confidence >= TH ? r.intent : "out_of_scope";
     evalPreds.push(`${e.intent}\t${r.intent}\t${r.confidence.toFixed(4)}\t${e.text}\t${set.name || ""}`);
     if (pred === e.intent) ok++; else errs.push(`  ${e.text}  want=${e.intent} got=${pred} (${r.intent} ${r.confidence.toFixed(2)})`);
   }
-  return { ok, n: set.length, errs };
+  return { ok, n: set.length, errs, dec };
 }
 
 const model = T.train(examples, { prune: 0.2, lexicon, ...quiet });
@@ -136,6 +153,7 @@ for (const [name, f] of [["held-out", manifest.test], ["boundary", manifest.boun
   const r = score(nlu, Object.assign(load(f), { name }));
   report[name] = `${r.ok}/${r.n}`;
   console.log(`${name}: ${r.ok}/${r.n}`); r.errs.forEach(e => console.log(e));
+  console.log(`  decisions: ${decisions(r.dec)}`); report[name + " decisions"] = r.dec;
 }
 
 { // --predictions file.eval.tsv: the same for held-out, boundary and probes
@@ -146,15 +164,18 @@ for (const [name, f] of [["held-out", manifest.test], ["boundary", manifest.boun
 if (cv) {
   // folds from a hash of each sentence: adding or removing sentences never moves the others,
   // so two versions of the skills are compared on the same folds
+  const groups = args.includes("--group") ? S.compile("skills", false).groups : null;
   const fold = t => { let h = 2166136261; for (const c of norm(t)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0) % 5; };
+  const foldOf = e => fold((groups && groups.get(e.intent + "|" + e.text)) || e.text);
   const cvErrs = [], preds = [];
-  const K = 5; let abst = 0, fyes = 0, wrong = 0, n = 0;
+  const K = 5; let abst = 0, fyes = 0, wrong = 0, n = 0; const dec = {};
   for (let k = 0; k < K; k++) {
-    const testI = new Set(examples.map((e, i) => fold(e.text) === k ? i : -1).filter(i => i >= 0));
+    const testI = new Set(examples.map((e, i) => foldOf(e) === k ? i : -1).filter(i => i >= 0));
     const m = T.train(examples.filter((_, i) => !testI.has(i)), { prune: 0.2, lexicon, ...quiet });
     const fn = new R.NLU(m, lexicon);
     for (const i of testI) {
       const e = examples[i], r = fn.parse(e.text);
+      const o = outcome(e.intent, r, fn, e.text); dec[o] = (dec[o] || 0) + 1; // the model alone: no template matcher in folds
       const pred = r.confidence >= TH ? r.intent : "out_of_scope";
       n++;
       preds.push(`${e.intent}\t${r.intent}\t${r.confidence.toFixed(4)}\t${e.text}`);
@@ -171,7 +192,8 @@ if (cv) {
   // choosing a threshold without retraining
   const pi = args.indexOf("--predictions");
   if (pi >= 0) fs.writeFileSync(path.resolve(args[pi + 1]), "want\ttop\tconfidence\tsentence\n" + preds.join("\n") + "\n");
-  report.cv = { n, abstained: abst, false_yes: fyes, wrong_skill: wrong, errors: abst + fyes + wrong };
-  console.log(`cv (${n}): abstained ${abst}, false yes ${fyes}, wrong skill ${wrong}, total ${abst + fyes + wrong}`);
+  report.cv = { folds: groups ? "example lines" : "sentences", n, abstained: abst, false_yes: fyes, wrong_skill: wrong, errors: abst + fyes + wrong, decisions: dec };
+  console.log(`cv (${n}, folds by ${groups ? "example line" : "sentence"}): abstained ${abst}, false yes ${fyes}, wrong skill ${wrong}, total ${abst + fyes + wrong}`);
+  console.log(`  decisions: ${decisions(dec)}`);
 }
 console.log("REPORT " + JSON.stringify(report));

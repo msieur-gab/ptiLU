@@ -84,7 +84,7 @@ section in both, and on a reply that uses a `{value}` that is no slot and no Ans
 ```markdown
 ---
 skill: set_reminder
-acts: yes            # it changes something: when the model isn't clearly sure, ask “Do you want…?” first
+acts: yes            # it changes something: unsure, or a word new to it → ask “Do you want…?” first
 uses: network        # only for skills that can't answer anything offline (get_weather)
 ---
 ## Slots
@@ -120,11 +120,16 @@ A script still asks by itself only when the rule isn't one slot: a file *or* a f
 (open_file), a level *or* a direction (volume), a time that should become a reminder (timer).
 
 **acts: yes.** The skill changes something (makes a file, sets a reminder, opens an app,
-changes the volume, saves or forgets something). Below 0.7 confidence, the agent asks first,
-with the skill's `unsure` reply or a generic “Do you want me to {help line}?”. Above it, or
-for skills that only answer (time, weather, help), it acts at the global 0.45. No question
-when the skill is about to ask for a missing value anyway. Leave it off a skill that already
-confirms every time (power).
+changes the volume, saves or forgets something). It acts only when the model is at least 0.45
+sure *and* every word of the sentence that isn't a value is a word this skill's examples use
+(grammar words like “with” or “into” aside). Otherwise the agent asks first, naming the new
+word: “I don't know “fresh” yet. Do you want me to create a file?” (the skill's `unsure` reply
+or the generic “Do you want me to {help line}?”); below 0.25 it says it can't. The sentence
+goes to the inbox, where the word can be taught: an example line that uses it. A sentence that
+matches an example line exactly acts at once. No question when the skill is about to ask for a
+missing value anyway. Skills that only answer (time, weather, help) answer at 0.45 or abstain:
+a wrong answer shows what was understood. Leave it off a skill that already confirms every
+time (power).
 
 **uses: network.** When the device is offline, or the request fails, the agent answers “I
 need a network connection to {help line}.” A skill's own `offline` reply still wins (get_time
