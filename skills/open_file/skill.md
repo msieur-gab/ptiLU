@@ -12,7 +12,7 @@ Opens a file or a folder with its default app. If what you named is actually an 
 ("open the terminal"), it hands over to open_app.
 
 ## Slots
-- name: text, ask: ask_which
+- name: text, ask: ask_name
 - location: text, ask: ask_where
 
 ## Examples
@@ -177,7 +177,6 @@ Opens a file or a folder with its default app. If what you named is actually an 
 - inbox
 
 ## Replies
-- ask_which: Which file or folder? Say its name.
-- ask_where: In which folder? Say its name, for example Documents.
+- ask_where: In which folder? Say its name, for example Documents. | Which folder do you mean? I can't see your screen, so tell me its name. | Where is it? Name the folder, like Documents or Projects.
 - done: Opening {target}. | Here's {target}.
-- ask_name: Which file or folder should I open?
+- ask_name: Which file or folder should I open? | Which one do you mean? Tell me its name. | I can't see your screen. Which file or folder?

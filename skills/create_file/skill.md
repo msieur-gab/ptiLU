@@ -151,7 +151,7 @@ Makes an empty file. A type ("a python file") becomes the extension; a name that
 - css → css
 
 ## Replies
-- ask_where: In which folder? Say its name, for example Documents.
+- ask_where: In which folder? Say its name, for example Documents. | Which folder do you mean? I can't see your screen, so tell me its name. | Where should it go? Name the folder, like Documents or Projects.
 - done: Created {file} in {where}. | Done. {file} is in {where}. | {file} created in {where}.
 - default_type: You didn't say which type, so I made a Markdown file.
 - ask_name: What should I call the file? | OK. What's the file name?

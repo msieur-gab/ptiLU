@@ -496,7 +496,9 @@
    "answer": {},
    "replies": {
     "ask_where": [
-     "In which folder? Say its name, for example Documents."
+     "In which folder? Say its name, for example Documents.",
+     "Which folder do you mean? I can't see your screen, so tell me its name.",
+     "Where should it go? Name the folder, like Documents or Projects."
     ],
     "done": [
      "Created {file} in {where}.",
@@ -668,7 +670,9 @@
    "answer": {},
    "replies": {
     "ask_where": [
-     "In which folder? Say its name, for example Documents."
+     "In which folder? Say its name, for example Documents.",
+     "Which folder do you mean? I can't see your screen, so tell me its name.",
+     "Where should it go? Name the folder, like Documents or Projects."
     ],
     "done": [
      "Done. {name} is now in {where}.",
@@ -1497,18 +1501,19 @@
    "request": null,
    "answer": {},
    "replies": {
-    "ask_which": [
-     "Which file or folder? Say its name."
-    ],
     "ask_where": [
-     "In which folder? Say its name, for example Documents."
+     "In which folder? Say its name, for example Documents.",
+     "Which folder do you mean? I can't see your screen, so tell me its name.",
+     "Where is it? Name the folder, like Documents or Projects."
     ],
     "done": [
      "Opening {target}.",
      "Here's {target}."
     ],
     "ask_name": [
-     "Which file or folder should I open?"
+     "Which file or folder should I open?",
+     "Which one do you mean? Tell me its name.",
+     "I can't see your screen. Which file or folder?"
     ]
    },
    "slots": {
@@ -1517,7 +1522,7 @@
      "list": null,
      "required": false,
      "guess": false,
-     "ask": "ask_which",
+     "ask": "ask_name",
      "invalid": null,
      "default": null,
      "ignore": []

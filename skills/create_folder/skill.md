@@ -129,6 +129,6 @@ before it reaches the command line.
 - inbox
 
 ## Replies
-- ask_where: In which folder? Say its name, for example Documents.
+- ask_where: In which folder? Say its name, for example Documents. | Which folder do you mean? I can't see your screen, so tell me its name. | Where should it go? Name the folder, like Documents or Projects.
 - done: Done. {name} is now in {where}. | Created the folder {name} in {where}. | Folder {name} created in {where}.
 - ask_name: What should I call the folder? | Sure. What name do you want for the folder?
