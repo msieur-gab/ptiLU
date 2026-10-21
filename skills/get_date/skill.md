@@ -57,6 +57,6 @@ read by the date parser (web/entities.js); holidays are not known.
 - is_today: Yes, today is {date}.
 - not_today: No, today is {date}.
 - other_one: If you meant the other one, that's {date}.
-- unknown: I don't know which date “{what}” is. Try a date like “december 25” or “next friday”.
+- unknown: I don't know which date “{what}” is. Try a date like “december 25” or “next friday”. | “{what}” isn't a date I can read. Try “december 25” or “next friday”. | I can't place “{what}” on the calendar. Something like “next friday” works.
 - month: It's {month}.
 - year: It's {year}.

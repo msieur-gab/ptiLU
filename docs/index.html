@@ -1101,7 +1101,9 @@ if (typeof module !== "undefined") module.exports = NLUServices;
    "answer": {},
    "replies": {
     "ask": [
-     "Brighter or darker? You can also give a level, like 60%."
+     "Brighter or darker? You can also give a level, like 60%.",
+     "Should the screen be brighter or darker? A level works too, like 60%.",
+     "Which way, brighter or darker? Or tell me a level, like 60%."
     ],
     "set": [
      "Brightness set to {n}%."
@@ -1327,7 +1329,9 @@ if (typeof module !== "undefined") module.exports = NLUServices;
    "answer": {},
    "replies": {
     "ask": [
-     "Up or down? You can also give a level, like 40%."
+     "Up or down? You can also give a level, like 40%.",
+     "Louder or quieter? Or give me a level, like 40%.",
+     "Which way, up or down? A level works too, like 40%."
     ],
     "set": [
      "Volume set to {n}%."
@@ -1836,7 +1840,9 @@ if (typeof module !== "undefined") module.exports = NLUServices;
      "There was nothing to forget."
     ],
     "unsure": [
-     "Do you want me to forget what I know about you?"
+     "Do you want me to forget what I know about you?",
+     "Should I forget your name and where you live?",
+     "Forget what I know about you, is that right?"
     ]
    },
    "slots": null,
@@ -1885,7 +1891,9 @@ if (typeof module !== "undefined") module.exports = NLUServices;
      "If you meant the other one, that's {date}."
     ],
     "unknown": [
-     "I don't know which date “{what}” is. Try a date like “december 25” or “next friday”."
+     "I don't know which date “{what}” is. Try a date like “december 25” or “next friday”.",
+     "“{what}” isn't a date I can read. Try “december 25” or “next friday”.",
+     "I can't place “{what}” on the calendar. Something like “next friday” works."
     ],
     "month": [
      "It's {month}."
@@ -2013,7 +2021,9 @@ if (typeof module !== "undefined") module.exports = NLUServices;
      "{place}, {phrase}:"
     ],
     "ask_place": [
-     "Which city? Tip: say “I live in …” and I'll remember it for next time."
+     "Which city? Tip: say “I live in …” and I'll remember it for next time.",
+     "Where? Name a city. If you say “I live in …”, I'll remember it.",
+     "Which place should I check? Say “I live in …” once and I'll know next time."
     ],
     "not_found": [
      "I couldn't find a place called “{place}”."
@@ -2405,10 +2415,14 @@ if (typeof module !== "undefined") module.exports = NLUServices;
      "Starting the {app}."
     ],
     "ask_app": [
-     "Which app? I can open the {choices}."
+     "Which app? I can open the {choices}.",
+     "Which one? I can open the {choices}.",
+     "What should I open? I know the {choices}."
     ],
     "unknown": [
-     "I don't know an app called “{value}”. I can open the {choices}."
+     "I don't know an app called “{value}”. I can open the {choices}.",
+     "“{value}” isn't an app I know. I can open the {choices}.",
+     "I can't find “{value}”. The apps I know are the {choices}."
     ]
    },
    "slots": {
@@ -2658,7 +2672,9 @@ if (typeof module !== "undefined") module.exports = NLUServices;
    "answer": {},
    "replies": {
     "ask": [
-     "Shut down, restart or sleep?"
+     "Shut down, restart or sleep?",
+     "Which one: shut down, restart or sleep?",
+     "Should I shut down, restart, or put it to sleep?"
     ],
     "confirm_shutdown": [
      "Shut down the device now? Say yes to confirm or no to cancel."
@@ -2854,7 +2870,9 @@ if (typeof module !== "undefined") module.exports = NLUServices;
      "I saved “{place}”. I'll look it up on the map when we're back online."
     ],
     "ask": [
-     "What should I remember? Your name (“my name is …”) or where you live (“I live in …”)."
+     "What should I remember? Your name (“my name is …”) or where you live (“I live in …”).",
+     "Tell me your name (“my name is …”) or where you live (“I live in …”).",
+     "What should I keep: your name (“my name is …”) or your city (“I live in …”)?"
     ]
    },
    "slots": {
@@ -2908,7 +2926,9 @@ if (typeof module !== "undefined") module.exports = NLUServices;
    "answer": {},
    "replies": {
     "ask_text": [
-     "What should I send on Telegram?"
+     "What should I send on Telegram?",
+     "What's the message for Telegram?",
+     "What do you want to say on Telegram?"
     ],
     "checking": [
      "Sending it on Telegram…"
@@ -2920,7 +2940,9 @@ if (typeof module !== "undefined") module.exports = NLUServices;
      "Telegram refused the message (error {status}). Check the token and that you wrote to your bot first."
     ],
     "unsure": [
-     "Do you want me to send that on Telegram?"
+     "Do you want me to send that on Telegram?",
+     "Should I send that on Telegram?",
+     "Send that on Telegram?"
     ],
     "ask_token": [
      "Paste the token @BotFather gave you for your bot."
@@ -2991,7 +3013,9 @@ if (typeof module !== "undefined") module.exports = NLUServices;
    "answer": {},
    "replies": {
     "ask_text": [
-     "What should I send to your phone?"
+     "What should I send to your phone?",
+     "What's the message for your phone?",
+     "What do you want on your phone?"
     ],
     "checking": [
      "Sending it to your phone…"
@@ -3003,7 +3027,9 @@ if (typeof module !== "undefined") module.exports = NLUServices;
      "ntfy refused the message (error {status})."
     ],
     "unsure": [
-     "Do you want me to send that to your phone?"
+     "Do you want me to send that to your phone?",
+     "Should I send that to your phone?",
+     "Send that to your phone?"
     ],
     "ask_topic": [
      "Which ntfy topic should I send to? Subscribe to it in the ntfy app first; I'll keep it on this device."
@@ -3054,13 +3080,19 @@ if (typeof module !== "undefined") module.exports = NLUServices;
      "OK. When?"
     ],
     "unsure": [
-     "Do you want a reminder for that?"
+     "Do you want a reminder for that?",
+     "Should I set a reminder for that?",
+     "Shall I remind you of that?"
     ],
     "when_invalid": [
-     "I didn't catch a time. Try “tomorrow at 9” or “in an hour”."
+     "I didn't catch a time. Try “tomorrow at 9” or “in an hour”.",
+     "When? Something like “tomorrow at 9” or “in an hour”.",
+     "I need a time for it, like “tomorrow at 9” or “in an hour”."
     ],
     "ask_day": [
-     "{phrase} runs from {from} to {to}. Which day?"
+     "{phrase} runs from {from} to {to}. Which day?",
+     "{phrase} is {from} to {to}. Which day do you mean?",
+     "Which day of {phrase}? It runs from {from} to {to}."
     ],
     "done": [
      "I'll remind you{what} {at}.",
@@ -3202,7 +3234,9 @@ if (typeof module !== "undefined") module.exports = NLUServices;
    },
    "replies": {
     "ask_place": [
-     "Which place should I show? Tip: say “I live in …” and I'll use it next time."
+     "Which place should I show? Tip: say “I live in …” and I'll use it next time.",
+     "Where should I look? Say “I live in …” once and I'll use it next time.",
+     "Which place? Name a city or a landmark."
     ],
     "checking": [
      "Looking for {place}…"

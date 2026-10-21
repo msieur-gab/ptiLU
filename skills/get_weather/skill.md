@@ -94,7 +94,7 @@ in the 16-day forecast.
 - now: {place} right now: {sky}, {temp}°C, wind {wind} km/h.
 - day: {when} in {place}: {sky}, {min} to {max}°C, {rain}% chance of rain.
 - days: {place}, {phrase}:
-- ask_place: Which city? Tip: say “I live in …” and I'll remember it for next time.
+- ask_place: Which city? Tip: say “I live in …” and I'll remember it for next time. | Where? Name a city. If you say “I live in …”, I'll remember it. | Which place should I check? Say “I live in …” once and I'll know next time.
 - not_found: I couldn't find a place called “{place}”.
 - too_far: I can only see 16 days ahead.
 - past: I only have the forecast, not past weather.

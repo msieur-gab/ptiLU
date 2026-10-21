@@ -54,8 +54,8 @@ token kept on the device, is in action.md next to it.
 - the kiln is off
 
 ## Replies
-- ask_text: What should I send on Telegram?
+- ask_text: What should I send on Telegram? | What's the message for Telegram? | What do you want to say on Telegram?
 - checking: Sending it on Telegram…
 - done: Sent on Telegram: “{text}”.
 - failed: Telegram refused the message (error {status}). Check the token and that you wrote to your bot first.
-- unsure: Do you want me to send that on Telegram?
+- unsure: Do you want me to send that on Telegram? | Should I send that on Telegram? | Send that on Telegram?

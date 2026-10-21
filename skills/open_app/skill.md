@@ -42,5 +42,5 @@ the name, the other words people use for it, then the command after the arrow.
 
 ## Replies
 - done: Opening the {app}. | Starting the {app}.
-- ask_app: Which app? I can open the {choices}.
-- unknown: I don't know an app called “{value}”. I can open the {choices}.
+- ask_app: Which app? I can open the {choices}. | Which one? I can open the {choices}. | What should I open? I know the {choices}.
+- unknown: I don't know an app called “{value}”. I can open the {choices}. | “{value}” isn't an app I know. I can open the {choices}. | I can't find “{value}”. The apps I know are the {choices}.

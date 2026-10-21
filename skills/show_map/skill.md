@@ -51,7 +51,7 @@ This file is what people say and what the agent answers. The place search is in 
 - Ljubljana
 
 ## Replies
-- ask_place: Which place should I show? Tip: say “I live in …” and I'll use it next time.
+- ask_place: Which place should I show? Tip: say “I live in …” and I'll use it next time. | Where should I look? Say “I live in …” once and I'll use it next time. | Which place? Name a city or a landmark.
 - checking: Looking for {place}…
 - done: {name}, {country}: https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=12/{lat}/{lon}
 - not_found: I couldn't find a place called “{place}”.

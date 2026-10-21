@@ -84,4 +84,4 @@ weather and time skills then use.
 - place_found: Found it: {place}. Saved on this phone, I'll use it for the weather and the time.
 - place_not_found: I saved “{place}”, but I couldn't find it on the map, so weather won't work for it yet.
 - place_offline: I saved “{place}”. I'll look it up on the map when we're back online.
-- ask: What should I remember? Your name (“my name is …”) or where you live (“I live in …”).
+- ask: What should I remember? Your name (“my name is …”) or where you live (“I live in …”). | Tell me your name (“my name is …”) or where you live (“I live in …”). | What should I keep: your name (“my name is …”) or your city (“I live in …”)?

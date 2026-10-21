@@ -75,7 +75,7 @@ track of the level. Brightness uses the same script with its own commands.
 - unmute: unmuted, unmut → unmute
 
 ## Replies
-- ask: Up or down? You can also give a level, like 40%.
+- ask: Up or down? You can also give a level, like 40%. | Louder or quieter? Or give me a level, like 40%. | Which way, up or down? A level works too, like 40%.
 - set: Volume set to {n}%.
 - up: Volume up to {n}%.
 - down: Volume down to {n}%.

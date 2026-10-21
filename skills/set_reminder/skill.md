@@ -106,9 +106,9 @@ after you agree. A day without a time is 9:00.
 
 ## Replies
 - ask_when: When should I remind you? | OK. When?
-- unsure: Do you want a reminder for that?
-- when_invalid: I didn't catch a time. Try “tomorrow at 9” or “in an hour”.
-- ask_day: {phrase} runs from {from} to {to}. Which day?
+- unsure: Do you want a reminder for that? | Should I set a reminder for that? | Shall I remind you of that?
+- when_invalid: I didn't catch a time. Try “tomorrow at 9” or “in an hour”. | When? Something like “tomorrow at 9” or “in an hour”. | I need a time for it, like “tomorrow at 9” or “in an hour”.
+- ask_day: {phrase} runs from {from} to {to}. Which day? | {phrase} is {from} to {to}. Which day do you mean? | Which day of {phrase}? It runs from {from} to {to}.
 - done: I'll remind you{what} {at}. | Reminder set{what} {at}. | OK, I'll remind you{what} {at}.
 - repeat: OK, I'll remind you{what}{rule}. First one {next}.
 - no_time: You didn't give a time, so I used 09:00.

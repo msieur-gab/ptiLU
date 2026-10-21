@@ -22,4 +22,4 @@ Deletes what the agent remembers about you: your name, your place, or both.
 - place: OK, I've forgotten where you live.
 - all: Done. I don't remember anything about you anymore.
 - nothing: There was nothing to forget.
-- unsure: Do you want me to forget what I know about you?
+- unsure: Do you want me to forget what I know about you? | Should I forget your name and where you live? | Forget what I know about you, is that right?

@@ -39,7 +39,7 @@ Shut down, restart or sleep. Always asks for a yes first: these can't be undone 
 - sleep: suspend, sleep mode, slepp, standby, nap, bed, rest, goodnight → sudo systemctl suspend
 
 ## Replies
-- ask: Shut down, restart or sleep?
+- ask: Shut down, restart or sleep? | Which one: shut down, restart or sleep? | Should I shut down, restart, or put it to sleep?
 - confirm_shutdown: Shut down the device now? Say yes to confirm or no to cancel.
 - confirm_reboot: Restart the device now? Say yes to confirm or no to cancel.
 - confirm_sleep: Put the device to sleep now? Say yes to confirm or no to cancel.

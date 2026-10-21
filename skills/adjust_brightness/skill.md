@@ -69,7 +69,7 @@ mute: "mute" means darker here.
 - unmute: unmuted, unmut → unmute
 
 ## Replies
-- ask: Brighter or darker? You can also give a level, like 60%.
+- ask: Brighter or darker? You can also give a level, like 60%. | Should the screen be brighter or darker? A level works too, like 60%. | Which way, brighter or darker? Or tell me a level, like 60%.
 - set: Brightness set to {n}%.
 - up: Brightness up to {n}%.
 - down: Brightness down to {n}%.

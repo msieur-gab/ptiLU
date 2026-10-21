@@ -76,8 +76,8 @@ topic kept on the device, is in action.md next to it.
 - call the bank back
 
 ## Replies
-- ask_text: What should I send to your phone?
+- ask_text: What should I send to your phone? | What's the message for your phone? | What do you want on your phone?
 - checking: Sending it to your phone…
 - done: Sent to your phone: “{text}”.
 - failed: ntfy refused the message (error {status}).
-- unsure: Do you want me to send that to your phone?
+- unsure: Do you want me to send that to your phone? | Should I send that to your phone? | Send that to your phone?
