@@ -785,7 +785,7 @@
      "ignore": []
     },
     "location": {
-     "type": "text",
+     "type": "folder",
      "list": null,
      "required": false,
      "guess": false,
@@ -950,7 +950,7 @@
      "ignore": []
     },
     "location": {
-     "type": "text",
+     "type": "folder",
      "list": null,
      "required": false,
      "guess": false,
@@ -2125,7 +2125,7 @@
    "request": null,
    "answer": {},
    "replies": {
-    "done": [
+    "say": [
      "OK, {event} moves to {when}."
     ],
     "ask_event": [
@@ -2176,7 +2176,7 @@
    "request": null,
    "answer": {},
    "replies": {
-    "done": [
+    "say": [
      "OK, {name} moves to {location}."
     ],
     "ask_name": [
@@ -2198,7 +2198,7 @@
      "ignore": []
     },
     "location": {
-     "type": "text",
+     "type": "folder",
      "list": null,
      "required": true,
      "guess": false,
@@ -2493,7 +2493,7 @@
      "ignore": []
     },
     "location": {
-     "type": "text",
+     "type": "folder",
      "list": null,
      "required": false,
      "guess": false,

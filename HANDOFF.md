@@ -228,6 +228,24 @@ lowers the questions.
 
 move_event has `acts: yes` too (it changes a calendar): move probes 22 acted right, 3 asked, 0 acted wrong; push probes 8 acted right, 3 asked, 1 missed.
 
+
+**No value dropped in silence, and folders checked** (same branch, after the phone test of
+21 October: "create a new folder named Testing inside the Document folder" made it in home).
+The slot model had read "Document" as a second name and the agent kept only the first.
+- A value the model marks that the skill can't take (a second name, a value it doesn't have)
+  now fills an empty `folder` slot, or the agent asks first, naming it ("I didn't understand
+  “Document”. Do you want me to…?"). `runtime.js` returns those values as `extra`; `decide()`
+  handles them.
+- New slot type `folder` (create_folder, create_file, open_file, move_file): known folder → used;
+  close to one → "Did you mean Documents?"; unknown → "Shall I use it anyway?", and a yes is
+  kept on the device (`ptilu.folders.v1`). A host can list its real folders in `agent.folders`.
+  The `## Values: loc` lists stay: they are training examples, not the device's folders.
+- Fixed on the way: move_file and move_event crashed after filling their values (their reply was
+  named `done`, the agent looks for `say`).
+- Dialogue test: 104 conversations (4 new); one changed: "a folder called Monday in Schedule"
+  now asks about Schedule. Held-out decisions: 128 acted right, 0 acted wrong, 1 answered
+  wrong, 16 asked (14 right skill), 17 abstained rightly.
+
 **Open:** the Python runtime ignores `known` (it has no dialogue yet); value typing on its
 own was not measured; "answered wrong" is mostly get_date ↔ get_weather and help ↔ recall_me.
 

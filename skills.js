@@ -124,7 +124,7 @@ function mergeAction(s, md, file) {
 
 // Checks that run when the skills are compiled, so a mistake shows up while writing the skill,
 // not when someone talks to the agent.
-const SLOT_TYPES = ["text", "place", "datetime", "duration", "list", "secret"];
+const SLOT_TYPES = ["text", "place", "folder", "datetime", "duration", "list", "secret"];
 const ROLES = ["yes", "no", "fallback"];   // the skills the dialogue itself relies on
 const DEFAULTS = ["home"];   // home: the place the person told the agent they live in
 const USES = ["network"];

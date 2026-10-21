@@ -12,7 +12,7 @@ Opens a file or a folder with its default app. If what you named is actually an 
 
 ## Slots
 - name: text
-- location: text
+- location: folder
 
 ## Examples
 - {open|show|show me|display|view|pull up|bring up} {[{fext}](name)|[{fext}](name)|the [{fname}](name) file|the [{folder}](name) folder}

@@ -100,6 +100,7 @@ script runs, so `skill.js` gets `ctx.slots.when` ready to use and never asks by 
 |---|---|
 | `text` | the words the model marked |
 | `place` | the place named, whole (“hong kong”) |
+| `folder` | a folder on the device, checked against those it knows (the standard ones, those the device lists, those the person said yes to). Close to one (“Document”) → “Did you mean Documents?” (reply `did_you_mean`, `{suggestion}`); unknown → “I don't know a folder called “Schedule”. Shall I use it anyway?” (reply `folder_unknown`, `{value}`); a yes is kept on the device. Both replies have a default in the core |
 | `datetime` | a date, time, range or repeat from the date parser |
 | `duration` | a duration from the date parser (“10 minutes”, “1h30”) |
 | `list app` | an entry of `## Values: app`; the script gets the whole entry (`.key`, `.out`) |

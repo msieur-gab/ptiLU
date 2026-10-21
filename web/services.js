@@ -59,6 +59,36 @@ const NLUServices = (() => {
     if (XDG[low]) return { path: "$HOME/" + XDG[low], label: XDG[low] };
     return { path: "$HOME/" + v, label: v };
   }
+  // A folder someone named, checked against the folders known on this device: the standard ones,
+  // those the device lists (agent.folders) and those the person said yes to (kept on the device).
+  // → { known: true } or { known: false, near: "Documents" } for a close one ("Document",
+  // "Documnets": one letter off, two in a long name), or { known: false } when nothing is close.
+  const plainName = raw => raw.replace(/^(the|my)\s+/i, "").replace(/\s+(folder|directory|dir)$/i, "").trim();
+  function editDistance(a, b) {
+    const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[a.length][b.length];
+  }
+  function folder(raw, extra = []) {
+    const low = plainName(raw).toLowerCase();
+    if (HERE.test(low) || low === "home" || low === "~") return { known: true };
+    const names = [...Object.values(XDG), ...extra];
+    if (names.some(n => n.toLowerCase() === low)) return { known: true };
+    let near = null, best = 99;
+    for (const n of names) {
+      const d = editDistance(low, n.toLowerCase());
+      if (d < best && d <= (n.length > 6 ? 2 : 1)) { best = d; near = n; }
+    }
+    return { known: false, near };
+  }
+  const FOLDERS_KEY = "ptilu.folders.v1";
+  const folders = {
+    get: (store, agent) => { try { return JSON.parse((store && store.getItem(FOLDERS_KEY)) || "null") || agent._folders || []; } catch { return agent._folders || []; } },
+    add: (store, agent, name) => { const all = [...new Set([...folders.get(store, agent), name])]; agent._folders = all; try { if (store) store.setItem(FOLDERS_KEY, JSON.stringify(all)); } catch { /* kept in memory only */ } },
+  };
+
   // text made safe for the command line: single quotes, so nothing in it ($, `, ;, &) is run.
   // A path's leading $HOME stays outside the quotes so the shell still expands it.
   const sq = t => (/^[\w./:-]+$/.test(t) ? t : "'" + t.replace(/'/g, "'\\''") + "'");
@@ -169,6 +199,6 @@ const NLUServices = (() => {
   };
 
   return { net: { geocode, request }, me, secrets, places: { placeIn }, fmt: { DAYS, MONTHS, pad2, cap, plural, day0, daysApart, fromIso, isoMinute, clock, dayText, whenText, durWords, ruleWords, onCalendar },
-    files: { where, quote } };
+    files: { where, quote, folder, plainName, folders } };
 })();
 if (typeof module !== "undefined") module.exports = NLUServices;

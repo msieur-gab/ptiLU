@@ -185,10 +185,10 @@ const NLURuntime = (() => {
       const ranked = this.classify(text);
       const toks = tokenize(text);
       const labels = this.tag(text, toks);
-      const slots = {};
-      for (const { name, value } of spansFromLabels(text, toks, labels)) if (!(name in slots)) slots[name] = value;
+      const slots = {}, extra = []; // extra: a second value for a slot already filled ("…Testing inside the Document folder")
+      for (const { name, value } of spansFromLabels(text, toks, labels)) if (!(name in slots)) slots[name] = value; else extra.push({ name, value });
       return { intent: ranked[0][0], confidence: ranked[0][1], ranking: ranked.slice(0, 3),
-        slots, labels, ms: performance.now() - t0 };
+        slots, extra, labels, ms: performance.now() - t0 };
     }
   }
   return { NLU, tokenize, intentFeatures, tokenFeatures, setValueTypes };

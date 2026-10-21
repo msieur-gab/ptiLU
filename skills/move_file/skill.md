@@ -11,7 +11,7 @@ Test skill for the move experiment (20 October 2026): only answers, runs nothing
 
 ## Slots
 - name: text, required, ask: ask_name
-- location: text, required, ask: ask_where
+- location: folder, required, ask: ask_where
 
 ## Examples
 - {please |}{move|push} [{file}](name) to {|the |my }[{loc}](location){| folder}
@@ -46,6 +46,6 @@ Test skill for the move experiment (20 October 2026): only answers, runs nothing
 - music
 
 ## Replies
-- done: OK, {name} moves to {location}.
+- say: OK, {name} moves to {location}.
 - ask_name: Which file or folder?
 - ask_where: Where should I move it?

@@ -45,6 +45,6 @@ Test skill for the move experiment (20 October 2026): only answers, no calendar.
 - 10am
 
 ## Replies
-- done: OK, {event} moves to {when}.
+- say: OK, {event} moves to {when}.
 - ask_event: Which event?
 - ask_when: To when?

@@ -39,14 +39,27 @@ function templateIntent(text) {
 // at THRESHOLD or abstains, and a wrong answer shows what it understood.
 function decide(nlu, r, text, missing = false) {
   if (r.intent === ROLE.fallback) return { act: "abstain", why: "out of scope, no action" };
-  const acts = SKILLS[r.intent] && SKILLS[r.intent].params.acts === "yes";
+  const sk = SKILLS[r.intent], acts = sk && sk.params.acts === "yes";
   const floor = acts ? ASK : THRESHOLD;
   if (r.confidence < floor) return { act: "abstain", why: "confidence " + r.confidence.toFixed(2) + " < " + floor + ", abstaining" };
+  // a value the model marked that the skill can't take (a second name, a value it doesn't have) is
+  // never dropped in silence: it fills an empty folder slot ("…Testing inside the Document folder",
+  // then checked as a folder), or the agent asks first, naming it
+  let slots = r.slots, dropped = [];
+  if (acts && sk.slots) {
+    dropped = (r.extra || []).concat(Object.entries(r.slots).filter(([k]) => !sk.slots[k]).map(([name, value]) => ({ name, value })));
+    const free = Object.keys(sk.slots).find(k => sk.slots[k].type === "folder" && !r.slots[k]);
+    slots = Object.fromEntries(Object.entries(r.slots).filter(([k]) => sk.slots[k]));
+    if (free && dropped.length === 1) { slots[free] = dropped[0].value; dropped = []; }
+    dropped = dropped.map(d => d.value);
+  }
   // no question when the skill is about to ask for a missing value anyway: nothing happens without the answer
   const unknown = r.template || !acts || missing ? [] : nlu.unknownWords(text, r.intent, r.labels, dateSpans(text));
-  if (unknown.length) return { act: "ask", unknown, why: unknown.map(w => "“" + w + "”").join(", ") + " never taught to " + r.intent + ": asking first" };
-  if (r.confidence < THRESHOLD && !missing) return { act: "ask", unknown, why: "confidence " + r.confidence.toFixed(2) + " < " + THRESHOLD + ": asking first" };
-  return { act: "act", unknown };
+  const quoted = ws => ws.map(w => "“" + w + "”").join(", ");
+  if (dropped.length) return { act: "ask", unknown, dropped, slots, why: quoted(dropped) + " marked but not usable by " + r.intent + ": asking first" };
+  if (unknown.length) return { act: "ask", unknown, dropped, slots, why: quoted(unknown) + " never taught to " + r.intent + ": asking first" };
+  if (r.confidence < THRESHOLD && !missing) return { act: "ask", unknown, dropped, slots, why: "confidence " + r.confidence.toFixed(2) + " < " + THRESHOLD + ": asking first" };
+  return { act: "act", unknown, dropped, slots };
 }
 const dateSpans = text => { try { return ENT.parse(text).filter(e => e.start != null).map(e => [e.start, e.end]); } catch (e) { return []; } };
 
@@ -60,6 +73,9 @@ const RESPONSES = {
   network: ["I need a network connection to {what}."],
   unsure: ["Do you want me to {what}?"],
   new_words: ["I don't know {words} yet."],
+  dropped: ["I didn't understand {words}."],
+  did_you_mean: ["Did you mean {suggestion}?"],
+  folder_unknown: ["I don't know a folder called “{value}”. Shall I use it anyway?"],
   wait: ["One moment…"],
 };
 for (const [name, sk] of Object.entries(SKILLS)) for (const [k, v] of Object.entries(sk.replies)) RESPONSES[name + "." + k] = v;
@@ -236,13 +252,16 @@ class Agent {
       trace.push({ type: "state", text: "learned skill " + r.intent + ", no skill folder" });
       return { trace, reply: fill("learned", { intent: r.intent.replace(/_/g, " "), got: got ? " (" + got + ")" : "" }) };
     }
+    const slots = d.slots || r.slots;
     if (d.act === "ask") {
-      this.pending = { type: "confirm", intent: r.intent, slots: r.slots, what: r.intent, sentence: text };
+      this.pending = { type: "confirm", intent: r.intent, slots, what: r.intent, sentence: text };
       trace.push({ type: "state", text: d.why });
+      const words = ws => ws.map(w => "“" + w + "”").join(", ");
       const ask = fill(has(r.intent + ".unsure") ? r.intent + ".unsure" : "unsure", { what: doing(SKILLS[r.intent]) });
-      return { trace, reply: (d.unknown.length ? fill("new_words", { words: d.unknown.map(w => "“" + w + "”").join(", ") }) + " " : "") + ask, unknown: true };
+      return { trace, reply: (d.dropped.length ? fill("dropped", { words: words(d.dropped) }) + " " : "")
+        + (d.unknown.length ? fill("new_words", { words: words(d.unknown) }) + " " : "") + ask, unknown: true };
     }
-    return this.run(r.intent, r.slots, trace);
+    return this.run(r.intent, slots, trace);
   }
 
   // Skills taught in the inbox ({ name: { answer, slots, needed } }) answer like a skill.md with
@@ -289,6 +308,21 @@ class Agent {
     return { trace, reply: fill(key, vars) };
   }
 
+  // a folder the device doesn't know: "Did you mean Documents?" for a close one, otherwise "Shall I
+  // use it anyway?". A yes runs the skill again with that folder; a folder said yes to is kept.
+  checkFolder(intent, slots, [name, raw, near], trace) {
+    const v = near || SV.files.plainName(raw);
+    const key = near ? "did_you_mean" : "folder_unknown", vars = { value: SV.files.plainName(raw), suggestion: near, name: cleanValue(slots.name || "") };
+    this.pending = { type: "choose", intent, slots, options: [{ label: v, keys: [v.toLowerCase()], then: () => {
+      if (!near) SV.files.folders.add(this.store, this, v);
+      return { handover: [intent, { ...slots, [name]: v }] };
+    } }] };
+    trace.push({ type: "state", text: name + " “" + raw + "” isn't a known folder" + (near ? ", close to " + near : "") + ": asking" });
+    return { trace, reply: fill(has(intent + "." + key) ? intent + "." + key : key, vars) };
+  }
+  // the folders the agent knows beyond the standard ones: those the device lists, those said yes to
+  folderNames() { return [...(this.folders || []), ...SV.files.folders.get(this.store, this)]; }
+
   // ---------- running a skill ----------
   run(intent, slots, trace) {
     const sk = SKILLS[intent];
@@ -300,6 +334,7 @@ class Agent {
     if (sk.slots) { // declared slots: fill them, ask for what's missing, before the skill runs
       const got = this.fillSlots(sk, slots, trace);
       if (got.ask) return this.ask(intent, { ...slots, ...got.values }, got.ask[0], intent + "." + got.ask[1], trace, got.ask[2]);
+      if (got.check) return this.checkFolder(intent, slots, got.check, trace);
       slots = got.values;
     }
     if (sk.code || sk.params.script) return this.runScript(intent, sk, slots, trace);
@@ -352,6 +387,11 @@ class Agent {
       let v = null;
       if (slot.type === "text") v = raw;
       else if (slot.type === "place") v = raw && SV.places.placeIn(text, raw);
+      else if (slot.type === "folder" && raw) { // checked against the folders this device knows
+        const f = SV.files.folder(raw, this.folderNames());
+        if (!f.known) return { check: [name, raw, f.near], values };
+        v = raw;
+      }
       else if (slot.type === "list") v = raw ? findValue(list, raw, slot.ignore) : slot.guess ? guessValue(list, text) : null;
       else if (slot.type === "secret") { const k = sk.params.skill + "." + name; v = raw || this.secret(k); if (raw) this.setSecret(k, raw); } // asked once per skill, kept on the device
       else if (slot.type === "duration") v = parsed().find(x => x.type === "duration") || null;

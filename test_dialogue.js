@@ -95,6 +95,11 @@ const CONVERSATIONS = [
   ["no"],
   ["create a folder"],
   ["make a folder", "drafts in documents"],
+  // a folder the device doesn't know: a close one is offered, an unknown one is asked about once
+  ["create a new folder named Testing inside the Document folder", "yes"],
+  ["create a new folder named Testing inside the Documnets folder", "no"],
+  ["make a folder called Monday in Schedule", "yes", "make a folder called Tuesday in Schedule"],
+  ["move report.txt to the dowloads", "yes"],
   ["create a python file called main"],
   ["new file called notes"],
   ["touch todo.txt"],

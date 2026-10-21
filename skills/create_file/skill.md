@@ -13,7 +13,7 @@ Makes an empty file. A type ("a python file") becomes the extension; a name that
 ## Slots
 - name: text, required, ask: ask_name
 - file_type: text
-- location: text
+- location: folder
 
 ## Examples
 - {please |}{create|make|add|start} {a |a new |}file {called|named} [{fname}](name)

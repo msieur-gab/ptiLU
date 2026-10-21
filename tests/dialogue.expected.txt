@@ -143,8 +143,7 @@
 
 > make a folder called Monday in Schedule
   [create_folder {"name":"Monday","location":"Schedule"}]
-  Done. “Monday” is now in Schedule.
-  $ mkdir -p $HOME/Schedule/Monday
+  I don't know a folder called “Schedule”. Shall I use it anyway?
 
 > open firefox
   [open_app {"app":"firefox"}]
@@ -432,6 +431,40 @@ Uptime: 3 hours 12 minutes.
   [move_file {"name":"drafts","location":"documents"}]
   Done. “drafts” is now in Documents.
   $ mkdir -p $HOME/Documents/drafts
+
+> create a new folder named Testing inside the Document folder
+  [create_folder {"name":"Testing"}]
+  Did you mean Documents?
+> yes
+  [affirm]
+  Done. “Testing” is now in Documents.
+  $ mkdir -p $HOME/Documents/Testing
+
+> create a new folder named Testing inside the Documnets folder
+  [create_folder {"name":"Testing"}]
+  Did you mean Documents?
+> no
+  [deny]
+  Cancelled.
+
+> make a folder called Monday in Schedule
+  [create_folder {"name":"Monday","location":"Schedule"}]
+  I don't know a folder called “Schedule”. Shall I use it anyway?
+> yes
+  [affirm]
+  Done. “Monday” is now in Schedule.
+  $ mkdir -p $HOME/Schedule/Monday
+> make a folder called Tuesday in Schedule
+  [create_folder {"name":"Tuesday","location":"Schedule"}]
+  Done. “Tuesday” is now in Schedule.
+  $ mkdir -p $HOME/Schedule/Tuesday
+
+> move report.txt to the dowloads
+  [move_file {"name":"report.txt","location":"dowloads"}]
+  Did you mean Downloads?
+> yes
+  [affirm]
+  OK, report.txt moves to Downloads.
 
 > create a python file called main
   [create_file {"file_type":"python","name":"main"}]

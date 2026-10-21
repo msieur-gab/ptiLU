@@ -13,7 +13,7 @@ before it reaches the command line.
 
 ## Slots
 - name: text, required, ask: ask_name
-- location: text
+- location: folder
 
 ## Examples
 - {please |}{create|make|add|set up|build} {a |a new |}{folder|directory|dir} {called|named} [{folder}](name)
