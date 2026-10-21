@@ -3,6 +3,7 @@ skill: move_event
 help: move a meeting or appointment (“move the meeting to friday”)
 samples: 14
 train_only: event, when
+acts: yes
 ---
 # Move an event
 

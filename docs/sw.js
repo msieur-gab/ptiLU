@@ -1,5 +1,5 @@
 // Offline cache for the ptiLU PWA. VERSION changes with every build, which replaces the cache.
-const VERSION = "6ba5e9edf6";
+const VERSION = "6601d5f873";
 const CACHE = "ptilu-" + VERSION;
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png"];
 

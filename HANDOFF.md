@@ -226,6 +226,8 @@ Before, on the same strict CV: 178 confident mistakes (2.5%), none of them asked
 Measure from now on: acted wrong (target ≤ 1%), questions, can't-missed. Teaching words
 lowers the questions.
 
+move_event has `acts: yes` too (it changes a calendar): move probes 22 acted right, 3 asked, 0 acted wrong; push probes 8 acted right, 3 asked, 1 missed.
+
 **Open:** the Python runtime ignores `known` (it has no dialogue yet); value typing on its
 own was not measured; "answered wrong" is mostly get_date ↔ get_weather and help ↔ recall_me.
 
