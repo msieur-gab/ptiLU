@@ -124,7 +124,7 @@ changes the volume, saves or forgets something). It acts only when the model is 
 sure *and* every word of the sentence that isn't a value is a word this skill's examples use
 (grammar words like “with” or “into” aside). Otherwise the agent asks first, naming the new
 word: “I don't know “fresh” yet. Do you want me to create a file?” (the skill's `unsure` reply
-or the generic “Do you want me to {help line}?”); below 0.25 it says it can't. The sentence
+or the generic “Do you want me to {help line}?”); below 0.25 it abstains. The sentence
 goes to the inbox, where the word can be taught: an example line that uses it. A sentence that
 matches an example line exactly acts at once. No question when the skill is about to ask for a
 missing value anyway. Skills that only answer (time, weather, help) answer at 0.45 or abstain:

@@ -5900,9 +5900,9 @@ return module.exports; })();
 // several commands in one sentence) and hands each skill a toolbox (ctx) of shared services.
 // Commands are simulated: the trace shows what would run on the device.
 
-// Act, ask or "I can't": a skill that changes something (acts: yes) acts only when the model is
+// Act, ask or abstain: a skill that changes something (acts: yes) acts only when the model is
 // sure enough AND every word that isn't a value is a word the skill was taught. Otherwise it asks
-// "Do you want me to …?" first, and below ASK the agent says it can't. The model only counts evidence for a skill, never against:
+// "Do you want me to …?" first, and below ASK the agent abstains. The model only counts evidence for a skill, never against:
 // words it doesn't know are invisible to it, so its confidence alone can't tell "I understood"
 // from "I recognised one word" (claude/diagnosis.md, 21 October).
 const THRESHOLD = 0.45;        // at or above this, with no unknown word, the agent acts
@@ -5931,14 +5931,14 @@ function templateIntent(text) {
   return hits.size === 1 ? [...hits][0] : null;
 }
 
-// act, ask or can't (see THRESHOLD above); tools/measure.js scores the same decision. Only a
+// act, ask or abstain (see THRESHOLD above); tools/measure.js scores the same decision. Only a
 // skill that changes something (acts: yes) asks: one that answers (time, weather, hello) answers
 // at THRESHOLD or abstains, and a wrong answer shows what it understood.
 function decide(nlu, r, text, missing = false) {
-  if (r.intent === ROLE.fallback) return { act: "cant", why: "out of scope, no action" };
+  if (r.intent === ROLE.fallback) return { act: "abstain", why: "out of scope, no action" };
   const acts = SKILLS[r.intent] && SKILLS[r.intent].params.acts === "yes";
   const floor = acts ? ASK : THRESHOLD;
-  if (r.confidence < floor) return { act: "cant", why: "confidence " + r.confidence.toFixed(2) + " < " + floor + ", abstaining" };
+  if (r.confidence < floor) return { act: "abstain", why: "confidence " + r.confidence.toFixed(2) + " < " + floor + ", abstaining" };
   // no question when the skill is about to ask for a missing value anyway: nothing happens without the answer
   const unknown = r.template || !acts || missing ? [] : nlu.unknownWords(text, r.intent, r.labels, dateSpans(text));
   if (unknown.length) return { act: "ask", unknown, why: unknown.map(w => "“" + w + "”").join(", ") + " never taught to " + r.intent + ": asking first" };
@@ -6124,7 +6124,7 @@ class Agent {
 
     const sk = SKILLS[r.intent];
     const d = decide(this.nlu, r, text, !!(sk && sk.slots && this.fillSlots(sk, r.slots, []).ask));
-    if (d.act === "cant") {
+    if (d.act === "abstain") {
       trace.push({ type: "abstain", text: d.why });
       return { trace, reply: fill(has(ROLE.fallback + ".say") ? ROLE.fallback + ".say" : "fallback"), unknown: true };
     }

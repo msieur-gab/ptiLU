@@ -189,7 +189,7 @@ outside ptiLU.
   by `acts: yes` and one threshold (0.7, the same one that decides splitting a sentence).
 - **Several commands per sentence:** keep, don't extend (source of the "salt and pepper" gap).
 
-## Act, ask or "I can't" (21 October, branch `act-ask-cant`, from `value-types`)
+## Act, ask or abstain (21 October, branch `act-ask-abstain`, from `value-types`)
 
 **Why errors wouldn't go down.** The model counts evidence for a skill, never against: words
 it doesn't know are ignored (TF-IDF is normalised over known words only). "xyzzy flurb remind
@@ -203,7 +203,7 @@ More contrast lines mostly trade abstentions for false yeses.
 **The rule.** A skill with `acts: yes` acts only when the model is ≥ 0.45 sure *and* every
 word that isn't a value (slot tag or date) is a word that skill's examples use, grammar words
 aside. Otherwise it asks, naming the word: "I don't know “pepper” yet. Do you want me to
-create folders?"; below 0.25 it can't. Skills that only answer act at 0.45 or abstain. Authored
+create folders?"; below 0.25 it abstains. Skills that only answer act at 0.45 or abstain. Authored
 `ask:` replies come first: no question when a value is missing anyway. Matching an example
 line exactly acts at once. Asked sentences go to the inbox.
 - `web/trainer.js` stores each skill's words in the model (`known`, +34 KB → 443 KB); older
@@ -215,7 +215,7 @@ line exactly acts at once. Asked sentences go to the inbox.
 
 **Numbers** (`node tools/measure.js . skills/lexicon.md --templates --cv --group`):
 
-| | acted right | acted wrong | answered wrong | asked (right skill) | can't, right / missed |
+| | acted right | acted wrong | answered wrong | asked (right skill) | abstained, right / missed |
 |---|---|---|---|---|---|
 | held-out (162) | 130 | 0 | 2 | 13 (12) | 17 / 0 |
 | boundary (64) | 40 | 0 | 0 | 12 (9) | 8 / 4 |
@@ -223,7 +223,7 @@ line exactly acts at once. Asked sentences go to the inbox.
 | CV by example line (7,108) | 5,121 | 24 (0.3%) | 89 (1.3%) | 965 (776) | 358 / 551 |
 
 Before, on the same strict CV: 178 confident mistakes (2.5%), none of them asked first.
-Measure from now on: acted wrong (target ≤ 1%), questions, can't-missed. Teaching words
+Measure from now on: acted wrong (target ≤ 1%), questions, abstained-but-real. Teaching words
 lowers the questions.
 
 move_event has `acts: yes` too (it changes a calendar): move probes 22 acted right, 3 asked, 0 acted wrong; push probes 8 acted right, 3 asked, 1 missed.

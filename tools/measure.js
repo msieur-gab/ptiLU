@@ -5,7 +5,7 @@
 // sentence is never tested against its twin; random folds hide about half the abstentions.
 // Each set also gets the agent's own decision (web/agent.js decide): acted right, acted wrong
 // (a skill that changes something did the wrong thing without asking: the number that matters),
-// answered wrong (a skill that only answers), asked (right / wrong skill), can't (right / missed).
+// answered wrong (a skill that only answers), asked (right / wrong skill), abstained (right / missed).
 const path = require("path");
 const fs = require("fs");
 const repo = path.resolve(process.argv[2]);
@@ -122,9 +122,9 @@ function outcome(want, r, nlu, text) {
   const d = A.decide(nlu, r, text);
   if (d.act === "act") return r.intent === want ? "acted right" : acts(r.intent) ? "ACTED WRONG" : "answered wrong";
   if (d.act === "ask") return r.intent === want ? "asked, right skill" : "asked, wrong skill";
-  return want === "out_of_scope" ? "can't, right" : "can't, missed";
+  return want === "out_of_scope" ? "abstained, right" : "abstained, missed";
 }
-const ORDER = ["acted right", "ACTED WRONG", "answered wrong", "asked, right skill", "asked, wrong skill", "can't, right", "can't, missed"];
+const ORDER = ["acted right", "ACTED WRONG", "answered wrong", "asked, right skill", "asked, wrong skill", "abstained, right", "abstained, missed"];
 const decisions = c => ORDER.filter(k => c[k]).map(k => `${k} ${c[k]}`).join(" · ");
 // --templates: a sentence matching one skill's example lines exactly is that skill (web/agent.js)
 const tplIntent = args.includes("--templates") ? require(path.join(repo, "web/agent.js")).templateIntent : null;
