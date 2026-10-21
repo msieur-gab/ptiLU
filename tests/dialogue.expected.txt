@@ -474,8 +474,8 @@ Uptime: 3 hours 12 minutes.
   Did you mean Documents?
 > yes
   [affirm]
-  Created “test.txt” in Documents. You didn't say which type, so I made a plain text file.
-  $ mkdir -p $HOME/Documents && touch $HOME/Documents/test.txt
+  Created “test.md” in Documents. You didn't say which type, so I made a Markdown file.
+  $ mkdir -p $HOME/Documents && touch $HOME/Documents/test.md
 
 > create a python file called main
   [create_file {"file_type":"python","name":"main"}]
@@ -484,8 +484,8 @@ Uptime: 3 hours 12 minutes.
 
 > new file called notes
   [create_file {"name":"notes"}]
-  Created “notes.txt” in your home folder. You didn't say which type, so I made a plain text file.
-  $ mkdir -p $HOME && touch $HOME/notes.txt
+  Created “notes.md” in your home folder. You didn't say which type, so I made a Markdown file.
+  $ mkdir -p $HOME && touch $HOME/notes.md
 
 > touch todo.txt
   [create_file {"name":"todo.txt"}]

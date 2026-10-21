@@ -8,7 +8,7 @@ acts: yes
 # Create a file
 
 Makes an empty file. A type ("a python file") becomes the extension; a name that already has one
-("notes.md") keeps it; with neither, it's a plain text file.
+("notes.md") keeps it; with neither, it's a Markdown file (.md).
 
 ## Slots
 - name: text, required, ask: ask_name
@@ -154,5 +154,5 @@ Makes an empty file. A type ("a python file") becomes the extension; a name that
 
 ## Replies
 - done: Created {file} in {where}. | Done. {file} is in {where}. | {file} created in {where}.
-- default_type: You didn't say which type, so I made a plain text file.
+- default_type: You didn't say which type, so I made a Markdown file.
 - ask_name: What should I call the file? | OK. What's the file name?
