@@ -240,6 +240,10 @@ The slot model had read "Document" as a second name and the agent kept only the 
   close to one → "Did you mean Documents?"; unknown → "Shall I use it anyway?", and a yes is
   kept on the device (`ptilu.folders.v1`). A host can list its real folders in `agent.folders`.
   The `## Values: loc` lists stay: they are training examples, not the device's folders.
+- A folder the model didn't mark is found in the sentence after in / inside / into / to…,
+  but only one the device knows or a close one, never any word ("a file to track expenses").
+  It's found before any question, so "create a note inside document" → "What should I call
+  the file?" → "test" → "Did you mean Documents?" keeps the folder (phone test, 21 October).
 - Fixed on the way: move_file and move_event crashed after filling their values (their reply was
   named `done`, the agent looks for `say`).
 - Dialogue test: 104 conversations (4 new); one changed: "a folder called Monday in Schedule"

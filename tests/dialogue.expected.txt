@@ -466,6 +466,17 @@ Uptime: 3 hours 12 minutes.
   [affirm]
   OK, report.txt moves to Downloads.
 
+> create a note inside document
+  [create_file]
+  What should I call the file?
+> test
+  [out_of_scope]
+  Did you mean Documents?
+> yes
+  [affirm]
+  Created “test.txt” in Documents. You didn't say which type, so I made a plain text file.
+  $ mkdir -p $HOME/Documents && touch $HOME/Documents/test.txt
+
 > create a python file called main
   [create_file {"file_type":"python","name":"main"}]
   Created “main.py” in your home folder.

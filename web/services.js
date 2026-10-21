@@ -83,6 +83,19 @@ const NLUServices = (() => {
     }
     return { known: false, near };
   }
+  // a folder named after in / inside / into / to… that the slot model didn't mark: only one this
+  // device knows, or a close one ("inside document"), never any word ("a file to track expenses")
+  function guessFolder(text, extra = [], taken = []) {
+    const RE = /\b(?:in|inside|into|to|under|within|from|on)\s+(?:the\s+|my\s+)?([A-Za-z][\w-]*)/gi;
+    const used = taken.filter(v => typeof v === "string").map(v => v.toLowerCase());
+    for (const m of text.matchAll(RE)) {
+      const w = m[1];
+      if (used.some(u => u.split(/\s+/).includes(w.toLowerCase()))) continue;
+      const f = folder(w, extra);
+      if (f.known || f.near) return w;
+    }
+    return null;
+  }
   const FOLDERS_KEY = "ptilu.folders.v1";
   const folders = {
     get: (store, agent) => { try { return JSON.parse((store && store.getItem(FOLDERS_KEY)) || "null") || agent._folders || []; } catch { return agent._folders || []; } },
@@ -199,6 +212,6 @@ const NLUServices = (() => {
   };
 
   return { net: { geocode, request }, me, secrets, places: { placeIn }, fmt: { DAYS, MONTHS, pad2, cap, plural, day0, daysApart, fromIso, isoMinute, clock, dayText, whenText, durWords, ruleWords, onCalendar },
-    files: { where, quote, folder, plainName, folders } };
+    files: { where, quote, folder, guessFolder, plainName, folders } };
 })();
 if (typeof module !== "undefined") module.exports = NLUServices;

@@ -380,6 +380,13 @@ class Agent {
     const text = this.lastText, values = { ...slots };
     let ents = null;
     const parsed = () => (ents = ents || ENT.parse(text, { now: this.now() }));
+    // a folder slot the model left empty: a folder named in the sentence is found before any
+    // question, so it isn't lost while the agent asks for another value ("create a note inside document")
+    for (const [name, slot] of Object.entries(sk.slots)) {
+      if (slot.type !== "folder" || slots[name]) continue;
+      const g = SV.files.guessFolder(text, this.folderNames(), Object.values(slots));
+      if (g) { slots = { ...slots, [name]: g }; values[name] = g; trace.push({ type: "state", text: name + " found in the sentence ← " + g }); }
+    }
     for (const [name, slot] of Object.entries(sk.slots)) {
       if (slots[name] && typeof slots[name] === "object") continue; // filled on an earlier turn
       const raw = slots[name] ? cleanValue(slots[name]) : null;

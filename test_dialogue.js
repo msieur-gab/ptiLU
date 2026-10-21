@@ -100,6 +100,7 @@ const CONVERSATIONS = [
   ["create a new folder named Testing inside the Documnets folder", "no"],
   ["make a folder called Monday in Schedule", "yes", "make a folder called Tuesday in Schedule"],
   ["move report.txt to the dowloads", "yes"],
+  ["create a note inside document", "test", "yes"], // the folder isn't lost while the name is asked for
   ["create a python file called main"],
   ["new file called notes"],
   ["touch todo.txt"],
