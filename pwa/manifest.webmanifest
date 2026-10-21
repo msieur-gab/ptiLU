@@ -1,5 +1,5 @@
 {
-  "id": "./",
+  "id": "ptilu",
   "name": "ptiLU",
   "short_name": "ptiLU",
   "description": "Private, Teachable, Interpretable Language Understanding: a small model that runs offline on the device and abstains rather than guesses.",
