@@ -340,6 +340,41 @@ copy): the yellow and grey turns, the trace folded under each reply, the chips a
 pause before a reply (about half a second, longer for a longer one) so it reads as a conversation. The
 chips are what can follow the last answer, else one example per skill and one question per file.
 
+## Does teaching make it grow? (20 November 2026)
+
+The goal, agreed with Gab: ptiLU is a small local model that anyone can make understand them better simply
+by teaching it, and whose growth from that teaching you can see and measure. This is the measurement.
+
+`node engine/meaning/teaching.mjs [-v]`. The engine is frozen (this branch as it is); only teaching changes,
+through the inbox's own code: `teachQuestion` to a listed question, `teach` to a skill, the sentence's vector
+with `addMeaning`, the model retrained after a skill is taught. 165 questions from my-agent (held-out.json
+answerable and requests, docs/questions.md A–L), each with a destination chosen by Claude (a file, a site
+skill, or the contact form: for Gab to check), split at random in two halves, 5 times. One half is taught,
+the other is only ever tested. 25 off-topic questions stay untaught as a guard.
+
+Untaught half (83 questions), average of 5 splits:
+
+| taught | right | wrong | contact form instead | "do you mean" | nothing |
+|---|---|---|---|---|---|
+| 0 | 57.4 | 15.2 | 3.0 | 5.4 | 1.0 |
+| inbox, all it lets you teach (10) | 56.8 | 16.0 | 3.0 | 5.2 | 1.0 |
+| every miss, wrong answers too (30) | 56.2 | 15.6 | 3.8 | 5.6 | 0.8 |
+| every miss, nearest taught sentence read first (≥ 0.5) | 55.6 | 13.4 | 7.2 | 5.0 | 0.8 |
+
+- What is taught is remembered: 413 of 415 taught sentences are right when asked again. Nothing taught was
+  refused, and no off-topic question started being answered.
+- Nothing carries to questions it wasn't taught: the curve is flat, slightly down, with every way of
+  reading what was taught (bars 0.5, 0.6, 0.7 fixed in advance give the same).
+- The inbox only sees "I can't": of about 30 misses in a taught half, 10 reach it. Wrong answers (15 of the
+  26 misses before teaching) never do, so they can't be corrected from the phone.
+- Why nothing carries: these questions hardly resemble each other. For 57 of 82 test questions the
+  nearest taught sentence is below 0.5 in meaning, and only 5 are above 0.6. Teaching one sentence fixes
+  that sentence and its close rewordings; this set has almost none.
+
+So: as built, teaching is a memory of sentences, not growth. What the measurement doesn't say is how often
+real visitors reword the same question: if they do, each taught sentence fixes all of them; if not, it
+fixes one.
+
 ## Not done yet
 
 - Follow-ups carry only values with a shape (durations, dates): "and 5 minutes" works, "and for buy milk"
