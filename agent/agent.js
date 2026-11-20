@@ -14,6 +14,7 @@ const S = require("./skills.js");
 
 // how near, in meaning (cosine) or in words, a sentence must be to a skill's examples. Set on my-agent's
 // skills examples, each left out (agent/meaning/bars.mjs); checked on tests/held-out.json (measure.mjs)
+const NUMBERS = { 2: "Two", 3: "Three", 4: "Four" };
 const BARS = { meaning: { sure: 0.525, ask: 0.45, gap: 0.08, far: 0.3 }, words: { sure: 0.75, ask: 0.35, gap: 0.1, far: 0.1 } };
 
 class Agent {
@@ -207,8 +208,11 @@ class Agent {
       const leads = skill.leads.filter(id => this.projects && this.projects.byId.has(id));
       if (!leads.length) return this.turn("act", skill.answer || this.say("not written"), { ...extra, command: "form.open", chips: this.contactChip() });
       const first = this.projects.byId.get(leads[0]);
-      const say = skill.answer || first.meta.intro || `That's what ${first.title} was about.`;
-      return this.openWith(leads[0], say, leads.slice(1), extra);
+      if (leads.length === 1) return this.openWith(leads[0], skill.answer || first.meta.intro || `That's what ${first.title} was about.`, [], extra);
+      // several projects answer it: a card for each, side by side; tapping one opens it
+      this.frame = null;
+      return this.turn("act", skill.answer || this.say("several", { n: NUMBERS[leads.length] || leads.length }), { ...extra, projects: leads,
+        cards: leads.map(id => this.projects.card(id)), chips: [...leads.map(id => ({ text: this.projects.byId.get(id).title, type: "project", id })), ...this.contactChip()] });
     }
     const say = this.read(T.fill(T.pick(skill.replies.done, this.random), said));
     const command = skill.command ? T.fill(skill.command, Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v.seconds !== undefined ? v.seconds : v.said]))) : null;
@@ -233,17 +237,17 @@ class Agent {
   openWith(id, say, others, extra) {
     const card = this.projects.card(id);
     this.frame = { project: id, seen: new Set(), others };
-    return this.turn("act", say || card.line, { ...extra, card, project: id, chips: this.follow(id, others) });
+    return this.turn("act", say || card.line, { ...extra, cards: [card], project: id, projects: [id], chips: this.follow(id, others) });
   }
   showPart(id, pi, why, text = null) {
     const part = this.projects.part(id, pi);
     if (!this.frame || this.frame.project !== id) this.frame = { project: id, seen: new Set(), others: [] };
     this.frame.seen.add(pi);
-    return this.turn("act", text || part.text, { why, project: id, part: part.title, chips: this.follow(id, this.frame.others) });
+    return this.turn("act", text || part.text, { why, project: id, projects: [id], part: part.title, chips: this.follow(id, this.frame.others) });
   }
   detail(hit, why) {
     this.frame = { project: hit.project, seen: new Set([hit.part]), others: [] };
-    return this.turn("act", hit.text, { why, project: hit.project, part: hit.title, card: this.projects.card(hit.project), chips: this.follow(hit.project, []) });
+    return this.turn("act", hit.text, { why, project: hit.project, projects: [hit.project], part: hit.title, cards: [this.projects.card(hit.project)], chips: this.follow(hit.project, []) });
   }
   more() {
     const id = this.frame.project, next = this.projects.next(id, this.frame.seen);

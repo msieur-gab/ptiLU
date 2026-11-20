@@ -10,6 +10,6 @@ const emb = async t => Float32Array.from((await pipe([t], { pooling: 'mean', nor
 const agent = require('../load.js').load({ random: () => 0 });
 for (const s of process.argv.slice(2)) {
   const r = agent.respond(s, await emb(agent.clean(s)));
-  console.log(`> ${s}\n  [${r.outcome}] ${r.say.slice(0, 160)}${r.card ? `\n  card: ${r.card.title} — ${r.card.line}` : ''}${r.command ? `\n  does: ${r.command}` : ''}\n  chips: ${r.chips.join(' · ')}\n  why: ${r.why}`);
+  console.log(`> ${s}\n  [${r.outcome}] ${r.say.slice(0, 160)}${(r.cards || []).map(c => `\n  card: ${c.title} — ${c.line}`).join('')}${r.command ? `\n  does: ${r.command}` : ''}\n  chips: ${r.chips.join(' · ')}\n  why: ${r.why}`);
 }
 console.log('inbox:', agent.inbox.map(e => `"${e.sentence}" (${e.why})`).join('; '));

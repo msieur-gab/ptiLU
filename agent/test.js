@@ -16,7 +16,7 @@ script("hello and the time", [["hi", is("skill", "greet")], ["what time is it", 
 script("a timer asks for its value", [["set a timer", is("outcome", "ask")], ["10 minutes", is("command", "timer.start 600")]]);
 script("a duration is read whole", [["how much is a day of your time", r => r.skill !== "set-timer" || "timer"]]);
 script("a project by name, then its parts", [
-  ["tell me about Senz", r => (r.card && r.card.title === "Senz") || "no card"],
+  ["tell me about Senz", r => (r.cards && r.cards[0].title === "Senz") || "no card"],
   ["Overview", is("part", "Overview")],
   ["tell me more", r => r.project === "senz" || "left senz"],
 ]);
@@ -35,6 +35,7 @@ script("do you mean: yes teaches, on your own device", [
   const r2 = a.respond("how many hours a week can you give us");
   if (!r1.ok || r2.skill !== "work-together" || !/## Learned\n- how many hours a week can you give us \(2026-11-20\)/.test(r1.md)) { fails++; console.log("✗ teaching", r1, r2.why); }
 }
+script("a skill leading to two projects shows both", [["Can digital play happen without a screen?", r => (r.cards && r.cards.length === 2) || `${(r.cards || []).length} cards`], ["Pebbble", is("project", "pebbble")]]);
 { // "that's not it" puts the sentence in the inbox
   const a = fresh(); n++;
   const r = a.respond("where are you based"); a.wrong(r);

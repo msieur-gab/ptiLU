@@ -39,4 +39,5 @@ Words that say nothing about which skill is meant.
 - not written: I haven't published work on this yet. Send me the question and I'll answer you myself.
 - ok: OK. | Alright.
 - far: That's outside what I work on, so I'd rather not guess. | I don't have anything on that, and it's not my field.
+- several: {n} pieces of my work answer this. | {n} of my projects are about this.
 - no more: That's all I have written about {title}.

@@ -12,6 +12,9 @@
 /* the agent's own additions */
 .turn .follow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
 .turn .follow .chip { white-space: normal; text-align: left; }
+.cards { display: flex; gap: 8px; max-width: 100%; }
+.cards.many { overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
+.cards.many .pcard { cursor: pointer; flex: 0 0 78%; max-width: none; scroll-snap-align: start; }
 .pcard { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; max-width: 92%; display: flex; flex-direction: column; gap: 4px; }
 .pcard .t { font-weight: 600; }
 .pcard .w { font: 11.5px var(--font-mono); color: var(--muted); }
@@ -96,12 +99,15 @@ function renderAgent(el, r) {
   if (r.command) t += row("exec", `$ ${esc(r.command)}<em>simulated</em>`, "exec");
   const dot = r.outcome === "abstain" ? "skip" : r.outcome === "act" ? "" : "ask";
   const icon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const c = r.card;
-  el.insertAdjacentHTML("beforeend", `<div class="reply">${esc(r.say)}${r.part ? `<span class="part">${esc(r.card ? "" : (agent.projects.byId.get(r.project) || {}).title + " · ")}${esc(r.part)}</span>` : ""}</div>`
-    + (c ? `<div class="pcard"><span class="t">${esc(c.title)}</span>${c.where ? `<span class="w">${esc(c.where)}</span>` : ""}${c.line && c.line !== r.say ? `<span class="l">${esc(c.line)}</span>` : ""}<span class="x">${esc(c.text)}</span></div>` : "")
+  const card = c => `<div class="pcard" role="button" tabindex="0" data-title="${esc(c.title)}"><span class="t">${esc(c.title)}</span>${c.where ? `<span class="w">${esc(c.where)}</span>` : ""}${c.line && c.line !== r.say ? `<span class="l">${esc(c.line)}</span>` : ""}<span class="x">${esc(c.text)}</span></div>`;
+  const cards = r.cards || [];
+  el.insertAdjacentHTML("beforeend", `<div class="reply">${esc(r.say)}${r.part ? `<span class="part">${esc(cards.length ? "" : (agent.projects.byId.get(r.project) || {}).title + " · ")}${esc(r.part)}</span>` : ""}</div>`
+    + (cards.length ? `<div class="cards${cards.length > 1 ? " many" : ""}">${cards.map(card).join("")}</div>` : "")
     + (r.chips.length ? `<div class="follow">${r.chips.map((x, i) => `<button class="chip" type="button" data-i="${i}">${esc(x)}</button>`).join("")}</div>` : "")
     + (r.outcome === "act" && (r.skill || r.project) ? `<button class="notit" type="button">That's not it</button>` : "")
     + `<details class="why"><summary aria-label="Show what the agent did">${icon}<span class="dot ${dot}"></span>${esc(r.skill || r.project || r.outcome)}</summary><div class="trace">${t}</div></details>`);
+  // with several cards, tapping one opens that project (as its tag does)
+  if (cards.length > 1) el.querySelectorAll(".pcard").forEach(x => x.addEventListener("click", () => send(x.dataset.title)));
   el.querySelectorAll(".follow .chip").forEach(b => b.addEventListener("click", () => send(r.chips[+b.dataset.i])));
   el.querySelector(".notit")?.addEventListener("click", e => { agent.wrong(r); e.target.textContent = "Thanks. It's in the inbox."; e.target.disabled = true; updateCount(); });
   if (r.command === "form.open") contactForm(el, r.sentence || "");

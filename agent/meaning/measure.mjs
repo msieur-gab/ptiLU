@@ -56,7 +56,7 @@ function did(a, q, vec) {
   a.reset();
   const r = a.respond(q, vec), s = r.skill && a.byName.get(r.skill);
   if (r.outcome === 'ask' && r.options) return { got: 'asks', options: r.options, r };
-  if (r.project) return { got: 'project:' + r.project, r };
+  if (r.projects) return { got: 'project:' + r.projects.join(','), r };
   if (r.command === 'form.open' || (s && s.kind === 'contact')) return { got: 'contact', r };
   if (r.outcome === 'abstain') return { got: 'far', r };
   if (s) return { got: 'skill:' + s.name, r };
@@ -70,7 +70,7 @@ function grade(a, want, d) {
   if (want.far) return d.got === 'far' || d.got === 'contact' ? 'right' : 'wrong';
   if (want.contact) return d.got === 'contact' ? 'right' : d.got === 'far' ? 'invitation' : 'wrong';
   if (d.got === 'contact' || d.got === 'far') return 'invitation';
-  if (want.projects) return d.got.startsWith('project:') && want.projects.includes(d.got.slice(8)) ? 'right' : 'wrong';
+  if (want.projects) return d.got.startsWith('project:') && d.got.slice(8).split(',').some(p => want.projects.includes(p)) ? 'right' : 'wrong';
   return d.got === 'skill:' + want.skill ? 'right' : 'wrong';
 }
 const KINDS = ['right', 'wrong', 'asks, right one offered', 'asks, not offered', 'invitation'];

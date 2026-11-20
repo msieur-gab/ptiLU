@@ -16,7 +16,8 @@ and its log (ENGINE.md) stay on the `engine` and `engine-site` branches.
 4. **Exactly**: a project named ("tell me about Senz"), or a skill's "People say" pattern.
 5. **By meaning**:
    - **Sure** (nearest example ≥ 0.525, at least 0.08 ahead of the next skill): the skill answers. A skill
-     that does something (a timer) still asks first.
+     that does something (a timer) still asks first. A question skill leading to several projects shows a
+     card for each, side by side; tapping one (or its tag) opens it.
    - **Inside a project**: its own paragraphs are looked at next.
    - **A project detail asked cold**: the paragraph that has most of its words, under that project's card.
    - **Less sure** (≥ 0.45): "Do you mean: …?", with the one or two nearest skills.
@@ -72,7 +73,7 @@ On sentences it was never given, from my-agent's `tests/held-out.json` and `docs
 
 | set | right | wrong | "Do you mean", right one offered | "Do you mean", not offered | invitation |
 |---|---|---|---|---|---|
-| a project expected (56) | 35 | 1 | 4 | 2 | 14 |
+| a project expected (56) | 36 | 0 | 4 | 2 | 14 |
 | off-topic (25) | 21 | 0 | — | 4 | — |
 | requests (10) | 7 | 0 | — | 3 | — |
 | questions about Gab (44) | 19 | 3 | 12 | 5 | 5 |
