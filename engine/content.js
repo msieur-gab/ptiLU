@@ -78,7 +78,7 @@ class Content {
       d.sections.forEach((s, si) => {
         for (let from = 0; from < s.sentences.length; from += WINDOW) {
           const to = Math.min(from + WINDOW, s.sentences.length);
-          this.units.push({ di, si, from, to, title: new Set(this.terms(d.title)), head: new Set([...about, ...this.terms(s.heading)]),
+          this.units.push({ di, si, from, to, title: new Set(this.terms(d.title)), label: new Set(this.terms(s.heading)), head: new Set([...about, ...this.terms(s.heading)]),
             // the title and the heading are the topic (head); as words, a heading counts once per section, in
             // its first passage, and the title not at all: else the first lines of a file (a date, a byline) win
             terms: this.terms(`${from === 0 && s.heading !== d.title ? s.heading : ""} ${s.sentences.slice(from, to).join(" ")}`) });
@@ -86,7 +86,7 @@ class Content {
       });
       d.questions.forEach(({ q, see }) => this.units.push({ di, si: 0, question: q, see, head: new Set([...about, ...this.terms(q)]), terms: this.terms(q) }));
       // the piece as a whole: its keywords say what it is about, its `answer:` answers it
-      if (d.keywords.length && d.answer) this.units.push({ di, si: 0, question: d.title, head: new Set(about), terms: about });
+      if (d.keywords.length && d.answer) this.units.push({ di, si: 0, question: d.title, piece: true, head: new Set(about), terms: about });
     });
     this.df = new Map();
     for (const u of this.units) for (const t of new Set(u.terms)) this.df.set(t, (this.df.get(t) || 0) + 1);
@@ -129,9 +129,10 @@ class Content {
         found++;
         covered += this.idf(t);
         if (u.head.has(t)) onTopic = true;
-        score += this.idf(t) * (f * 2.2) / (f + 1.2 * (0.25 + 0.75 * u.terms.length / this.avg));
+        // a word of the section's heading counts twice, as in Nod's own documentation search
+        score += this.idf(t) * (f * 2.2) / (f + 1.2 * (0.25 + 0.75 * u.terms.length / this.avg)) * (u.label && u.label.has(t) ? 2 : 1);
       }
-      if (u.question) score *= 1.5;
+      if (u.question && !u.piece) score *= 1.5;
       // a follow-up looks around where the conversation is: the same file first, the passage it's on and
       // the ones beside it most (a moving window, not a fresh search)
       if (prefer && u.di === prefer.di) score *= Math.abs(u.si - prefer.si) <= 1 ? 1.6 : 1.3;
@@ -139,7 +140,9 @@ class Content {
       // shares one word ("wants") mustn't beat a section that holds most of what was asked
       const coverage = covered / total;
       // a question a file lists (or was taught) asked word for word wins, wherever the conversation is
-      const rank = score * coverage * (u.question && coverage >= 0.9 ? 3 : 1);
+      // (word for word both ways: "why is it so small" isn't "can one small test open a new market")
+      const same = u.question && !u.piece && coverage >= 0.9 && u.terms.filter(t => q.includes(t)).length >= 0.9 * u.terms.length;
+      const rank = score * coverage * (same ? 3 : 1);
       if (!best || rank > best.rank) best = { ...u, score, rank, coverage, onTopic, found, asked: q.length, q };
     }
     return best && best.score > 0 ? best : null;
@@ -154,7 +157,9 @@ class Content {
     // (its file's title or topic words, its heading, or a question the file lists). One word in common is
     // never enough off-topic: "what is the weather" isn't answered by a passage that mentions the weather
     if (!hit) return null;
-    const pass = (hit.onTopic && hit.coverage >= 0.45) || (hit.found >= OFF_TOPIC && hit.coverage >= 0.6);
+    // a sentence not asked as a question ("I need a new file") must say most of what a listed question says
+    const pass = onlyQuestions ? hit.coverage >= 0.75 && hit.found >= 2
+      : (hit.onTopic && hit.coverage >= 0.45) || (hit.found >= OFF_TOPIC && hit.coverage >= 0.6);
     if (!pass) return null;
     const d = this.docs[hit.di];
     if (hit.question && hit.see) { // the passage the file points to for this question

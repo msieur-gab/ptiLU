@@ -174,7 +174,7 @@ class Engine {
     // sentence only against what the files say they answer. So "my daughter lives abroad" finds the piece
     // that lists it, and a command is never answered with a quote ("move ideas to documnet" is in the
     // review, word for word)
-    const isQuestion = intent === "ask" || this.asked || this.talk.questions.includes(ws[0]);
+    const isQuestion = (intent === "ask" && conf >= SURE) || this.asked || this.talk.questions.includes(ws[0]);
     if (this.content) {
       const r = this.content.answer(sentence, this.frame && this.frame.kind === "content" ? this.frame : null, !isQuestion);
       if (r) { this.frame = r.frame; return this.turn("act", r.say, { source: r.source, chips: r.chips, why: isQuestion ? "content" : "content, a question it lists" }); }

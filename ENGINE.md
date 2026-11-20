@@ -167,10 +167,14 @@ when a follow-up comes". That is how it works now:
 - **What a file may declare, if its author wants:** `keywords:` and `themes:`, `answers:` with an
   `answer:`, and `questions:` with `see:` pointing a question to a passage. my-agent's work files use them;
   they raise what is found, they aren't needed.
+- **Nod's documentation search, read in its code (`src/server/documentation.ts`):** keyword scoring where a
+  word of a section's heading counts twice, up to five sections with their source, and `read` with an
+  offset to go on. The engine does the same: heading words count twice; "tell me more" is the offset.
 - **The bar:** a little under half of the question in a passage on the topic (its file's title or topic
   words, its heading), or most of it, with at least three words in common, anywhere. A word of the title
   counts as covered in every passage of that file. One word in common is never enough off the topic. A
-  sentence not asked as a question only reaches what the files list.
+  sentence not asked as a question only reaches what the files list, and must say most of it ("I need a
+  new file" is not "can one small test open a new market?").
 - **The reply:** the sentence of the passage that holds most of the question, with where it comes from.
   A line of numbers, a byline or HTML is never a sentence to answer with.
 - **The moving window:** "tell me more" goes on from the last sentence said; a follow-up question looks
@@ -183,8 +187,8 @@ on its five work pages, through the whole engine:
 | | right piece | with the expected passage | wrong piece | nothing | off-topic answered |
 |---|---|---|---|---|---|
 | my-agent's matcher (main) | 29 | (pieces only) | 3 | 24 | 0 |
-| the engine, the files as they are | 47 | 22 | 0 | 9 | 0 |
-| the engine, every question, answer and keyword removed | 32 | 18 | 0 | 24 | 0 |
+| the engine, the files as they are | 42 | 21 | 0 | 14 | 0 |
+| the engine, every question, answer and keyword removed | 31 | 18 | 0 | 25 | 0 |
 
 On 96 saved articles (thinking-memories, read locally, not published): indexed in about 0.4 s, 2,400
 passages, a question answered in under 10 ms; 1 of the 25 off-topic questions answered. Specific questions
