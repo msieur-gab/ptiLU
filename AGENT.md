@@ -94,6 +94,24 @@ Still flat. A taught sentence is answered right from then on, but these test sen
 each other enough for one to help another. Whether real visitors repeat themselves is what the inbox will
 show.
 
+## ptiLU's own classifier, measured (`node agent/meaning/classifier.mjs`)
+
+The TF-IDF and logistic regression classifier from main (`web/trainer.js`), trained on the skills' examples
+plus 20 "I can't" lines, against MiniLM's nearest example and plain words. The same sentences as above;
+routing only (no project paragraph search); each "sure" bar chosen on the skills' own examples.
+
+| projects expected (56) | nearest skill right | sure and right | sure and wrong |
+|---|---|---|---|
+| MiniLM | 32 | 13 | 2 |
+| classifier | 21 | 4 | 1 |
+| words | 25 | 2 | 0 |
+| MiniLM and classifier agreeing | 32 | 14 | 3 |
+
+On the questions about Gab (44), sure and right: MiniLM 16, classifier 8, words 11. Teaching (every miss of
+half taught, the classifier retrained in 0.2 s): MiniLM 15.4 → 16.0 sure and right, the classifier 7.0 → 6.0.
+With five or so examples per skill, worded freely, the classifier learns the words of the examples, not
+what they mean; it isn't brought back as the router.
+
 ## Run
 
 ```
@@ -101,6 +119,7 @@ node agent/test.js                  # conversations that must always go the same
 node agent/meaning/embed.mjs        # every example sentence → agent/meaning.json (after editing skills)
 node agent/meaning/bars.mjs         # the bars, chosen on the skills' own examples
 node agent/meaning/measure.mjs -v   # held-out.json, questions L, the teaching curve
+node agent/meaning/classifier.mjs   # ptiLU's classifier against MiniLM and words
 node agent/meaning/chat.mjs "how do we test an idea" "Overview" "tell me more"
 node agent/build.js                 # docs/agent/index.html, for GitHub Pages (branch ptilu-agent, /docs)
 ```
