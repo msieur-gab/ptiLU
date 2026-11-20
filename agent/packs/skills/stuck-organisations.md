@@ -5,7 +5,7 @@ leads: [dowgo, senz]
 ---
 Stuck organisations and complexity — Mostly from my own client patterns, not surveys. Section J of my-agent's docs/questions.md: its questions are the
 examples, with the "answers:" lines of dowgo that are nearest to them.
-No answer written yet: the reply introduces dowgo, its card, and follow-ups into it.
+No answer written yet: the reply shows a card for each project it leads to.
 
 ## Also said
 - Everyone agrees something must change. Nobody agrees on what.

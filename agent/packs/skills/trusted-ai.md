@@ -5,7 +5,7 @@ leads: [designing-by-abstention, senz]
 ---
 AI people can trust. Section C of my-agent's docs/questions.md: its questions are the
 examples.
-No answer written yet: the reply introduces designing-by-abstention, its card, and follow-ups into it.
+No answer written yet: the reply shows a card for each project it leads to.
 
 ## Also said
 - How do we use AI without it making things up in front of customers?

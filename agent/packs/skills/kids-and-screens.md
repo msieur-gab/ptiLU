@@ -5,7 +5,7 @@ leads: [vrooom, pebbble]
 ---
 Children and screens. Section H of my-agent's docs/questions.md: its questions are the
 examples.
-No answer written yet: the reply introduces vrooom, its card, and follow-ups into it.
+No answer written yet: the reply shows a card for each project it leads to.
 
 ## Also said
 - Can digital play happen without a screen?

@@ -5,7 +5,7 @@ leads: [vrooom, pebbble]
 ---
 Product discovery without advertising — Evidence here is thin. Treat this theme as a hypothesis to test. Section I of my-agent's docs/questions.md: its questions are the
 examples.
-No answer written yet: the reply introduces vrooom, its card, and follow-ups into it.
+No answer written yet: the reply shows a card for each project it leads to.
 
 ## Also said
 - How do people discover a product without ads?
