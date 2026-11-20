@@ -20,7 +20,7 @@ function stem(w) {
 }
 
 function plain(md) {
-  return md.replace(/```[\s\S]*?```/g, " ").replace(/`([^`]*)`/g, "$1").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+  return md.replace(/```[\s\S]*?```/g, " ").replace(/<[^>]*>/g, " ").replace(/\[\*?\s*\]\([^)]*\)/g, " ").replace(/`([^`]*)`/g, "$1").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(?<![\w/])\*([^*\s][^*]*)\*(?!\w)/g, "$1").replace(/^\s*\|.*\|\s*$/gm, " ");
 }
 function sentencesOf(text) {
@@ -28,10 +28,14 @@ function sentencesOf(text) {
   for (const block of plain(text).split(/\n\s*\n|\n(?=\s*[-*]\s)/)) {
     const flat = block.replace(/^\s*[-*]\s+/gm, "").replace(/\s+/g, " ").trim();
     if (flat.length < 3 || /^#/.test(flat)) continue;
-    out.push(...flat.split(/(?<=[.!?])\s+(?=[\p{L}“"(])/u));
+    // a line that is mostly numbers or symbols (a date line, a page range, a caption) is no sentence to answer with
+    out.push(...flat.split(/(?<=[.!?])\s+(?=[\p{L}“"(])/u).filter(x => (x.match(/\p{L}/gu) || []).length >= 0.6 * x.replace(/\s/g, "").length));
   }
   return out;
 }
+
+const WINDOW = 4; // sentences in a passage
+let OFF_TOPIC = 3; // words in common a passage needs when its file isn't about the topic
 
 class Content {
   constructor(docs, small, topics = []) {
@@ -54,12 +58,32 @@ class Content {
       return { id, title, questions: qs, answer: meta.answer || null, next, keywords: [].concat(meta.keywords || [], meta.themes || []),
         sections: secs.map(s => ({ heading: s.heading, sentences: sentencesOf(s.text) })).filter(s => s.sentences.length) };
     });
-    // the units searched: every section, and every question a file says it answers
+    // what each file is about, found without anyone writing it: the words it uses most that the other
+    // files use least. So a saved article needs nothing added to be searched by its topic
+    const dfDoc = new Map(), tfs = this.docs.map(d => {
+      const tf = new Map();
+      for (const s of d.sections) for (const t of this.terms(`${s.heading} ${s.sentences.join(" ")}`)) tf.set(t, (tf.get(t) || 0) + 1);
+      for (const t of tf.keys()) dfDoc.set(t, (dfDoc.get(t) || 0) + 1);
+      return tf;
+    });
+    this.docs.forEach((d, di) => {
+      d.found = [...tfs[di]].filter(([t, n]) => n >= 2 && t.length > 2)
+        .map(([t, n]) => [t, n * Math.log(1 + this.docs.length / dfDoc.get(t))]).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([t]) => t);
+    });
+    // the units searched: passages of a few sentences (a window moved along each section), and every
+    // question a file says it answers
     this.units = [];
     this.docs.forEach((d, di) => {
-      const about = this.terms(`${d.title} ${d.keywords.join(" ")}`);
-      d.sections.forEach((s, si) => this.units.push({ di, si, head: new Set([...about, ...this.terms(s.heading)]),
-        terms: this.terms(`${d.title} ${s.heading} ${s.heading} ${s.sentences.join(" ")}`) }));
+      const about = [...this.terms(`${d.title} ${d.keywords.join(" ")}`), ...d.found];
+      d.sections.forEach((s, si) => {
+        for (let from = 0; from < s.sentences.length; from += WINDOW) {
+          const to = Math.min(from + WINDOW, s.sentences.length);
+          this.units.push({ di, si, from, to, title: new Set(this.terms(d.title)), head: new Set([...about, ...this.terms(s.heading)]),
+            // the title and the heading are the topic (head); as words, a heading counts once per section, in
+            // its first passage, and the title not at all: else the first lines of a file (a date, a byline) win
+            terms: this.terms(`${from === 0 && s.heading !== d.title ? s.heading : ""} ${s.sentences.slice(from, to).join(" ")}`) });
+        }
+      });
       d.questions.forEach(({ q, see }) => this.units.push({ di, si: 0, question: q, see, head: new Set([...about, ...this.terms(q)]), terms: this.terms(q) }));
       // the piece as a whole: its keywords say what it is about, its `answer:` answers it
       if (d.keywords.length && d.answer) this.units.push({ di, si: 0, question: d.title, head: new Set(about), terms: about });
@@ -95,10 +119,14 @@ class Content {
       if (onlyQuestions && !u.question) continue;
       const tf = new Map();
       for (const t of u.terms) tf.set(t, (tf.get(t) || 0) + 1);
-      let score = 0, covered = 0, onTopic = false;
+      let score = 0, covered = 0, onTopic = false, found = 0;
       for (const t of q) {
         const f = tf.get(t);
+        // a word of the file's title counts as covered in every passage of it: "how AI threatens
+        // democracy" is what the whole article is about, even where a passage doesn't say "threatens"
+        if (!f && u.title && u.title.has(t)) { covered += this.idf(t); onTopic = true; continue; }
         if (!f) continue;
+        found++;
         covered += this.idf(t);
         if (u.head.has(t)) onTopic = true;
         score += this.idf(t) * (f * 2.2) / (f + 1.2 * (0.25 + 0.75 * u.terms.length / this.avg));
@@ -110,7 +138,7 @@ class Content {
       // ranked by how much of the question a unit covers as much as by how strongly: a short question that
       // shares one word ("wants") mustn't beat a section that holds most of what was asked
       const coverage = covered / total, rank = score * coverage;
-      if (!best || rank > best.rank) best = { ...u, score, rank, coverage, onTopic, asked: q.length };
+      if (!best || rank > best.rank) best = { ...u, score, rank, coverage, onTopic, found, asked: q.length, q };
     }
     return best && best.score > 0 ? best : null;
   }
@@ -120,11 +148,12 @@ class Content {
   // file says it answers counts, never a passage that happens to share its words
   answer(question, frame = null, onlyQuestions = false) {
     const hit = this.search(question, frame, onlyQuestions);
-    // the bar: half of what was asked is there, and the topic is what the section is about (its title, its
-    // heading, or a question the file says it answers): "what is the weather" isn't answered by a section
-    // that mentions the weather in passing. To widen what a file answers, add `questions:` to it
-    // a question a file lists is closer to the point than a passage, so a little under half of the words is enough there
-    if (!hit || hit.coverage < (hit.question ? 0.45 : 0.5) || !hit.onTopic) return null;
+    // the bar: most of what was asked is in one passage, or a little less when the passage is on the topic
+    // (its file's title or topic words, its heading, or a question the file lists). One word in common is
+    // never enough off-topic: "what is the weather" isn't answered by a passage that mentions the weather
+    if (!hit) return null;
+    const pass = (hit.onTopic && hit.coverage >= 0.45) || (hit.found >= OFF_TOPIC && hit.coverage >= 0.6);
+    if (!pass) return null;
     const d = this.docs[hit.di];
     if (hit.question && hit.see) { // the passage the file points to for this question
       const want = this.terms(hit.see).join(" ");
@@ -135,9 +164,15 @@ class Content {
     }
     if (hit.question && d.answer) return this.reply(hit.di, hit.si, [0], d.answer, `${d.title}, written answer`);
     const s = d.sections[hit.si];
-    const q = new Set(this.terms(question));
-    let at = 0, most = -1;
-    s.sentences.forEach((x, i) => { const n = this.terms(x).filter(t => q.has(t)).length; if (n > most) { most = n; at = i; } });
+    const q = new Set(hit.q);
+    // the sentence that holds most of the question (by weight); a line of numbers or a caption never answers
+    let at = hit.from || 0, most = -1;
+    for (let i = hit.from || 0; i < (hit.to || s.sentences.length); i++) {
+      const x = s.sentences[i];
+      const real = x.split(/\s+/).length >= 6 && (x.match(/\p{L}/gu) || []).length > 0.6 * x.length;
+      const n = (real ? 0.01 : -1) + this.terms(x).filter(t => q.has(t)).reduce((a, t) => a + this.idf(t), 0);
+      if (n > most) { most = n; at = i; }
+    }
     return this.reply(hit.di, hit.si, ...this.from(s, at), this.where(d, s));
   }
 
@@ -173,4 +208,4 @@ class Content {
 
 }
 
-if (typeof module !== "undefined") module.exports = { Content };
+if (typeof module !== "undefined") module.exports = { Content, setOffTopic: n => { OFF_TOPIC = n; } };

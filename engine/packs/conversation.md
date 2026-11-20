@@ -21,6 +21,7 @@ Words that say nothing about which skill is meant: the taught-words check doesn'
 - with, from, about, there, here, up, so, then, also, us, we, our, mine, again, one, by, as
 - which, who, whom, whose, how, why, when, where, much, many, should, must, may, might, shall, was, were, been
 - have, has, had, he, she, his, her, they, them, their, these, those, if, but, not, very, too, more, most, than
+- tell, explain, describe, know, think, want, like, need, said, say
 
 ## Follow-up
 A sentence starting with these may complete the request before it.

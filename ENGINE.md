@@ -160,33 +160,40 @@ Gab: the content skill "should act as a search engine, finding keywords or conce
 question, then use part of the content to formulate replies, moving the search window in the document
 when a follow-up comes". That is how it works now:
 
-- **Search:** words (BM25, endings off, ise/ize as one, a typo read as the known word one letter away),
-  plus what a file declares: `keywords:` and `themes:` say what it is about, `answers:` the questions the
-  whole piece answers (with its `answer:`), and `questions:` with `see:` point a question to the passage
-  that answers it. my-agent's work files are read as they are.
-- **The bar:** half of the question found in a passage whose title or heading is the topic; a little under
-  half for a question a file lists. A sentence that isn't asked as a question ("my kids live abroad with
-  their mother") only reaches what the files list, never a passage that happens to share its words.
-- **The reply:** sentences from the file, with where they come from. A sentence that ends on ":" brings its
-  list; a very short one brings the next.
+- **Nothing has to be written into the files.** Any Markdown file is searched as it is: in passages of four
+  sentences moved along each section, by its words (BM25, endings off, ise/ize as one, a typo read as the
+  known word one letter away). What each file is about is found, not written: the words it uses most that
+  the other files use least, plus its title. Gab: "I cannot edit each saved article to add questions."
+- **What a file may declare, if its author wants:** `keywords:` and `themes:`, `answers:` with an
+  `answer:`, and `questions:` with `see:` pointing a question to a passage. my-agent's work files use them;
+  they raise what is found, they aren't needed.
+- **The bar:** a little under half of the question in a passage on the topic (its file's title or topic
+  words, its heading), or most of it, with at least three words in common, anywhere. A word of the title
+  counts as covered in every passage of that file. One word in common is never enough off the topic. A
+  sentence not asked as a question only reaches what the files list.
+- **The reply:** the sentence of the passage that holds most of the question, with where it comes from.
+  A line of numbers, a byline or HTML is never a sentence to answer with.
 - **The moving window:** "tell me more" goes on from the last sentence said; a follow-up question looks
-  in the same file first, and the passage it's on and the ones beside it most ("why a stone?", then "how
-  is it made?" stays in Pebbble's stone section).
-- **Teaching:** a question it had nothing for is pointed, from the inbox, to the passage that answers it
-  (`questions: - q: … see: …`). Accepted only if the passage is in the file and the question then finds it.
+  in the same file first, and the passage it's on and the ones beside it most.
+- **Teaching:** a question it had nothing for is pointed, from the inbox, to the passage that answers it.
 
-Measured on my-agent's five work pages, with its own `tests/held-out.json` (56 answerable questions, 10
-near-misses, 25 off-topic, 10 requests for services), through the whole engine with the everyday pack:
+Measured with my-agent's `tests/held-out.json` (56 answerable, 25 off-topic, 10 requests for services),
+on its five work pages, through the whole engine:
 
-| | right piece | of which the expected passage | wrong piece | nothing | off-topic answered | requests answered |
-|---|---|---|---|---|---|---|
-| my-agent's matcher (main) | 29 | (pieces only) | 3 | 24 | 0 | 3 (1 + 2 partial) |
-| the engine | 41 | 19 | 1 | 14 | 0 | 1 |
+| | right piece | with the expected passage | wrong piece | nothing | off-topic answered |
+|---|---|---|---|---|---|
+| my-agent's matcher (main) | 29 | (pieces only) | 3 | 24 | 0 |
+| the engine, the files as they are | 47 | 22 | 0 | 9 | 0 |
+| the engine, every question, answer and keyword removed | 32 | 18 | 0 | 24 | 0 |
 
-my-agent's own `tests/check.js` cases on those pieces: 17 of 19 (it passes its own 20 of 20). Read
-honestly: the bar for listed questions (0.45) was chosen on this held-out set, so it is no longer blind;
-the questions and labels were written by Claude, not visitors. The 14 it can't find are concepts the
-words don't share ("democratise prototyping"): teaching is how they get found, one question at a time.
+On 96 saved articles (thinking-memories, read locally, not published): indexed in about 0.4 s, 2,400
+passages, a question answered in under 10 ms; 1 of the 25 off-topic questions answered. Specific questions
+find their article ("what is dataset minimalism", "which boards beat the raspberry pi 5"); broad ones
+across many articles on the same subject are weaker ("does AI threaten democracy" lands in the wrong one).
+
+Read honestly: the bars were chosen on this held-out set, so it is no longer blind, and its questions were
+written by Claude, not visitors. Without anything declared, it finds words, not concepts: "democratise
+prototyping" isn't found until a question is taught or a keyword written.
 
 ## Not done yet
 

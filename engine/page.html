@@ -27,7 +27,7 @@
 </style>
 </head>
 <body>
-<header><b>ptiLU</b><span class="why">engine · offline</span><button id="tab">Inbox</button></header>
+<header><b>ptiLU</b><span class="why">engine · <span id="built"></span></span><button id="tab">Inbox</button></header>
 <main id="log"></main>
 <main id="inbox"></main>
 <form class="say"><input id="q" placeholder="Ask or tell me something" autocomplete="off"><button class="go">Send</button></form>
@@ -92,6 +92,7 @@ function drawInbox() {
     box.append(el("h3", "", "Taught on this phone"), el("pre", "", lines.join("\n") + "\n\nCopy these under ## Learned in each skill.md to keep them."));
   }
 }
+document.getElementById("built").textContent = "built " + BUILT;
 say("hello");
 </script>
 </body>
