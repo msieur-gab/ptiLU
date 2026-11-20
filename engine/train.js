@@ -15,7 +15,7 @@ function examples(packs) {
   for (const s of packs.skills) {
     const samples = K.samplesFor(s);
     for (const p of s.patterns) for (const x of P.expandSpans(p, samples, 12)) add(s.name, x.text, x.spans);
-    for (const t of s.also) add(s.name, t);
+    s.also.forEach((t, i) => add(s.name, t, s.alsoSpans && s.alsoSpans[i])); // marked values teach the tagger too
   }
   for (const t of packs.asks) add("ask", t);
   for (const d of packs.docs) {

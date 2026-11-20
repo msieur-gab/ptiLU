@@ -22,11 +22,11 @@ it asks which one.
 - (ping/nudge) me {when} (to/about) {task}
 
 ## Also said
-- I need a reminder to water the plants tonight
-- make sure I don't forget to pay the rent
+- I need a reminder to [water the plants](task) tonight
+- make sure I don't forget to [pay the rent](task)
 - can you remind me later
-- remember to buy milk tomorrow
-- I keep forgetting to call the bank, remind me on monday
+- remember to [buy milk](task) tomorrow
+- I keep forgetting to [call the bank](task), remind me on monday
 
 ## What it needs
 - {task}: some text. If it's missing, ask: What should I remind you of? | Remind you to do what?

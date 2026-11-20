@@ -278,6 +278,11 @@ use. Most misses are sentences that never reach the skill ("I just moved to Rott
 sure), or values the reader takes whole ("water the bonsai every" + "sunday"). The model trains in 0.4 s
 on the phone, so a sentence taught with its values marked retrains the skill and the tagger at once.
 
+Also said lines can mark their values as main's data did (`I'm based in [Munich](place)`): the sentence
+teaches the skill, the marks teach the tagger. The 10 existing lines with a value are marked; the template
+values went 248 → 255 right, the handwritten ones stayed at 7 of 11. The lever is volume: main's tagger had
+6,286 sentences.
+
 ## The page
 
 Main's page, its look read straight from `web/template.html` at build time (one design system, not a

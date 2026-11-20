@@ -14,9 +14,9 @@ Where home is. Kept on this device only, with the sentence you said it in.
 - i've moved to {place}
 
 ## Also said
-- I'm based in Munich
-- I stay in Lyon these days
-- my town is Kyoto
+- I'm based in [Munich](place)
+- I stay in [Lyon](place) these days
+- my town is [Kyoto](place)
 
 ## What it needs
 - {place}: a place. If it's missing, ask: Where do you live?

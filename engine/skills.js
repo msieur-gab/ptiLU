@@ -35,10 +35,32 @@ function readSkill(name, md, pack) {
   return {
     name, pack, does: meta.does, label: meta.label || meta.does,
     acts: meta.acts === "yes", approve: meta.approve === "yes", role: meta.role || null,
-    needs, patterns, also: (s["also said"] || { lines: [] }).lines, replies, samples,
+    needs, patterns, ...alsoSaid((s["also said"] || { lines: [] }).lines, needs, fail), replies, samples,
     command: ((s["does"] || { text: "" }).text.trim().split("\n")[0]) || null,
     tests: [], md,
   };
+}
+
+// "Also said" lines may mark their values as main's data did: "I just moved to [Rotterdam](place)". The
+// plain sentence teaches the skill; the marks also teach the tagger where values sit
+function alsoSaid(lines, needs, fail) {
+  const also = [], alsoSpans = [];
+  for (const line of lines) {
+    let text = "", pos = 0, marked = false;
+    const spans = [];
+    for (const m of line.matchAll(/\[([^\]]+)\]\((\w+)\)/g)) {
+      if (!needs[m[2]]) fail(`[${m[1]}](${m[2]}) in "${line}": no value {${m[2]}} under What it needs`);
+      text += line.slice(pos, m.index);
+      spans.push([text.length, text.length + m[1].length, m[2]]);
+      text += m[1];
+      pos = m.index + m[0].length;
+      marked = true;
+    }
+    text += line.slice(pos);
+    also.push(text);
+    alsoSpans.push(marked ? spans : null);
+  }
+  return { also, alsoSpans };
 }
 
 // a skill's own words: what its patterns, sentences and samples say (the taught-words check)
