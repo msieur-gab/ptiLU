@@ -34,7 +34,7 @@ function readSkill(name, md, pack) {
   for (const [k, v] of Object.entries(F.keyed((s["samples"] || { lines: [] }).lines))) samples[k] = v;
   return {
     name, pack, does: meta.does, label: meta.label || meta.does,
-    acts: meta.acts === "yes", approve: meta.approve === "yes", role: meta.role || null,
+    acts: meta.acts === "yes", approve: meta.approve === "yes", role: meta.role || null, fallback: meta.fallback === "yes",
     needs, patterns, ...alsoSaid((s["also said"] || { lines: [] }).lines, needs, fail), replies, samples,
     command: ((s["does"] || { text: "" }).text.trim().split("\n")[0]) || null,
     tests: [], md,

@@ -71,3 +71,21 @@ for (const [label, rows] of Object.entries(sets)) {
     console.log(`  ${name.padEnd(44)} ${keys().map(([k, v]) => `${k} ${v}`).join(' · ')}`);
   }
 }
+
+// the questions about Gab (docs/questions.md, section L): what each system does with each, side by side.
+// No right answer is marked there yet ("Answer it?" is empty): the column is for Gab to judge
+{
+  const md = fs.readFileSync(path.join(MA, 'docs/questions.md'), 'utf8');
+  const L = md.slice(md.indexOf('## L.'), md.indexOf('## When nothing matches'));
+  const qs = L.split('\n').filter(l => /^\| [^|]*\? \|/.test(l)).map(l => l.split('|')[1].trim());
+  console.log(`\nquestions about Gab (section L, ${qs.length}): what the engine does`);
+  const tally = {};
+  for (const q of qs) {
+    const e = make(); let r = e.respond(q);
+    if (r.outcome === 'abstain' && r.meaning) { const m = e.byMeaning(q, await emb(q)); r = m || (r.fallback && e.fallback(q)) || r; }
+    const kind = r.command === 'form.open' ? 'contact form' : r.skill && ['about', 'contact'].includes((e.byName.get(r.skill) || {}).role) ? `answers (${r.skill})` : r.source ? `a passage (${r.source.split(',')[0]})` : r.outcome === 'ask' ? 'asks' : 'nothing';
+    tally[kind.replace(/ \(.*/, '')] = (tally[kind.replace(/ \(.*/, '')] || 0) + 1;
+    if (process.argv.includes('-L')) console.log(`  ${q.padEnd(52)} → ${kind}`);
+  }
+  console.log('  ' + Object.entries(tally).map(([k, v]) => `${k} ${v}`).join(' · '));
+}

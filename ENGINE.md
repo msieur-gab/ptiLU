@@ -312,6 +312,27 @@ defensible: "Can a product work without an account?" → Vrooom). But on questio
 ("When could you start?", "How much does a project cost?", "What tools do you use?"), where the site should
 invite the visitor to write, it answers 11 of 40 with a loosely related passage; the live site, 1.
 
+## The site pack (branch `engine-site`, 20 November, 11:30)
+
+`packs/site/`: who I am, what I do, write to me, what I haven't done, how this page works. Every reply is
+Gab's wording from my-agent's `content/site.json`. "Write to me" and "what I haven't done" open a contact
+form with the visitor's question in it (sent by mail to `contact:` in pack.md, empty for now). The site
+skills change nothing anywhere, so the model may take them at a lower bar (0.5 before the content, 0.3 after
+it); and a question nothing answers, by words or by meaning, falls to the invitation instead of "I don't
+have anything written about that", as my-agent does. The questions of my-agent's docs/questions.md were kept
+out of the training sentences: they are the test.
+
+Questions about Gab (docs/questions.md, section L, 43), what the engine does:
+
+| | answers about me | contact form | a passage of the work | nothing |
+|---|---|---|---|---|
+| before the site pack | 3 | 7 | 9 | 22 (+2 asks) |
+| with it | 9 | 26 | 7 | 1 |
+
+Work questions unchanged (questions.md: 23 right, 4 "do you mean", 5 elsewhere; held-out: 51 of 56).
+A correction: the "invitation" in section L is its "Today" column, what the live site does now, not the
+right answer ("Answer it?" is empty, for Gab to fill). Agreeing with it is agreeing with the live site.
+
 ## The page
 
 Main's page, its look read straight from `web/template.html` at build time (one design system, not a

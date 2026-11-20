@@ -94,6 +94,7 @@ function renderAgent(el, r) {
     + (follow.length ? `<div class="follow">${follow.map((c, i) => `<button class="chip" type="button" data-i="${i}">${esc(c)}</button>`).join("")}</div>` : "")
     + `<details class="why"><summary aria-label="Show what the engine did">${icon}<span class="dot ${dot}"></span>${esc(r.skill || (r.source ? "content" : r.outcome))}</summary><div class="trace">${t}</div></details>`);
   el.querySelectorAll(".follow .chip").forEach(b => b.addEventListener("click", () => send(follow[+b.dataset.i])));
+  if (r.command === "form.open") contactForm(el, el.querySelector(".cmd").textContent);
   log.scrollTop = log.scrollHeight;
 }
 function renderUser(text, typing) {
@@ -138,15 +139,34 @@ function send(text, instant = false) {
     embed(text).then(out => {
       clearTimeout(note); el.querySelector(".pending")?.remove();
       const m = out.ok ? engine.byMeaning(text, out.vec) : null;
-      show(m ? { ...m, why: `${m.why}${out.ms !== undefined ? ` · ${out.ms} ms` : ""}` } : r);
+      show(m ? { ...m, why: `${m.why}${out.ms !== undefined ? ` · ${out.ms} ms` : ""}` } : (r.fallback && engine.fallback(text)) || r);
     });
     return true;
   }
-  show(r);
+  show(r.outcome === "abstain" && r.fallback ? engine.fallback(text) || r : r);
   return true;
 }
 $("form").addEventListener("submit", e => { e.preventDefault(); if (send($("q").value)) $("q").value = ""; });
 $("reset").addEventListener("click", () => { log.innerHTML = ""; engine.pending = null; engine.frame = null; chips(EXAMPLES); $("q").focus(); });
+
+// the contact form: the visitor's question already in it, their address, and what I'll receive shown
+// before it goes. It sends to the address in packs/site/pack.md (contact:), by their own mail app
+const CONTACT = (() => { const p = FILES.packs.site; return p ? (EngineFiles.frontMatter(p["pack.md"]).meta.contact || "") : ""; })();
+function contactForm(el, question) {
+  const f = document.createElement("div");
+  f.className = "card";
+  f.innerHTML = `<p class="meta">Your question, as I'll receive it. Change anything before sending.</p>`
+    + `<textarea rows="3" style="font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;padding:8px">${esc(question)}</textarea>`
+    + `<input type="email" placeholder="your email, so I can reply" style="font:inherit;border:1px solid var(--line);border-radius:8px;padding:8px">`
+    + `<div class="card-actions"><button class="primary" type="button">Send</button></div><p class="meta msg"></p>`;
+  f.querySelector(".primary").addEventListener("click", () => {
+    const text = f.querySelector("textarea").value.trim(), from = f.querySelector("input").value.trim();
+    if (!CONTACT) { f.querySelector(".msg").textContent = "No address set yet (packs/site/pack.md, contact:). Nothing was sent."; return; }
+    location.href = `mailto:${CONTACT}?subject=${encodeURIComponent("A question from the site")}&body=${encodeURIComponent(text + (from ? "\n\nReply to: " + from : ""))}`;
+  });
+  el.appendChild(f);
+  log.scrollTop = log.scrollHeight;
+}
 
 // the inbox: pick the skill a sentence meant, mark its values; it's learned at once and kept on this phone
 function updateCount() { const n = engine.inbox.length; $("inboxCount").hidden = !n; $("inboxCount").textContent = n; }

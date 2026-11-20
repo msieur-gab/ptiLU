@@ -51,6 +51,9 @@ function decide(e, sentence, want) {
   if (r.outcome === "abstain") return want ? "abstained" : "right";
   if (r.outcome === "ask" && r.say.includes("Do you want me")) return want ? "asked other" : "asked";
   if (!want && r.outcome === "act" && !r.skill) return "answered"; // a content answer to something no skill does
+  // a site skill (about me, contact) answering what ptiLU's own set calls out of scope ("who made you") is the
+  // site doing its job: it changes nothing on the device; counted as answered, not as a wrong action
+  if (!want && r.outcome === "act" && r.skill && ["about", "contact"].includes((e.byName.get(r.skill) || {}).role)) return "answered";
   return r.skill ? "wrong" : (want ? "abstained" : "right");
 }
 function tally(rows) {

@@ -29,6 +29,8 @@ class Engine {
     this.inbox = []; // what it couldn't do, waiting to be taught
     this.vocab = new Map(skills.map(s => [s.name, S.vocabulary(s, T.words)]));
     this.byName = new Map(skills.map(s => [s.name, s]));
+    // a pack may name the skill a question falls to when nothing answers it (the site: the invitation to write)
+    this.fallbackSkill = skills.find(s => s.fallback) || null;
   }
 
   say(key, values = {}) { return T.fill(T.pick(this.talk.replies[key] || [key], this.random), values); }
@@ -161,8 +163,13 @@ class Engine {
     const [intent, conf] = ranked[0] || [null, 0];
     const skill = this.byName.get(intent);
     let unknown = null, values = {};
+    // the site's own skills (about me, write to me) change nothing anywhere: the model may take them at a
+    // lower bar, untaught words or not, and before the content when it is fairly sure ("When could you
+    // start?" is work-together, not a passage of the talk that says "start")
+    const site = skill && ["about", "contact"].includes(skill.role);
+    if (site && conf >= 0.5) return this.next(skill, {}, `model ${conf.toFixed(2)} (${skill.name}), a question about me`, sentence);
     // small talk is cheap to get wrong but still wrong: the model alone says hello only when sure
-    if (skill && conf >= (skill.role ? SURE : PROPOSE)) {
+    if (skill && !site && conf >= (skill.role ? SURE : PROPOSE)) {
       // the values its shape gives away, then the words left: are they all the skill's own?
       let left = sentence;
       const take = (slot, v) => { values[slot] = v; left = left.replace(new RegExp(v.text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), " "); };
@@ -201,6 +208,7 @@ class Engine {
       const r = this.content.answer(sentence, this.frame && this.frame.kind === "content" ? this.frame : null, !isQuestion);
       if (r) { this.frame = r.frame; return this.turn("act", r.say, { source: r.source, chips: r.chips, why: isQuestion ? "content" : "content, a question it lists" }); }
     }
+    if (site && conf >= 0.3) return this.next(skill, {}, `model ${conf.toFixed(2)} (${skill.name}), a question about me, nothing in the content`, sentence);
     if (skill && unknown && unknown.length && !skill.role) {
       return this.confirm(skill, values, `model ${conf.toFixed(2)} (${skill.name}), untaught: ${unknown.join(", ")}`, sentence, true,
         this.say("unknown word", { word: unknown.slice(0, 2).map(w => `“${w}”`).join(", "), label: skill.label }));
@@ -210,7 +218,7 @@ class Engine {
     const meaning = !!this.meaning;
     if (this.content && isQuestion) {
       this.inbox.push({ sentence, why, on: this.now().toISOString().slice(0, 10) });
-      return this.turn("abstain", this.say("nothing written"), { why, meaning });
+      return this.turn("abstain", this.say("nothing written"), { why, meaning, fallback: !!this.fallbackSkill });
     }
     return { ...this.abstain(sentence, why), meaning };
   }
@@ -276,6 +284,11 @@ class Engine {
     if (qs.length) return this.turn("ask", this.say("do you mean"), { chips: qs.map(x => x.key.split("|")[2]), why: `meaning ${qs[0].score.toFixed(2)}, not sure` });
     return null;
   }
+  // nothing answered a question, by words or meaning: the pack's fallback skill, if it has one
+  fallback(sentence) {
+    return this.fallbackSkill ? this.finish(this.fallbackSkill, {}, "nothing answered it: the invitation", false, sentence) : null;
+  }
+
   // the listed questions a sentence most likely means, by meaning (the inbox's suggestions)
   questionsByMeaning(vec, n = 4) {
     if (!this.meaning || !this.content) return [];
