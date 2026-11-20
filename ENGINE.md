@@ -294,6 +294,24 @@ you" (they had pulled "which city do I live in" toward remembering a place):
 
 No wrong action anywhere; `test.js` now fails on one in main's held-out set too.
 
+## Can it replace my-agent? Measured (20 November, 11:00)
+
+`node engine/meaning/compare.mjs ../my-agent`: the engine against my-agent's live keyword matcher (main) and
+its MiniLM branch (feat/nlu), on the same questions. held-out.json is the set both tuned on; the questions
+logged in my-agent's docs/questions.md (with their candidate answer: a live piece, or "invitation") were
+tuned on by neither.
+
+| | held-out, answerable (56) | held-out, off-topic + requests (35) | questions.md, a piece (32) | questions.md, invitation (40) |
+|---|---|---|---|---|
+| my-agent main | 29 right, 3 wrong | 3 answered | 24 right, 4 wrong | 1 answered |
+| my-agent feat/nlu | 55 right | 10 answered | 22 right, 10 wrong | 14 answered |
+| the engine | 51 right, 2 "do you mean", 1 wrong | 2 answered, 2 "do you mean" | 23 right, 4 "do you mean", 5 wrong | 11 answered, 4 "do you mean" |
+
+Not yet. On questions about the work it is level with the live site (and three of its five "wrong" look
+defensible: "Can a product work without an account?" → Vrooom). But on questions about Gab and his services
+("When could you start?", "How much does a project cost?", "What tools do you use?"), where the site should
+invite the visitor to write, it answers 11 of 40 with a loosely related passage; the live site, 1.
+
 ## The page
 
 Main's page, its look read straight from `web/template.html` at build time (one design system, not a
