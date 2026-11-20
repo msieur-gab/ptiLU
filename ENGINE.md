@@ -283,6 +283,17 @@ teaches the skill, the marks teach the tagger. The 10 existing lines with a valu
 values went 248 → 255 right, the handwritten ones stayed at 7 of 11. The lever is volume: main's tagger had
 6,286 sentences.
 
+Then 95 varied sentences with marked values, written by Claude for Gab to review (35 reminders, 25 names,
+25 places, none copied from main's held-out set), and 6 contrasting lines for "say what it knows about
+you" (they had pulled "which city do I live in" toward remembering a place):
+
+| | handwritten held-out (11 values) | main's template sentences (354) |
+|---|---|---|
+| before | 7 right, 3 wrong, 1 missed | 255 right, 31 wrong, 111 missed |
+| after | 9 right, 2 wrong, 0 missed | 285 right, 25 wrong, 87 missed |
+
+No wrong action anywhere; `test.js` now fails on one in main's held-out set too.
+
 ## The page
 
 Main's page, its look read straight from `web/template.html` at build time (one design system, not a

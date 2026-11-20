@@ -28,6 +28,42 @@ it asks which one.
 - remember to [buy milk](task) tomorrow
 - I keep forgetting to [call the bank](task), remind me on monday
 
+Written by Claude on 20 November 2026 for Gab to review: varied sentences, values marked.
+- remind me to [return the library books](task) on thursday
+- please remind me to [defrost the chicken](task) this afternoon
+- could you remind me to [phone the plumber](task) tomorrow morning
+- in two hours remind me to [take the laundry out](task)
+- I must [renew the parking permit](task) next week, can you remind me
+- remind me on saturday to [buy flowers for Lea](task)
+- can you make sure I [call grandma](task) tonight
+- set a reminder to [sand the cedar lid](task) at 5pm
+- add a reminder to [check the glue joints](task) in 30 minutes
+- I'd like a reminder to [email the accountant](task) on monday at 10
+- don't let me forget to [pack the chargers](task)
+- remind me to [stretch my back](task) in 45 minutes
+- next friday remind me to [pay the electricity bill](task)
+- remind me about [the dentist appointment](task) tomorrow at 8
+- nudge me to [drink water](task) in an hour
+- ping me at noon to [move the car](task)
+- please set a reminder for me to [order more sandpaper](task)
+- make a reminder to [send the invoice to Romain](task) tonight
+- could you remind me later to [answer Eva's message](task)
+- tomorrow remind me to [bring the drill back](task)
+- remind me at 7 to [wake the kids](task)
+- I need you to remind me to [file the tax return](task) on the 30th
+- set up a reminder to [water the herbs](task) every evening
+- remind me in 10 minutes to [turn off the oven](task)
+- remind me to [print the boarding passes](task) the day after tomorrow
+- hey, remind me to [call the bank](task) before 4pm
+- would you remind me to [book a table](task) for friday
+- when it's 6, remind me to [start cooking](task)
+- give me a reminder to [take my vitamins](task) at 8 am
+- remind me tonight that I need to [prepare the slides](task)
+- remind me in three days to [follow up with Marc](task)
+- create a reminder: [oil the workbench](task), sunday morning
+- reminder for tomorrow: [pick up the photos](task)
+- remind me to [lock the workshop](task) when it's 9pm
+- set a reminder to [cancel the trial](task) before the 15th
 ## What it needs
 - {task}: some text. If it's missing, ask: What should I remind you of? | Remind you to do what?
 - {when}: a date and time. If it's missing, ask: When? | When should I remind you?

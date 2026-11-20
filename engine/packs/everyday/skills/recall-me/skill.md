@@ -20,6 +20,14 @@ What it keeps about you, and nothing else.
 - do you remember where I live
 - say my name
 
+Contrasting lines (20 November): questions about where you live are this skill's, not "remember where you live".
+- what's my city
+- where is my home
+- in what town is my home
+- what city did I tell you
+- where did I say I live
+- what's my home town
+
 ## Does
 memory.recall
 

@@ -130,6 +130,6 @@ console.log(`review conversations (${rv.length}): ${tally(rv)}`);
   if (bad) failed++; else console.log(`real sentences: ${lines.length}, all where they belong`);
 }
 
-const wrong = [...all, ...rv, ...others].filter(r => r[2] === "wrong").length;
+const wrong = [...all, ...rv, ...others, ...mine].filter(r => r[2] === "wrong").length;
 if (wrong) { failed++; console.log(`FAIL: ${wrong} wrong actions`); }
 process.exit(failed ? 1 : 0);
