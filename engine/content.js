@@ -99,6 +99,22 @@ class Content {
     this.avg = this.units.reduce((a, u) => a + u.terms.length, 0) / Math.max(1, this.units.length);
   }
 
+  // the questions the files list that a sentence most likely means: the words they share, weighed by how
+  // rare they are, the file the search leans to counting a little. For the inbox: "which question is it?"
+  nearest(sentence, n = 4) {
+    const q = new Set(this.terms(sentence).map(t => this.df.has(t) ? t : ([...this.df.keys()].find(k => k.length >= 5 && T.close(t, k)) || t)));
+    const lean = this.search(sentence);
+    const all = [];
+    this.docs.forEach((d, di) => d.questions.forEach(x => {
+      const score = this.terms(x.q).filter(t => q.has(t)).reduce((a, t) => a + this.idf(t), 0) + (lean && lean.di === di ? 0.5 : 0);
+      all.push({ di, title: d.title, q: x.q, see: x.see, score });
+    }));
+    const seen = new Set();
+    return all.filter(x => x.score > 0.5).sort((a, b) => b.score - a.score)
+      .filter(x => !seen.has(x.q.toLowerCase()) && seen.add(x.q.toLowerCase())).slice(0, n);
+  }
+  get questionsByFile() { return this.docs.map((d, di) => ({ di, title: d.title, questions: d.questions.map(x => x.q) })).filter(x => x.questions.length); }
+
   // a question taught from the inbox: it points to a passage of a file, as a `questions:` line would
   learn(di, q, see) {
     const d = this.docs[di];

@@ -64,4 +64,19 @@ function teachContent(engine, sentence, doc, see) {
   return { ok: true, line: `  - q: ${q}\n    see: ${see}`, say: r.say };
 }
 
-if (typeof module !== "undefined") module.exports = { teach, unlearn, teachContent };
+// a sentence from the inbox taught as another way of asking a question a file already lists: it gets that
+// question's answer (its passage, or the file's written answer). Kept only if it then finds that file.
+function teachQuestion(engine, sentence, title, listedQ) {
+  const c = engine.content;
+  const di = c ? c.docs.findIndex(d => d.title === title || d.id === title) : -1;
+  const target = di >= 0 ? c.docs[di].questions.find(x => x.q === listedQ) : null;
+  if (!target) return { ok: false, why: `"${listedQ}" isn't a question ${title} lists` };
+  const q = engine.clean(sentence);
+  c.learn(di, q, target.see);
+  const r = c.answer(q);
+  if (!r || r.frame.di !== di) { c.docs[di].questions.pop(); c.units.pop(); return { ok: false, why: "it still doesn't find that answer" }; }
+  engine.inbox = engine.inbox.filter(e => e.sentence !== q && e.sentence !== sentence);
+  return { ok: true, say: r.say, line: target.see ? `  - q: ${q}\n    see: ${target.see}` : `  - ${q}` };
+}
+
+if (typeof module !== "undefined") module.exports = { teach, unlearn, teachContent, teachQuestion };

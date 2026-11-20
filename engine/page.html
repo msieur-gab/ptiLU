@@ -14,6 +14,7 @@
 .turn .follow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
 .turn .follow .chip { white-space: normal; text-align: left; }
 .sheet[hidden], .count[hidden] { display: none; }
+.card select { max-width: 100%; }
 .card select, .card input { font: 14px var(--font-ui); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
 </style>
 </head>
@@ -41,7 +42,7 @@
 <section class="sheet" id="sheet" hidden aria-label="Inbox">
   <div class="sheet-head"><h2>Inbox</h2><button class="ghost" id="sheetClose" type="button">Close</button></div>
   <div class="sheet-body">
-    <p class="hint">What I couldn't do, and what you said yes to without my knowing the words. Pick the skill it meant and mark its values: I learn it at once. Everything stays on this phone.</p>
+    <p class="hint">What I couldn't answer or do. Tap the question it means and it gets the same answer from now on, or teach it to a skill. I learn it at once; it stays on this phone.</p>
     <div id="waiting"></div>
     <div class="learned"><h3>Taught on this phone</h3><pre class="rlog" id="learned"></pre></div>
   </div>
@@ -59,6 +60,8 @@ const engine = new EngineCore.Engine({ skills: packs.skills, talk: packs.talk, m
   model: new NLURuntime.NLU(MODEL) });
 const taught = store.get("ptilu.engine.taught") || [];
 for (const t of taught) EngineLearn.teach(engine, t.sentence, t.skill, t.marks);
+const taughtQ = store.get("ptilu.engine.taughtQ") || [];
+for (const t of taughtQ) EngineLearn.teachQuestion(engine, t.sentence, t.title, t.q);
 const retrain = () => { engine.model = new NLURuntime.NLU(NLUTrainer.train(EngineTrain.examples(packs), { log: () => {} })); };
 if (taught.length) retrain();
 
@@ -128,27 +131,41 @@ function drawInbox() {
   if (!engine.inbox.length) box.innerHTML = `<div class="empty">Nothing waiting.</div>`;
   for (const item of engine.inbox) {
     const card = document.createElement("div"); card.className = "card";
+    const near = engine.content ? engine.content.nearest(item.sentence) : [];
+    const groups = engine.content ? engine.content.questionsByFile : [];
     card.innerHTML = `<p class="said">${esc(item.sentence)}</p><p class="meta">${esc(item.why)}</p>`
-      + `<div class="card-actions"><select><option value="">teach it to…</option>${engine.skills.map(s => `<option value="${s.name}">${esc(s.label)}</option>`).join("")}</select>`
-      + `<button class="btn quiet" type="button">not for me</button></div><div class="slots card-actions"></div><p class="meta msg"></p>`;
-    const sel = card.querySelector("select"), slots = card.querySelector(".slots"), msg = card.querySelector(".msg");
+      + (groups.length ? `<p class="meta">Is it one of these questions? Tap it: it will get the same answer.</p>`
+        + `<div class="card-actions near">${near.map((x, i) => `<button class="btn" type="button" data-i="${i}">${esc(x.q)} <span class="dim">· ${esc(x.title)}</span></button>`).join("")}</div>`
+        + `<div class="card-actions"><select class="anyq"><option value="">another question…</option>${groups.map(g => `<optgroup label="${esc(g.title)}">${g.questions.map(q => `<option value="${esc(g.title)}\u0000${esc(q)}">${esc(q)}</option>`).join("")}</optgroup>`).join("")}</select></div>` : "")
+      + `<details><summary class="meta">or teach it to a skill</summary><div class="card-actions"><select class="skill"><option value="">teach it to…</option>${engine.skills.map(s => `<option value="${s.name}">${esc(s.label)}</option>`).join("")}</select></div><div class="slots card-actions"></div></details>`
+      + `<div class="card-actions"><button class="btn quiet no" type="button">not for me</button></div><p class="meta msg"></p>`;
+    const msg = card.querySelector(".msg");
+    const asQuestion = (title, q) => {
+      const r = EngineLearn.teachQuestion(engine, item.sentence, title, q);
+      msg.textContent = r.ok ? `Learned. It now answers: "${r.say.slice(0, 90)}…"` : "Not learned: " + r.why;
+      if (r.ok) { taughtQ.push({ sentence: item.sentence, title, q }); store.set("ptilu.engine.taughtQ", taughtQ); updateCount(); setTimeout(drawInbox, 1400); }
+    };
+    card.querySelectorAll(".near .btn").forEach(b => b.addEventListener("click", () => asQuestion(near[+b.dataset.i].title, near[+b.dataset.i].q)));
+    card.querySelector(".anyq")?.addEventListener("change", e => { const [t, q] = e.target.value.split("\u0000"); if (q) asQuestion(t, q); });
+    const sel = card.querySelector(".skill"), slots = card.querySelector(".slots");
     sel.addEventListener("change", () => {
-      const s = engine.byName.get(sel.value); slots.innerHTML = ""; if (!s) return;
-      for (const slot of Object.keys(s.needs)) slots.insertAdjacentHTML("beforeend", `<input data-slot="${slot}" placeholder="${slot}: the words that are it">`);
+      const sk = engine.byName.get(sel.value); slots.innerHTML = ""; if (!sk) return;
+      for (const slot of Object.keys(sk.needs)) slots.insertAdjacentHTML("beforeend", `<input data-slot="${slot}" placeholder="${slot}: the words that are it">`);
       slots.insertAdjacentHTML("beforeend", `<button class="primary" type="button">Teach</button>`);
       slots.querySelector(".primary").addEventListener("click", () => {
         const marks = {};
         slots.querySelectorAll("input").forEach(i => { if (i.value.trim()) marks[i.dataset.slot] = i.value.trim(); });
         const r = EngineLearn.teach(engine, item.sentence, sel.value, marks);
         msg.textContent = r.ok ? "Learned: " + r.pattern : "Not learned: " + r.why;
-        if (r.ok) { taught.push({ sentence: item.sentence, skill: sel.value, marks }); store.set("ptilu.engine.taught", taught); retrain(); setTimeout(drawInbox, 900); }
+        if (r.ok) { taught.push({ sentence: item.sentence, skill: sel.value, marks }); store.set("ptilu.engine.taught", taught); retrain(); updateCount(); setTimeout(drawInbox, 1200); }
       });
     });
-    card.querySelector(".btn.quiet").addEventListener("click", () => { engine.inbox.splice(engine.inbox.indexOf(item), 1); drawInbox(); });
-    if (item.suggest) { sel.value = item.suggest; sel.dispatchEvent(new Event("change")); }
+    if (item.suggest) { card.querySelector("details").open = true; sel.value = item.suggest; sel.dispatchEvent(new Event("change")); }
+    card.querySelector(".no").addEventListener("click", () => { engine.inbox.splice(engine.inbox.indexOf(item), 1); updateCount(); drawInbox(); });
     box.appendChild(card);
   }
-  $("learned").textContent = taught.length ? taught.map(t => `${t.skill}: "${t.sentence}"`).join("\n") + "\n\nCopy these under ## Learned in each skill.md to keep them." : "Nothing yet.";
+  const lines = [...taughtQ.map(t => `${t.title} — "${t.sentence}" asks "${t.q}"`), ...taught.map(t => `${t.skill} — "${t.sentence}"`)];
+  $("learned").textContent = lines.length ? lines.join("\n") + "\n\nKept on this phone. To keep them for everyone: add each under that question in the file's questions:, or under ## Learned in the skill." : "Nothing yet.";
 }
 
 chips(EXAMPLES);

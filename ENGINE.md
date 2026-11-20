@@ -182,7 +182,10 @@ when a follow-up comes". That is how it works now:
   order), else the sections that come next, then "tell me more"; a heading or a file's
   title, tapped or typed alone, opens it. "tell me more" goes on from the last sentence said; a follow-up question looks
   in the same file first, and the passage it's on and the ones beside it most.
-- **Teaching:** a question it had nothing for is pointed, from the inbox, to the passage that answers it.
+- **Teaching, in the page's inbox (20 November, after Gab found it missing):** a sentence it couldn't answer
+  comes with the four listed questions it most likely means; one tap and it gets that question's answer,
+  then and for sentences worded like it. Any other listed question can be picked from a list, or the
+  sentence taught to a skill. Kept on the phone; the taught lines are shown to copy into the files.
 
 Measured with my-agent's `tests/held-out.json` (56 answerable, 25 off-topic, 10 requests for services),
 on its five work pages, through the whole engine:
