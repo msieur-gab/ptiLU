@@ -34,6 +34,11 @@ A sentence starting with these may complete the request before it.
 A sentence starting with one of these is a question, and may be answered from the content.
 - what, what's, who, who's, why, how, when, where, which, is, are, does, do, did, tell, explain, describe
 
+## Command words
+A sentence starting with one of these is a command, never a problem told to the content.
+- create, make, move, open, delete, remove, rename, copy, set, start, stop, turn, play, show, send, put
+- close, launch, run, install, download, find, list, add, change, go, take, give, call, write, read
+
 ## Chips
 - yes
 - no

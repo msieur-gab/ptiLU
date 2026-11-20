@@ -124,27 +124,6 @@ class Content {
     }
     return out;
   }
-  setMeaning(m) { // { dims, keys: [...], vectors: Float32Array (keys.length × dims) }
-    this.meaning = m;
-    this.byKey = new Map(m.keys.map((k, i) => [k, i]));
-  }
-  // the nearest listed question and passage to a sentence's vector, each with its cosine
-  nearestByMeaning(vec, frame = null) {
-    const m = this.meaning;
-    if (!m) return null;
-    const all = m.keys.map((key, i) => {
-      let c = 0;
-      for (let j = 0; j < m.dims; j++) c += vec[j] * m.vectors[i * m.dims + j];
-      const id = key.split("|")[1];
-      if (frame && this.docs[frame.di].id === id) c += 0.02; // the window: the file the conversation is in, a little
-      return { key, score: c };
-    }).sort((a, b) => b.score - a.score);
-    const qs = all.filter(x => x.key.startsWith("q|")), ps = all.filter(x => x.key.startsWith("p|"));
-    // a listed question wins over a passage unless the passage is clearly nearer
-    const top = qs[0] && (!ps[0] || qs[0].score >= ps[0].score - 0.03) ? qs[0] : ps[0];
-    const seen = new Set();
-    return { top, questions: qs.filter(x => { const q = this.questionOf(x.key).toLowerCase(); return !seen.has(q) && seen.add(q); }).slice(0, 4) };
-  }
   // answer the nearest item: a listed question's answer, or a passage from its best sentence
   answerKey(key) {
     const [kind, id, a, b] = key.split("|");
@@ -231,8 +210,11 @@ class Content {
     // never enough off-topic: "what is the weather" isn't answered by a passage that mentions the weather
     if (!hit) return null;
     // a sentence not asked as a question ("I need a new file") must say most of what a listed question says
+    // a long question ("we are building a due diligence platform but users complain…") says much around its
+    // topic: on the topic, a third of its words is enough
+    const onTopicBar = hit.asked >= 5 ? 0.33 : 0.45;
     const pass = onlyQuestions ? hit.coverage >= 0.75 && hit.found >= 2
-      : (hit.onTopic && hit.coverage >= 0.45) || (hit.found >= OFF_TOPIC && hit.coverage >= 0.6);
+      : (hit.onTopic && hit.coverage >= onTopicBar && hit.found >= 2) || (hit.onTopic && hit.coverage >= 0.45) || (hit.found >= OFF_TOPIC && hit.coverage >= 0.6);
     if (!pass) return null;
     const d = this.docs[hit.di];
     if (hit.question && !hit.piece) { const r = this.listed(hit.di, { q: hit.question, see: hit.see }); if (r) return r; }

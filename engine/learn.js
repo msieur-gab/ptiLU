@@ -34,7 +34,7 @@ function teach(engine, sentence, skillName, marks = {}) {
   skill.md = /\n## Learned\n/.test(skill.md) ? skill.md.replace(/\n## Learned\n((?:- .*\n?)*)/, (all, body) => `\n## Learned\n${body.replace(/\n?$/, "\n")}${line}\n`)
     : skill.md.replace(/\n?$/, "\n\n## Learned\n" + line + "\n");
   engine.inbox = engine.inbox.filter(e => e.sentence !== clean && e.sentence !== sentence);
-  return { ok: true, pattern, line, md: skill.md };
+  return { ok: true, pattern, line, md: skill.md, key: `s|${skill.name}|taught` };
 }
 
 // a learned line can be taken back; a line the person wrote can't be changed from here
@@ -76,7 +76,7 @@ function teachQuestion(engine, sentence, title, listedQ) {
   const r = c.answer(q);
   if (!r || r.frame.di !== di) { c.docs[di].questions.pop(); c.units.pop(); return { ok: false, why: "it still doesn't find that answer" }; }
   engine.inbox = engine.inbox.filter(e => e.sentence !== q && e.sentence !== sentence);
-  return { ok: true, say: r.say, line: target.see ? `  - q: ${q}\n    see: ${target.see}` : `  - ${q}` };
+  return { ok: true, say: r.say, key: `q|${c.docs[di].id}|${target.q}`, line: target.see ? `  - q: ${q}\n    see: ${target.see}` : `  - ${q}` };
 }
 
 if (typeof module !== "undefined") module.exports = { teach, unlearn, teachContent, teachQuestion };

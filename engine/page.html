@@ -58,11 +58,12 @@ const packs = EngineLoad.fromFiles(FILES);
 const engine = new EngineCore.Engine({ skills: packs.skills, talk: packs.talk, memory: store.get("ptilu.engine.me") || {},
   content: packs.docs.length ? new EngineContent.Content(packs.docs, packs.talk.small, packs.topics) : null,
   model: new NLURuntime.NLU(MODEL) });
-if (MEANING && engine.content) engine.content.setMeaning(EngineContent.decodeMeaning(MEANING));
+if (MEANING) engine.setMeaning(EngineContent.decodeMeaning(MEANING));
 const taught = store.get("ptilu.engine.taught") || [];
 for (const t of taught) EngineLearn.teach(engine, t.sentence, t.skill, t.marks);
 const taughtQ = store.get("ptilu.engine.taughtQ") || [];
-for (const t of taughtQ) EngineLearn.teachQuestion(engine, t.sentence, t.title, t.q);
+for (const t of taughtQ) { const r = EngineLearn.teachQuestion(engine, t.sentence, t.title, t.q); if (r.ok && t.vec) engine.addMeaning(r.key, Float32Array.from(t.vec)); }
+for (const t of taught) if (t.vec) engine.addMeaning(`s|${t.skill}|taught`, Float32Array.from(t.vec));
 const retrain = () => { engine.model = new NLURuntime.NLU(NLUTrainer.train(EngineTrain.examples(packs), { log: () => {} })); };
 if (taught.length) retrain();
 
@@ -151,12 +152,25 @@ $("reset").addEventListener("click", () => { log.innerHTML = ""; engine.pending 
 function updateCount() { const n = engine.inbox.length; $("inboxCount").hidden = !n; $("inboxCount").textContent = n; }
 $("inboxBtn").addEventListener("click", () => { $("sheet").hidden = false; drawInbox(); });
 $("sheetClose").addEventListener("click", () => { $("sheet").hidden = true; updateCount(); });
+// a taught sentence is remembered by meaning too: its vector points to the same answer, so sentences
+// worded differently find it; the vector is kept on the phone with the sentence
+function byMeaningToo(sentence, key, t, storeKey, list) {
+  if (!MEANING || !key) return;
+  embed(sentence).then(out => {
+    if (!out.ok) return;
+    engine.addMeaning(key, out.vec);
+    t.vec = Array.from(out.vec, x => Math.round(x * 1e4) / 1e4);
+    store.set(storeKey, list);
+  });
+}
+
 function drawInbox() {
   const box = $("waiting"); box.innerHTML = "";
   if (!engine.inbox.length) box.innerHTML = `<div class="empty">Nothing waiting.</div>`;
   for (const item of engine.inbox) {
     const card = document.createElement("div"); card.className = "card";
-    const near = engine.content ? engine.content.nearest(item.sentence) : [];
+    const near = item.near || (engine.content ? engine.content.nearest(item.sentence) : []);
+    if (!item.near && MEANING) embed(item.sentence).then(out => { if (out.ok) { item.near = engine.questionsByMeaning(out.vec); drawInbox(); } });
     const groups = engine.content ? engine.content.questionsByFile : [];
     card.innerHTML = `<p class="said">${esc(item.sentence)}</p><p class="meta">${esc(item.why)}</p>`
       + (groups.length ? `<p class="meta">Is it one of these questions? Tap it: it will get the same answer.</p>`
@@ -168,7 +182,11 @@ function drawInbox() {
     const asQuestion = (title, q) => {
       const r = EngineLearn.teachQuestion(engine, item.sentence, title, q);
       msg.textContent = r.ok ? `Learned. It now answers: "${r.say.slice(0, 90)}…"` : "Not learned: " + r.why;
-      if (r.ok) { taughtQ.push({ sentence: item.sentence, title, q }); store.set("ptilu.engine.taughtQ", taughtQ); updateCount(); setTimeout(drawInbox, 1400); }
+      if (r.ok) {
+        const t = { sentence: item.sentence, title, q }; taughtQ.push(t); store.set("ptilu.engine.taughtQ", taughtQ);
+        byMeaningToo(item.sentence, r.key, t, "ptilu.engine.taughtQ", taughtQ);
+        updateCount(); setTimeout(drawInbox, 1400);
+      }
     };
     card.querySelectorAll(".near .btn").forEach(b => b.addEventListener("click", () => asQuestion(near[+b.dataset.i].title, near[+b.dataset.i].q)));
     card.querySelector(".anyq")?.addEventListener("change", e => { const [t, q] = e.target.value.split("\u0000"); if (q) asQuestion(t, q); });
@@ -182,7 +200,11 @@ function drawInbox() {
         slots.querySelectorAll("input").forEach(i => { if (i.value.trim()) marks[i.dataset.slot] = i.value.trim(); });
         const r = EngineLearn.teach(engine, item.sentence, sel.value, marks);
         msg.textContent = r.ok ? "Learned: " + r.pattern : "Not learned: " + r.why;
-        if (r.ok) { taught.push({ sentence: item.sentence, skill: sel.value, marks }); store.set("ptilu.engine.taught", taught); retrain(); updateCount(); setTimeout(drawInbox, 1200); }
+        if (r.ok) {
+          const t = { sentence: item.sentence, skill: sel.value, marks }; taught.push(t); store.set("ptilu.engine.taught", taught);
+          byMeaningToo(item.sentence, r.key, t, "ptilu.engine.taught", taught);
+          retrain(); updateCount(); setTimeout(drawInbox, 1200);
+        }
       });
     });
     if (item.suggest) { card.querySelector("details").open = true; sel.value = item.suggest; sel.dispatchEvent(new Event("change")); }

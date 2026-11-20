@@ -18,7 +18,7 @@ const S = typeof EngineSkills !== "undefined" ? EngineSkills : require("./skills
 
 const SURE = 0.7, PROPOSE = 0.3;
 // cosines of the meaning model: chosen on my-agent's held-out questions (no off-topic one reaches floor)
-const MEANING = { floor: 0.42, sure: 0.55 }; // below PROPOSE the model proposes nothing; the taught-words check guards what it does propose
+const MEANING = { floor: 0.42, sure: 0.55, skill: 0.6 }; // below PROPOSE the model proposes nothing; the taught-words check guards what it does propose
 
 class Engine {
   constructor({ skills, content = null, talk, model = null, memory = {}, now = () => new Date(), random = Math.random }) {
@@ -180,7 +180,11 @@ class Engine {
     // sentence only against what the files say they answer. So "my daughter lives abroad" finds the piece
     // that lists it, and a command is never answered with a quote ("move ideas to documnet" is in the
     // review, word for word)
-    const isQuestion = (intent === "ask" && conf >= SURE) || this.asked || this.talk.questions.includes(ws[0]);
+    // a problem told rather than asked ("we are building a due diligence platform and users find it hard
+    // to organise files") is a question too, when no skill claims it and it says enough (4 words that
+    // carry meaning); a command ("move ideas to documnet", "create a folder…") never is
+    const told = !skill && !this.talk.commands.includes(ws[0]) && T.words(sentence).filter(w => !this.talk.small.has(w)).length >= 4;
+    const isQuestion = (intent === "ask" && conf >= SURE) || this.asked || this.talk.questions.includes(ws[0]) || told;
     if (this.content) {
       const r = this.content.answer(sentence, this.frame && this.frame.kind === "content" ? this.frame : null, !isQuestion);
       if (r) { this.frame = r.frame; return this.turn("act", r.say, { source: r.source, chips: r.chips, why: isQuestion ? "content" : "content, a question it lists" }); }
@@ -191,7 +195,7 @@ class Engine {
     }
     const why = intent ? `model ${conf.toFixed(2)} (${intent}), nothing in the content` : "nothing read it";
     // with a meaning model, the host may still ask it (byMeaning) before this "I can't" stands
-    const meaning = !!(this.content && this.content.meaning);
+    const meaning = !!this.meaning;
     if (this.content && isQuestion) {
       this.inbox.push({ sentence, why, on: this.now().toISOString().slice(0, 10) });
       return this.turn("abstain", this.say("nothing written"), { why, meaning });
@@ -199,20 +203,74 @@ class Engine {
     return { ...this.abstain(sentence, why), meaning };
   }
 
-  // after an "I can't" on the content, by meaning (an embedding model the host runs): sure enough, the
-  // nearest answer; less sure, "Do you mean…?" with the nearest listed questions, for the person to pick;
-  // below that, the "I can't" stands. The model only finds; the answer is still the files' own words
+  // ---- by meaning: an embedding model (MiniLM) the host runs; the engine keeps the vectors ----
+  // what to embed: the content's listed questions and passages, and each skill's example sentences
+  meaningItems() {
+    const out = this.content ? this.content.meaningItems() : [];
+    for (const s of this.skills) {
+      const seen = new Set();
+      const add = t => { if (!seen.has(t)) { seen.add(t); out.push({ key: `s|${s.name}|${out.length}`, text: t }); } };
+      for (const p of s.patterns) for (const t of P.expand(p, K.samplesFor(s), 3)) add(t);
+      for (const t of s.also) add(t);
+    }
+    return out;
+  }
+  setMeaning(m) { this.meaning = m; }
+  // a sentence taught on the phone, by meaning too: its vector points to the same answer or skill
+  addMeaning(key, vec) {
+    const m = this.meaning;
+    if (!m) return;
+    const v = new Float32Array(m.vectors.length + m.dims);
+    v.set(m.vectors); v.set(vec, m.vectors.length);
+    m.vectors = v; m.keys.push(key);
+  }
+  nearestByMeaning(vec) {
+    const m = this.meaning, fr = this.frame && this.frame.kind === "content" ? this.frame : null;
+    const all = m.keys.map((key, i) => {
+      let c = 0;
+      for (let j = 0; j < m.dims; j++) c += vec[j] * m.vectors[i * m.dims + j];
+      if (fr && key.split("|")[1] === this.content.docs[fr.di].id) c += 0.02; // the file the conversation is in, a little
+      return { key, score: c };
+    }).sort((a, b) => b.score - a.score);
+    const of = k => all.filter(x => x.key.startsWith(k + "|"));
+    const qs = of("q"), ps = of("p"), ss = of("s");
+    const top = qs[0] && (!ps[0] || qs[0].score >= ps[0].score - 0.03) ? qs[0] : ps[0];
+    const seen = new Set();
+    return { top, skill: ss[0], questions: qs.filter(x => { const q = x.key.split("|")[2].toLowerCase(); return !seen.has(q) && seen.add(q); }).slice(0, 4) };
+  }
+
+  // after an "I can't": by meaning. A skill is never done on a guess: it asks "Do you want me to…?". The
+  // content: sure, the nearest answer; less sure, "Do you mean…?" with the nearest listed questions; below,
+  // the "I can't" stands. The model only finds; what is said is still the files' and the skills' own words
   byMeaning(sentence, vec) {
-    const n = this.content && this.content.nearestByMeaning(vec, this.frame && this.frame.kind === "content" ? this.frame : null);
-    if (!n || !n.top) return null;
+    if (!this.meaning) return null;
+    const n = this.nearestByMeaning(vec);
     const drop = () => { this.inbox = this.inbox.filter(e => e.sentence !== sentence); };
+    const content = n.top ? n.top.score : -1;
+    if (n.skill && n.skill.score >= MEANING.skill && n.skill.score > content) {
+      const skill = this.byName.get(n.skill.key.split("|")[1]);
+      if (skill && !skill.role) {
+        const values = {};
+        for (const [slot, need] of Object.entries(skill.needs)) { const v = K.findIn(need.kind, sentence, this.now()); if (v) values[slot] = v; }
+        return this.confirm(skill, values, `meaning ${n.skill.score.toFixed(2)} (${skill.name})`, sentence, true);
+      }
+    }
+    if (!this.content || !n.top) return null;
     if (n.top.score >= MEANING.sure) {
       const r = this.content.answerKey(n.top.key);
       if (r) { drop(); this.frame = r.frame; return this.turn("act", r.say, { source: r.source, chips: r.chips, why: `meaning ${n.top.score.toFixed(2)}` }); }
     }
     const qs = n.questions.filter(x => x.score >= MEANING.floor);
-    if (qs.length) return this.turn("ask", this.say("do you mean"), { chips: qs.map(x => this.content.questionOf(x.key)), why: `meaning ${qs[0].score.toFixed(2)}, not sure` });
+    if (qs.length) return this.turn("ask", this.say("do you mean"), { chips: qs.map(x => x.key.split("|")[2]), why: `meaning ${qs[0].score.toFixed(2)}, not sure` });
     return null;
+  }
+  // the listed questions a sentence most likely means, by meaning (the inbox's suggestions)
+  questionsByMeaning(vec, n = 4) {
+    if (!this.meaning || !this.content) return [];
+    return this.nearestByMeaning(vec).questions.slice(0, n).map(x => {
+      const [, id, q] = x.key.split("|"), d = this.content.docs.find(d => d.id === id);
+      return { di: this.content.docs.indexOf(d), title: d.title, q, score: x.score };
+    });
   }
 
   confirm(skill, values, why, sentence, unsure, say) {

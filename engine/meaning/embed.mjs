@@ -11,10 +11,8 @@ const here = path.dirname(new URL(import.meta.url).pathname);
 env.allowRemoteModels = false;
 env.localModelPath = path.join(here, '../../docs/engine/meaning/models/');
 const pipe = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { quantized: true });
-const { load } = require('../load.js');
-const { Content } = require('../content.js');
-const packs = load();
-const items = new Content(packs.docs, packs.talk.small, packs.topics).meaningItems();
+const { make } = require('../make.js');
+const items = make({ withMeaning: false }).meaningItems(); // the content's questions and passages, the skills' examples
 const dims = 384, bytes = new Int8Array(items.length * dims), scales = [];
 const t0 = Date.now();
 for (let i = 0; i < items.length; i++) {

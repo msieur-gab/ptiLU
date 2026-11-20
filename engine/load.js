@@ -18,7 +18,7 @@ function conversation(md) {
   return {
     yes: get("yes"), no: get("no"), fillers: get("fillers").sort((a, b) => b.length - a.length),
     small: new Set(get("small words").flatMap(w => w.split(" "))), "follow-up": get("follow-up").sort((a, b) => b.length - a.length),
-    more: get("more"), questions: get("question words"), chips: (s["chips"] || { lines: [] }).lines,
+    more: get("more"), questions: get("question words"), commands: get("command words"), chips: (s["chips"] || { lines: [] }).lines,
     replies: F.keyed((s["replies"] || { lines: [] }).lines),
   };
 }

@@ -4,13 +4,11 @@ kind: content
 about: ptiLU itself
 files:
 - README.md
-- ENGINE.md
-- REVIEW-2026-10-21.md
 ---
 # About ptiLU
 
-Questions about ptiLU itself, answered from its own documents: the README, the engine's plan and the
-review of 21 October. Any Markdown file can be listed here; headings make the sections.
+Questions about ptiLU itself, answered from its README and a short page about it. The engine's working
+notes (ENGINE.md, the reviews) stay out: they quote test sentences word for word, and would answer them. Any Markdown file can be listed here; headings make the sections.
 
 ## Also said
 How people ask about content, for the model to tell a question from a command.

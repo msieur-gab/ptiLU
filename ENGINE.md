@@ -230,6 +230,24 @@ mobile app" → Pebbble, at 0.55). Gab's two sentences: "launching without adver
 passage; "data hosted outside the European Union" → "Do you mean: Can we use our customer data with AI and
 stay GDPR-compliant?". The thresholds were chosen on this same set.
 
+### Meaning everywhere words stop (later the same morning)
+
+- **Skills by meaning:** each skill's example sentences are embedded too. When words leave a sentence
+  unclaimed and its nearest example is a skill's (cosine 0.6 or more, above any content), it asks "Do you
+  want me to…?"; a skill is never done on a guess.
+- **Taught by meaning:** a sentence taught in the inbox (to a listed question or a skill) is embedded on the
+  phone and added beside the original, so sentences worded differently find it. Measured: after teaching
+  "is it a problem to have data hosted outside of European union", "can we keep our records on servers in
+  America?" rises from 0.44 to 0.51, offered as "Do you mean: Our compliance tool is hosted in the US…?";
+  one teaching moves it closer, not all the way.
+- **Inbox by meaning:** the questions it suggests for a missed sentence come from the meaning model once it
+  has been loaded.
+- **Content that answered its own tests:** ENGINE.md and the review left the about pack: they quote test
+  sentences word for word.
+- **Told problems:** "we are building a due diligence platform and users find it hard…" reaches the content
+  when no skill claims it and it says enough (4 words that carry meaning); a sentence that starts with a
+  command word never does.
+
 ## The page
 
 Main's page, its look read straight from `web/template.html` at build time (one design system, not a
