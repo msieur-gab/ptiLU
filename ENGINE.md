@@ -175,9 +175,11 @@ when a follow-up comes". That is how it works now:
   counts as covered in every passage of that file. One word in common is never enough off the topic. A
   sentence not asked as a question only reaches what the files list, and must say most of it ("I need a
   new file" is not "can one small test open a new market?").
-- **The reply:** the sentence of the passage that holds most of the question, with where it comes from.
+- **The reply:** from the sentence of the passage that holds most of the question to the end of its
+  paragraph (three sentences at most), with where it comes from. A `see:` points to where that starts.
   A line of numbers, a byline or HTML is never a sentence to answer with.
-- **The moving window:** "tell me more" goes on from the last sentence said; a follow-up question looks
+- **The moving window:** the chips are "tell me more" and the sections that come next; a heading or a file's
+  title, tapped or typed alone, opens it. "tell me more" goes on from the last sentence said; a follow-up question looks
   in the same file first, and the passage it's on and the ones beside it most.
 - **Teaching:** a question it had nothing for is pointed, from the inbox, to the passage that answers it.
 
@@ -187,7 +189,7 @@ on its five work pages, through the whole engine:
 | | right piece | with the expected passage | wrong piece | nothing | off-topic answered |
 |---|---|---|---|---|---|
 | my-agent's matcher (main) | 29 | (pieces only) | 3 | 24 | 0 |
-| the engine, the files as they are | 42 | 21 | 0 | 14 | 0 |
+| the engine, the files as they are | 42 | 29 | 0 | 14 | 0 |
 | the engine, every question, answer and keyword removed | 31 | 18 | 0 | 25 | 0 |
 
 On 96 saved articles (thinking-memories, read locally, not published): indexed in about 0.4 s, 2,400

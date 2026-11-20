@@ -9,7 +9,7 @@ const mods = [["EngineText", "text.js"], ["EngineFiles", "files.js"], ["EnginePa
   ["EngineSkills", "skills.js"], ["EngineContent", "content.js"], ["EngineLoad", "load.js"], ["EngineCore", "engine.js"],
   ["EngineLearn", "learn.js"], ["EngineTrain", "train.js"]]
   .map(([name, f]) => `const ${name} = (() => { const module = { exports: {} };\n${here(f)}\nreturn module.exports; })();`).join("\n");
-const built = new Date().toISOString().slice(0, 16).replace("T", " ");
+const built = new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC";
 const data = `const BUILT = "${built}";\nconst FILES = ${JSON.stringify(files())};\nconst MODEL = ${here("model.json")};`;
 const page = here("page.html").replace("/*SCRIPTS*/", () => [raw, mods, data].join("\n").replace(/<\/script/g, "<\\/script"));
 // engine/index.html to open from the branch; docs/engine/index.html for GitHub Pages (Pages serves docs/)

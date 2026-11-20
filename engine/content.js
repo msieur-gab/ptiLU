@@ -23,13 +23,18 @@ function plain(md) {
   return md.replace(/```[\s\S]*?```/g, " ").replace(/<[^>]*>/g, " ").replace(/\[\*?\s*\]\([^)]*\)/g, " ").replace(/`([^`]*)`/g, "$1").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(?<![\w/])\*([^*\s][^*]*)\*(?!\w)/g, "$1").replace(/^\s*\|.*\|\s*$/gm, " ");
 }
+// sentences, each knowing its paragraph (out.para[i]): an answer is told to the end of its paragraph
 function sentencesOf(text) {
   const out = [];
+  out.para = [];
+  let p = 0;
   for (const block of plain(text).split(/\n\s*\n|\n(?=\s*[-*]\s)/)) {
     const flat = block.replace(/^\s*[-*]\s+/gm, "").replace(/\s+/g, " ").trim();
     if (flat.length < 3 || /^#/.test(flat)) continue;
     // a line that is mostly numbers or symbols (a date line, a page range, a caption) is no sentence to answer with
-    out.push(...flat.split(/(?<=[.!?])\s+(?=[\p{L}“"(])/u).filter(x => (x.match(/\p{L}/gu) || []).length >= 0.6 * x.replace(/\s/g, "").length));
+    const ss = flat.split(/(?<=[.!?])\s+(?=[\p{L}“"(])/u).filter(x => (x.match(/\p{L}/gu) || []).length >= 0.6 * x.replace(/\s/g, "").length);
+    for (const x of ss) { out.push(x); out.para.push(p); }
+    p++;
   }
   return out;
 }
@@ -56,7 +61,7 @@ class Content {
       const qs = [].concat(meta.questions || [], meta.answers || []).map(q => (typeof q === "string" ? { q } : q)).filter(q => q.q);
       const next = Array.isArray(meta.next) ? meta.next : meta.next ? meta.next.split(/\s*,\s*/) : [];
       return { id, title, questions: qs, answer: meta.answer || null, next, keywords: [].concat(meta.keywords || [], meta.themes || []),
-        sections: secs.map(s => ({ heading: s.heading, sentences: sentencesOf(s.text) })).filter(s => s.sentences.length) };
+        sections: secs.map(s => { const ss = sentencesOf(s.text); return { heading: s.heading, sentences: ss, para: ss.para }; }).filter(s => s.sentences.length) };
     });
     // what each file is about, found without anyone writing it: the words it uses most that the other
     // files use least. So a saved article needs nothing added to be searched by its topic
@@ -198,18 +203,39 @@ class Content {
   }
 
   // a sentence that ends on ":" opens a list: the list comes with it
+  // from the sentence found to the end of its paragraph (at most 3 sentences, about 450 letters); a sentence
+  // ending on ":" brings its list
   from(section, at) {
     const said = [at];
-    if (/:$/.test(section.sentences[at])) for (let i = at + 1; i < Math.min(at + 5, section.sentences.length); i++) said.push(i);
-    else if (section.sentences[at].split(/\s+/).length < 7 && at + 1 < section.sentences.length) said.push(at + 1); // "From TermNL: the skill file." says little alone
+    const n = section.sentences.length, len = () => said.reduce((a, i) => a + section.sentences[i].length, 0);
+    if (/:$/.test(section.sentences[at])) for (let i = at + 1; i < Math.min(at + 5, n); i++) said.push(i);
+    else for (let i = at + 1; i < n && section.para[i] === section.para[at] && said.length < 3 && len() < 450; i++) said.push(i);
     return [said, said.map(i => section.sentences[i]).join(" ")];
+  }
+
+  // a heading or a file's title, said or tapped: go there, from its first paragraph (the window moved by hand)
+  goto(text, frame = null) {
+    const same = x => T.words(x).join(" "), t = same(text); // the heading itself, word for word, nothing around it
+    if (!t) return null;
+    const order = frame ? [frame.di, ...this.docs.keys()] : [...this.docs.keys()];
+    for (const di of order) {
+      const d = this.docs[di];
+      if (same(d.title) === t) {
+        if (d.answer) return this.reply(di, 0, [0], d.answer, `${d.title}, written answer`);
+        return this.reply(di, 0, ...this.from(d.sections[0], 0), this.where(d, d.sections[0]));
+      }
+      const si = d.sections.findIndex(s => same(s.heading) === t);
+      if (si >= 0) return this.reply(di, si, ...this.from(d.sections[si], 0), this.where(d, d.sections[si]));
+    }
+    return null;
   }
   where(d, s) { return s.heading === d.title ? d.title : `${d.title}, ${s.heading}`; }
 
   reply(di, si, said, say, source) {
     const d = this.docs[di];
-    const chips = d.sections.filter((_, k) => k !== si).slice(0, 3).map(s => s.heading)
-      .concat(d.next.map(id => (this.docs.find(x => x.id === id) || {}).title).filter(Boolean));
+    // what can follow: more of the same, the sections after this one (each opens where it starts), related files
+    const chips = ["tell me more", ...d.sections.slice(si + 1).filter(s => s.heading !== d.title).slice(0, 3).map(s => s.heading),
+      ...d.next.map(id => (this.docs.find(x => x.id === id) || {}).title).filter(Boolean)];
     return { say, source, chips, frame: { kind: "content", di, si, said } };
   }
 

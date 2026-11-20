@@ -80,9 +80,11 @@ class Engine {
       return this.next(read.skill, read.values, why, sentence);
     }
 
-    // 4. a follow-up of the turn before
+    // 4. a follow-up of the turn before; a file's title or a heading said alone opens it
     const f = this.follow(sentence, ws);
     if (f) return f;
+    const g = this.content && !(this.frame && this.frame.kind === "content") ? this.content.goto(sentence) : null;
+    if (g) { this.frame = g.frame; return this.turn("act", g.say, { source: g.source, chips: g.chips, why: "went to that file" }); }
 
     // 5. the model proposes, the check decides
     return this.propose(sentence, ws);
@@ -127,6 +129,8 @@ class Engine {
     if (!fr) return null;
     const more = this.isWord("more", ws), lead = this.talk["follow-up"].find(w => ws.join(" ").startsWith(w + " "));
     if (fr.kind === "content") {
+      const g = this.content.goto(sentence, fr);
+      if (g) { this.frame = g.frame; return this.turn("act", g.say, { source: g.source, chips: g.chips, why: "went to that section" }); }
       if (more) {
         const r = this.content.more(fr);
         if (!r) return this.turn("act", this.say("no more", { title: this.content.docs[fr.di].title }), { why: "end of the file" });
