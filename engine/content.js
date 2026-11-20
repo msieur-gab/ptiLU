@@ -158,7 +158,15 @@ class Content {
   // onlyQuestions: for a sentence that isn't asked as a question ("my daughter lives abroad"), only what a
   // file says it answers counts, never a passage that happens to share its words
   answer(question, frame = null, onlyQuestions = false) {
-    this.asked.add(T.words(question).join(" ")); // a listed question asked once isn't offered again
+    const said = T.words(question).join(" ");
+    this.asked.add(said); // a listed question asked once isn't offered again
+    // a question a file lists, asked word for word (a tapped chip, "who are you?"), is answered as listed,
+    // even when it holds only small words
+    const order = frame ? [frame.di, ...this.docs.keys()] : [...this.docs.keys()];
+    for (const di of order) {
+      const q = this.docs[di].questions.find(x => T.words(x.q).join(" ") === said);
+      if (q) { const r = this.listed(di, q); if (r) return r; }
+    }
     const hit = this.search(question, frame, onlyQuestions);
     // the bar: most of what was asked is in one passage, or a little less when the passage is on the topic
     // (its file's title or topic words, its heading, or a question the file lists). One word in common is
@@ -169,13 +177,7 @@ class Content {
       : (hit.onTopic && hit.coverage >= 0.45) || (hit.found >= OFF_TOPIC && hit.coverage >= 0.6);
     if (!pass) return null;
     const d = this.docs[hit.di];
-    if (hit.question && hit.see) { // the passage the file points to for this question
-      const want = this.terms(hit.see).join(" ");
-      for (let si = 0; si < d.sections.length; si++) {
-        const at = d.sections[si].sentences.findIndex(x => this.terms(x).join(" ").includes(want));
-        if (at >= 0) return this.reply(hit.di, si, ...this.from(d.sections[si], at), this.where(d, d.sections[si]));
-      }
-    }
+    if (hit.question && !hit.piece) { const r = this.listed(hit.di, { q: hit.question, see: hit.see }); if (r) return r; }
     if (hit.question && d.answer) return this.reply(hit.di, hit.si, [0], d.answer, `${d.title}, written answer`);
     const s = d.sections[hit.si];
     const q = new Set(hit.q);
@@ -188,6 +190,19 @@ class Content {
       if (n > most) { most = n; at = i; }
     }
     return this.reply(hit.di, hit.si, ...this.from(s, at), this.where(d, s));
+  }
+
+  // a listed question's answer: the passage its `see:` points to, else the file's written `answer:`
+  listed(di, { see }) {
+    const d = this.docs[di];
+    if (see) {
+      const want = this.terms(see).join(" ");
+      for (let si = 0; si < d.sections.length; si++) {
+        const at = d.sections[si].sentences.findIndex(x => this.terms(x).join(" ").includes(want));
+        if (at >= 0) return this.reply(di, si, ...this.from(d.sections[si], at), this.where(d, d.sections[si]));
+      }
+    }
+    return d.answer ? this.reply(di, 0, [0], d.answer, `${d.title}, written answer`) : null;
   }
 
   // "tell me more": the next sentence not said yet in this section, then the next section

@@ -202,6 +202,13 @@ Read honestly: the bars were chosen on this held-out set, so it is no longer bli
 written by Claude, not visitors. Without anything declared, it finds words, not concepts: "democratise
 prototyping" isn't found until a question is taught or a keyword written.
 
+## The talk as a pack (20 November)
+
+`packs/abstention/`: Gab's "Designing by Abstention" text, from his article draft of 12 November (the
+talk's speaker notes, adapted for reading), copied word for word into one Markdown file, with 25 listed
+questions, each pointing with `see:` to the sentence where its answer starts. All 25 land on their
+passage. The questions are Claude's suggestions; the answers are only Gab's sentences.
+
 ## The page
 
 Main's page, its look read straight from `web/template.html` at build time (one design system, not a
