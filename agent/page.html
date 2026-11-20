@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ptiLU agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/*STYLE*/
+/* the agent's own additions */
+.turn .follow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.turn .follow .chip { white-space: normal; text-align: left; }
+.pcard { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; max-width: 92%; display: flex; flex-direction: column; gap: 4px; }
+.pcard .t { font-weight: 600; }
+.pcard .w { font: 11.5px var(--font-mono); color: var(--muted); }
+.pcard .l { font-style: italic; }
+.pcard .x { font-size: 14px; color: var(--fg); }
+.part { font: 11.5px var(--font-mono); color: var(--muted); display: block; margin-top: 6px; }
+.notit { background: none; border: none; color: var(--muted); font: 12px var(--font-ui); text-decoration: underline; cursor: pointer; padding: 0; align-self: flex-start; }
+.sheet[hidden], .count[hidden] { display: none; }
+.card select, .card input, .card textarea { font: 14px var(--font-ui); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; max-width: 100%; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="top">
+      <h1>ptiLU<span id="ver"></span></h1>
+      <div class="actions">
+        <button class="ghost" id="inboxBtn" type="button">Inbox<span class="count" id="inboxCount" hidden></span></button>
+        <button class="ghost" id="reset" type="button">Clear</button>
+      </div>
+    </div>
+  </header>
+  <main class="log" id="log" aria-live="polite"></main>
+  <div class="composer">
+    <div class="chips" id="chips"></div>
+    <form id="form" autocomplete="off">
+      <input id="q" type="text" enterkeyhint="send" autocapitalize="none" spellcheck="false" placeholder="Ask me something" aria-label="Ask me something">
+      <button class="send" type="submit">Send</button>
+    </form>
+  </div>
+</div>
+
+<section class="sheet" id="sheet" hidden aria-label="Inbox">
+  <div class="sheet-head"><h2>Inbox</h2><button class="ghost" id="sheetClose" type="button">Close</button></div>
+  <div class="sheet-body">
+    <p class="hint">What I couldn't answer, answered wrong, or wasn't sure about. Tap the skill it was for: the sentence becomes one of its examples, at once, and stays on this phone.</p>
+    <div id="waiting"></div>
+    <div class="learned"><h3>Taught on this phone</h3><pre class="rlog" id="learned"></pre></div>
+  </div>
+</section>
+
+<script>
+/*SCRIPTS*/
+</script>
+<script>
+const store = { get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const { fromFiles } = require("./load.js"), { decode } = require("./router.js"), F = require("./files.js");
+// on this page, a "yes" to "Do you mean…?" teaches at once: it's your phone. A public site would keep
+// visitors' yeses in the inbox for you to approve (mode "site")
+const agent = fromFiles(FILES, { mode: "own" });
+if (MEANING) agent.router.setVectors(decode(MEANING));
+const taught = store.get("ptilu.agent.taught") || [];
+for (const t of taught) agent.teach(t.sentence, t.skill, t.vec ? Float32Array.from(t.vec) : null);
+agent.onTeach = t => { taught.push({ sentence: t.sentence, skill: t.skill, vec: t.vec ? Array.from(t.vec, x => Math.round(x * 1e4) / 1e4) : null, on: agent.today() }); store.set("ptilu.agent.taught", taught); drawLearned(); };
+
+const $ = id => document.getElementById(id), log = $("log");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const meta = F.frontMatter(FILES["conversation.md"]).meta, CONTACT = typeof meta.contact === "string" ? meta.contact : "";
+
+// by meaning: the MiniLM worker, loaded when the page opens (about 23 MB, then cached by the browser);
+// until it's ready, skills are found by words
+let worker = new Worker("meaning/worker.js"), ready = false, waiting = new Map(), nextId = 0;
+worker.onmessage = e => { const w = waiting.get(e.data.id); if (w) { waiting.delete(e.data.id); w(e.data); } };
+const call = msg => new Promise(res => { const id = ++nextId; waiting.set(id, res); worker.postMessage({ id, ...msg }); });
+const status = () => { $("ver").textContent = `agent · ${ready ? "meaning" : "words, meaning loading"} · built ${BUILT}`; };
+status();
+if (MEANING) call({ type: "load" }).then(r => { ready = r.ok; status(); });
+const embed = text => ready ? call({ type: "embed", text }).then(r => (r.ok ? r.vec : null)) : Promise.resolve(null);
+
+// the bar at the bottom: a few things to ask, always the same
+const EXAMPLES = ["How can we test an idea before committing a budget?", "Can a toy be connected without screens?", "Who are you?", "What do you do?", "What time is it?"];
+function chips(list) {
+  $("chips").innerHTML = list.map((c, i) => `<button class="chip" type="button" data-i="${i}">${esc(c)}</button>`).join("");
+  $("chips").querySelectorAll(".chip").forEach(b => b.addEventListener("click", () => send(list[+b.dataset.i])));
+}
+
+function row(k, v, cls = "") { return `<div class="row ${cls}"><span>${k}</span><span>${v}</span></div>`; }
+function renderAgent(el, r) {
+  el.querySelector(".typing")?.remove();
+  let t = row("outcome", esc(r.outcome), r.outcome === "abstain" ? "abstain" : "state") + row("why", esc(r.why || ""));
+  if (r.command) t += row("exec", `$ ${esc(r.command)}<em>simulated</em>`, "exec");
+  const dot = r.outcome === "abstain" ? "skip" : r.outcome === "act" ? "" : "ask";
+  const icon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const c = r.card;
+  el.insertAdjacentHTML("beforeend", `<div class="reply">${esc(r.say)}${r.part ? `<span class="part">${esc(r.card ? "" : (agent.projects.byId.get(r.project) || {}).title + " · ")}${esc(r.part)}</span>` : ""}</div>`
+    + (c ? `<div class="pcard"><span class="t">${esc(c.title)}</span>${c.where ? `<span class="w">${esc(c.where)}</span>` : ""}${c.line && c.line !== r.say ? `<span class="l">${esc(c.line)}</span>` : ""}<span class="x">${esc(c.text)}</span></div>` : "")
+    + (r.chips.length ? `<div class="follow">${r.chips.map((x, i) => `<button class="chip" type="button" data-i="${i}">${esc(x)}</button>`).join("")}</div>` : "")
+    + (r.outcome === "act" && (r.skill || r.project) ? `<button class="notit" type="button">That's not it</button>` : "")
+    + `<details class="why"><summary aria-label="Show what the agent did">${icon}<span class="dot ${dot}"></span>${esc(r.skill || r.project || r.outcome)}</summary><div class="trace">${t}</div></details>`);
+  el.querySelectorAll(".follow .chip").forEach(b => b.addEventListener("click", () => send(r.chips[+b.dataset.i])));
+  el.querySelector(".notit")?.addEventListener("click", e => { agent.wrong(r); e.target.textContent = "Thanks. It's in the inbox."; e.target.disabled = true; updateCount(); });
+  if (r.command === "form.open") contactForm(el, r.sentence || "");
+  log.scrollTop = log.scrollHeight;
+}
+function renderUser(text, typing) {
+  const el = document.createElement("section");
+  el.className = "turn";
+  el.innerHTML = `<div class="cmd">${esc(text)}</div>` + (typing ? `<div class="reply typing" aria-label="Typing"><span></span><span></span><span></span></div>` : "");
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el;
+}
+
+// the agent answers in a millisecond; a short pause, longer for a longer reply, makes it a conversation
+let busy = false;
+async function send(text, instant = false) {
+  text = String(text).trim();
+  if (!text || busy) return false;
+  busy = true;
+  const el = renderUser(text, !instant), t0 = Date.now();
+  const vec = await embed(agent.clean(text));
+  const r = agent.respond(text, vec);
+  const pause = instant ? 0 : Math.max(0, 450 + Math.min(r.say.length * 6, 450) + Math.random() * 250 - (Date.now() - t0));
+  setTimeout(() => { renderAgent(el, r); updateCount(); busy = false; }, pause);
+  return true;
+}
+$("form").addEventListener("submit", e => { e.preventDefault(); const v = $("q").value; $("q").value = ""; send(v); });
+$("reset").addEventListener("click", () => { log.innerHTML = ""; agent.reset(); chips(EXAMPLES); $("q").focus(); });
+
+// the contact form: the visitor's question already in it, sent by their own mail app to `contact:` in
+// packs/conversation.md
+function contactForm(el, question) {
+  const f = document.createElement("div");
+  f.className = "card";
+  f.innerHTML = `<p class="meta">Your question, as I'll receive it. Change anything before sending.</p>`
+    + `<textarea rows="3">${esc(question)}</textarea><input type="email" placeholder="your email, so I can reply">`
+    + `<div class="card-actions"><button class="primary" type="button">Send</button></div><p class="meta msg"></p>`;
+  f.querySelector(".primary").addEventListener("click", () => {
+    const text = f.querySelector("textarea").value.trim(), from = f.querySelector("input").value.trim();
+    if (!CONTACT) { f.querySelector(".msg").textContent = "No address set yet (packs/conversation.md, contact:). Nothing was sent."; return; }
+    location.href = `mailto:${CONTACT}?subject=${encodeURIComponent("A question from the site")}&body=${encodeURIComponent(text + (from ? "\n\nReply to: " + from : ""))}`;
+  });
+  el.appendChild(f);
+  log.scrollTop = log.scrollHeight;
+}
+
+// the inbox: each sentence with the skills it most likely meant (nearest first, without the ones it was
+// said not to be); one tap teaches it
+function updateCount() { const n = agent.inbox.length; $("inboxCount").hidden = !n; $("inboxCount").textContent = n; }
+$("inboxBtn").addEventListener("click", () => { $("sheet").hidden = false; drawInbox(); });
+$("sheetClose").addEventListener("click", () => { $("sheet").hidden = true; updateCount(); });
+function drawInbox() {
+  const box = $("waiting"); box.innerHTML = "";
+  if (!agent.inbox.length) box.innerHTML = `<div class="empty">Nothing waiting.</div>`;
+  for (const item of [...agent.inbox]) {
+    const not = new Set(item.not || []);
+    const near = agent.router.rank(item.sentence, item.vec || null).filter(r => !not.has(r.skill)).slice(0, 3).map(r => r.skill);
+    if (item.suggest && !near.includes(item.suggest)) near.unshift(item.suggest);
+    const label = n => agent.byName.get(n).label;
+    const card = document.createElement("div"); card.className = "card";
+    card.innerHTML = `<p class="said">${esc(item.sentence)}</p><p class="meta">${esc(item.why)}</p><p class="meta">Which skill was it for?</p>`
+      + `<div class="card-actions near">${near.map(n => `<button class="btn" type="button" data-n="${n}">${esc(label(n))}</button>`).join("")}</div>`
+      + `<div class="card-actions"><select><option value="">another skill…</option>${agent.skills.map(s => `<option value="${s.name}">${esc(s.label)} (${s.kind})</option>`).join("")}</select></div>`
+      + `<div class="card-actions"><button class="btn quiet no" type="button">not for me</button></div><p class="meta msg"></p>`;
+    const teach = name => {
+      const r = agent.teach(item.sentence, name, item.vec || null);
+      card.querySelector(".msg").textContent = r.ok ? `Learned: "${item.sentence}" is ${label(name)}.` : "Not learned: " + r.why;
+      agent.inbox.splice(agent.inbox.indexOf(item), 1);
+      updateCount(); setTimeout(drawInbox, 1200);
+    };
+    card.querySelectorAll(".near .btn").forEach(b => b.addEventListener("click", () => teach(b.dataset.n)));
+    card.querySelector("select").addEventListener("change", e => e.target.value && teach(e.target.value));
+    card.querySelector(".no").addEventListener("click", () => { agent.inbox.splice(agent.inbox.indexOf(item), 1); updateCount(); drawInbox(); });
+    box.appendChild(card);
+  }
+  drawLearned();
+}
+// what was taught, as the lines to paste under "## Learned" in each skill file, to keep them for everyone
+function drawLearned() {
+  const by = {};
+  for (const t of taught) (by[t.skill] ||= []).push(`- ${t.sentence} (${t.on || agent.today()})`);
+  $("learned").textContent = Object.keys(by).length ? Object.entries(by).map(([s, l]) => `skills/${s}.md, ## Learned\n${l.join("\n")}`).join("\n\n") : "Nothing yet.";
+}
+
+chips(EXAMPLES);
+send("what can you do", true);
+const d = document.createElement("div"); d.className = "divider"; d.textContent = "your turn"; log.appendChild(d);
+</script>
+</body>
+</html>

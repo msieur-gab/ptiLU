@@ -1,5 +1,5 @@
 __pycache__/
 *.pyc
 .DS_Store
-engine/meaning/node_modules/
-engine/meaning/package-lock.json
+agent/meaning/node_modules/
+agent/meaning/package-lock.json

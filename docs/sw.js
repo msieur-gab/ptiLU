@@ -1,5 +1,5 @@
 // Offline cache for the ptiLU PWA. VERSION changes with every build, which replaces the cache.
-const VERSION = "engine-1";
+const VERSION = "agent-1";
 const CACHE = "ptilu-" + VERSION;
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png"];
 
@@ -29,8 +29,8 @@ self.addEventListener("fetch", event => {
     return;
   }
   if (url.origin !== location.origin) return;
-  // the engine's page (engine branch) is its own page: left to the network, never stored as this app's index
-  if (url.pathname.includes("/engine/")) return;
+  // the engine and agent pages (their branches) are their own pages: left to the network, never stored as this app's index
+  if (url.pathname.includes("/engine/") || url.pathname.includes("/agent/")) return;
   // Pages and the manifest: network first (always the latest when online), saved copy when offline.
   // "no-cache" revalidates with the server, so an unchanged page costs a tiny 304 response.
   const isPage = req.mode === "navigate" || url.pathname.endsWith(".html") || url.pathname.endsWith(".webmanifest");
