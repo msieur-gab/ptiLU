@@ -158,8 +158,9 @@ Read honestly:
 
 - Follow-ups carry only values with a shape (durations, dates): "and 5 minutes" works, "and for buy milk"
   doesn't.
-- The page isn't on GitHub Pages: Pages serves `docs/` on main. Open `engine/index.html` from the branch,
-  or copy it to `docs/engine/` when it's worth testing on the phone.
+- To try it on the phone: in the repository's Settings → Pages, set the branch to `engine` (folder
+  `/docs`). The engine is then at `/ptiLU/engine/`, and main's app stays at `/ptiLU/` (this branch still
+  holds it). Set it back to `main` afterwards.
 - TermNL's board skills as a pack, my-agent's content as a pack, the same engine on the board.
 
 ## Run
@@ -168,7 +169,7 @@ Read honestly:
 node engine/train.js            # the packs → engine/model.json
 node engine/test.js             # the dialogue scripts, tests.md, the held-out set, the review, teaching
 node engine/chat.js             # talk to it in the terminal (/inbox, /teach <skill> slot=words)
-node engine/build.js            # engine/index.html: the engine, packs and model in one offline page
+node engine/build.js            # engine/index.html and docs/engine/: the engine, packs and model in one offline page
 ```
 
 Core size: 871 lines in `engine/*.js` (without test.js, chat.js and build.js), against 1,009 for main's

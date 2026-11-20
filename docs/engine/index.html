@@ -1,0 +1,2015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ptiLU engine</title>
+<style>
+  :root { --bg: #f6f4ef; --ink: #1d1c1a; --soft: #77736b; --line: #dcd7cc; --me: #e8e3d8; --accent: #3b5b4a; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #171716; --ink: #ecebe6; --soft: #9a968d; --line: #33322f; --me: #26251f; --accent: #8fb89f; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.45 system-ui, sans-serif; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; height: 100dvh; }
+  header { display: flex; gap: 1rem; align-items: baseline; padding: .8rem 1rem; border-bottom: 1px solid var(--line); }
+  header b { font-weight: 600; } header button { margin-left: auto; }
+  main { flex: 1; overflow-y: auto; padding: 1rem; }
+  .turn { margin: 0 0 .9rem; max-width: 38rem; }
+  .me { margin-left: auto; background: var(--me); padding: .45rem .75rem; border-radius: .8rem; width: fit-content; }
+  .why { color: var(--soft); font-size: .78rem; margin-top: .2rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .4rem; }
+  button { font: inherit; font-size: .9rem; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 1rem; padding: .25rem .7rem; }
+  button.go { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  form.say { display: flex; gap: .5rem; padding: .7rem 1rem; border-top: 1px solid var(--line); }
+  form.say input { flex: 1; font: inherit; padding: .55rem .8rem; border-radius: 1.2rem; border: 1px solid var(--line); background: transparent; color: var(--ink); }
+  #inbox { display: none; } body.inbox #inbox { display: block; } body.inbox #log, body.inbox form.say { display: none; }
+  .item { border-bottom: 1px solid var(--line); padding: .8rem 0; }
+  .item select, .item input { font: inherit; font-size: .9rem; margin: .3rem .3rem 0 0; padding: .2rem .4rem; background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: .3rem; }
+  pre { white-space: pre-wrap; font-size: .8rem; color: var(--soft); }
+</style>
+</head>
+<body>
+<header><b>ptiLU</b><span class="why">engine · offline</span><button id="tab">Inbox</button></header>
+<main id="log"></main>
+<main id="inbox"></main>
+<form class="say"><input id="q" placeholder="Ask or tell me something" autocomplete="off"><button class="go">Send</button></form>
+<script>
+// Dependency-free NLU runtime. Mirrors nlu/features.py + nlu/runtime.py exactly.
+const NLURuntime = (() => {
+  const TOKEN_RE = /[A-Za-z0-9_](?:[A-Za-z0-9_.\-]*[A-Za-z0-9_])?|[^\sA-Za-z0-9_]/g;
+  const WORD_RE = /^[A-Za-z0-9_]/;
+  const ALNUM = /^[A-Za-z0-9]/;
+  const EXT_RE = /[a-z0-9_]\.[a-z0-9]{1,5}$/;
+  const QUOTES = new Set(["'", '"', "‘", "’", "“", "”", "`"]);
+
+  function tokenize(text) {
+    const out = [];
+    for (const m of text.matchAll(TOKEN_RE)) out.push([m[0], m.index, m.index + m[0].length]);
+    return out;
+  }
+
+  function intentFeatures(text) {
+    const toks = tokenize(text).map(t => t[0]).filter(t => WORD_RE.test(t)).map(t => t.toLowerCase());
+    const feats = [];
+    let prev = "<s>";
+    for (const t of toks) {
+      feats.push("w:" + t, "b:" + prev + "_" + t);
+      const p = "<" + t + ">";
+      for (const n of [3, 4]) for (let i = 0; i + n <= p.length; i++) feats.push("c:" + p.slice(i, i + n));
+      prev = t;
+    }
+    feats.push("b:" + prev + "_</s>");
+    return feats;
+  }
+
+  function shape(tok) {
+    let out = "";
+    for (const ch of tok) {
+      const c = ch >= "A" && ch <= "Z" ? "X" : ch >= "a" && ch <= "z" ? "x" : ch >= "0" && ch <= "9" ? "d" : ch;
+      if (out[out.length - 1] !== c) out += c;
+    }
+    return out;
+  }
+
+  function quoteMask(text, toks) {
+    let inside = false;
+    return toks.map(([tok, s, e]) => {
+      if (QUOTES.has(tok)) {
+        const before = s > 0 ? text[s - 1] : " ";
+        const after = e < text.length ? text[e] : " ";
+        if (!(ALNUM.test(before) && ALNUM.test(after))) { inside = !inside; return false; }
+      }
+      return inside;
+    });
+  }
+
+  function tokenFeatures(text, toks) {
+    const low = toks.map(t => t[0].toLowerCase());
+    const q = quoteMask(text, toks);
+    const n = low.length;
+    const at = i => (i < 0 ? "BOS" : i >= n ? "EOS" : low[i]);
+    return low.map((w, i) => {
+      const f = ["bias", "w=" + w, "s3=" + w.slice(-3), "sh=" + shape(toks[i][0]),
+        "w-1=" + at(i - 1), "w-2=" + at(i - 2), "w+1=" + at(i + 1), "w+2=" + at(i + 2),
+        "w-1|w=" + at(i - 1) + "|" + w, "w|w+1=" + w + "|" + at(i + 1)];
+      if (EXT_RE.test(w)) f.push("ext");
+      if (q[i]) f.push("inq");
+      return f;
+    });
+  }
+
+  function f32(b64) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Float32Array(bytes.buffer);
+  }
+
+  // format 2: only the kept weights, 1 byte each. Per feature: count, then (intent, value) pairs.
+  function unpack(m, nf) {
+    const bin = atob(m.weights), K = m.intents.length, coef = new Float32Array(K * nf);
+    let o = 0;
+    for (let j = 0; j < nf; j++) {
+      const n = bin.charCodeAt(o++);
+      for (let q = 0; q < n; q++) {
+        const k = bin.charCodeAt(o++), v = bin.charCodeAt(o++);
+        coef[k * nf + j] = (v > 127 ? v - 256 : v) * m.scale;
+      }
+    }
+    return coef;
+  }
+
+  function spansFromLabels(text, toks, labels) {
+    const out = [];
+    let cur = null;
+    toks.forEach(([, s, e], i) => {
+      const lab = labels[i];
+      if (lab.startsWith("B-") || (lab.startsWith("I-") && (!cur || cur[2] !== lab.slice(2)))) {
+        if (cur) out.push(cur);
+        cur = [s, e, lab.slice(2)];
+      } else if (lab.startsWith("I-") && cur) cur[1] = e;
+      else { if (cur) out.push(cur); cur = null; }
+    });
+    if (cur) out.push(cur);
+    return out.map(([s, e, n]) => ({ name: n, value: text.slice(s, e) }));
+  }
+
+  class NLU {
+    constructor(m) {
+      this.m = m;
+      this.vocab = new Map(m.vocab.map((f, i) => [f, i]));
+      this.idf = f32(m.idf);
+      this.nf = m.vocab.length;
+      this.coef = m.format === 2 ? unpack(m, this.nf) : f32(m.coef);
+      this.L = m.labels.length;
+    }
+    classify(text) {
+      const counts = new Map();
+      for (const f of intentFeatures(text)) {
+        const j = this.vocab.get(f);
+        if (j !== undefined) counts.set(j, (counts.get(j) || 0) + 1);
+      }
+      const vec = [];
+      let norm = 0;
+      for (const [j, c] of counts) { const v = (1 + Math.log(c)) * this.idf[j]; vec.push([j, v]); norm += v * v; }
+      norm = Math.sqrt(norm) || 1;
+      const scores = this.m.intents.map((_, k) => {
+        let s = this.m.intercept[k];
+        const base = k * this.nf;
+        for (const [j, v] of vec) s += this.coef[base + j] * v / norm;
+        return s;
+      });
+      const mx = Math.max(...scores);
+      const ex = scores.map(s => Math.exp(s - mx));
+      const sum = ex.reduce((a, b) => a + b, 0);
+      return ex.map((e, i) => [this.m.intents[i], e / sum]).sort((a, b) => b[1] - a[1]);
+    }
+    tag(text, toks) {
+      const L = this.L, st = this.m.state, tr = this.m.trans;
+      const em = tokenFeatures(text, toks).map(feats => {
+        const row = new Array(L).fill(0);
+        for (const f of feats) {
+          const w = st[f];
+          if (w) for (let q = 0; q < w.length; q += 2) row[w[q]] += w[q + 1];
+        }
+        return row;
+      });
+      if (!em.length) return [];
+      let score = em[0].slice();
+      const back = [];
+      for (let t = 1; t < em.length; t++) {
+        const nw = new Array(L), bp = new Array(L);
+        for (let b = 0; b < L; b++) {
+          let best = -1e18, arg = 0;
+          for (let a = 0; a < L; a++) { const v = score[a] + tr[a][b]; if (v > best) { best = v; arg = a; } }
+          nw[b] = best + em[t][b]; bp[b] = arg;
+        }
+        score = nw; back.push(bp);
+      }
+      let last = 0;
+      for (let i = 1; i < L; i++) if (score[i] > score[last]) last = i;
+      const path = [last];
+      for (let i = back.length - 1; i >= 0; i--) path.push(back[i][path[path.length - 1]]);
+      return path.reverse().map(i => this.m.labels[i]);
+    }
+    parse(text) {
+      const t0 = performance.now();
+      const ranked = this.classify(text);
+      const toks = tokenize(text);
+      const labels = this.tag(text, toks);
+      const slots = {};
+      for (const { name, value } of spansFromLabels(text, toks, labels)) if (!(name in slots)) slots[name] = value;
+      return { intent: ranked[0][0], confidence: ranked[0][1], ranking: ranked.slice(0, 3),
+        slots, labels, ms: performance.now() - t0 };
+    }
+  }
+  return { NLU, tokenize, intentFeatures, tokenFeatures };
+})();
+if (typeof module !== "undefined") module.exports = NLURuntime;
+
+// Rule-based date / time / duration / recurrence entities. No model, no dependencies.
+// Shared by every skill that needs time: reminders, timers, calendar, "what day is ...".
+// Usage: NLUEntities.parse("remind me next friday at 3pm", { now: new Date() })
+// Every result carries `ambiguous` + `alternatives` so the dialogue can ask instead of guessing.
+
+const NLUEntities = (() => {
+  // ---------- numbers ----------
+  const SMALL_N = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+    eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
+  const TENS_N = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60 };
+  const SMALL = "thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve";
+  const NUM = `(?:\\d+(?:[.,]\\d+)?|(?:twenty|thirty|forty|fifty|sixty)(?:[\\s-](?:one|two|three|four|five|six|seven|eight|nine))?|a\\s+couple\\s+of|couple\\s+of|a\\s+couple|a\\s+few|few|several|${SMALL}|an?)`;
+  const HOURW = "one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve";
+  const ORD_N = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10,
+    eleventh: 11, twelfth: 12, thirteenth: 13, fourteenth: 14, fifteenth: 15, sixteenth: 16, seventeenth: 17, eighteenth: 18,
+    nineteenth: 19, twentieth: 20, thirtieth: 30 };
+  const ORDW = "(?:twenty|thirty)[\\s-](?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)|thirtieth|twentieth|nineteenth|eighteenth|seventeenth|sixteenth|fifteenth|fourteenth|thirteenth|twelfth|eleventh|tenth|ninth|eighth|seventh|sixth|fifth|fourth|third|second|first";
+  // "21", "21st", "twenty-first" → 21
+  function ordNum(s) {
+    s = s.toLowerCase().replace(/(st|nd|rd|th)$/, m => (/^\d/.test(s) ? "" : m));
+    if (/^\d+$/.test(s)) return +s;
+    const [a, b] = s.split(/[\s-]/);
+    return b ? (a === "twenty" ? 20 : 30) + ORD_N[b] : ORD_N[a];
+  }
+
+  function num(s) {
+    s = s.trim().toLowerCase().replace(/\s+/g, " ");
+    if (/^\d/.test(s)) return parseFloat(s.replace(",", "."));
+    if (/couple/.test(s)) return 2;
+    if (/few|several/.test(s)) return 3;
+    if (s === "a" || s === "an") return 1;
+    const [t, u] = s.split(/[\s-]/);
+    if (t in TENS_N) return TENS_N[t] + (u ? SMALL_N[u] : 0);
+    return SMALL_N[s];
+  }
+
+  // ---------- durations ----------
+  const UNIT = "seconds?|secs?|minutes?|mins?|hours?|hrs?|days?|weeks?|wks?|fortnights?|months?|years?|yrs?";
+  const unitKey = u => {
+    u = u.toLowerCase();
+    if (/^s/.test(u)) return "seconds";
+    if (/^mi|^m$/.test(u)) return "minutes";
+    if (/^h/.test(u)) return "hours";
+    if (/^d/.test(u)) return "days";
+    if (/^w/.test(u)) return "weeks";
+    if (/^f/.test(u)) return "fortnight";
+    if (/^mo/.test(u)) return "months";
+    return "years";
+  };
+  const comp = named => {
+    const g = n => (named ? `?<${n}>` : "?:");
+    return [
+      `(${g("n1")}${NUM})\\s+and\\s+a\\s+half\\s+(${g("u1")}${UNIT})\\b`,
+      `(?:an?\\s+)?half\\s+(?:an?\\s+)?(${g("u2")}hour|day|minute|week|month|year)\\b`,
+      `(${g("q")}(?:a\\s+)?quarter\\s+(?:of\\s+)?an?\\s+hour)\\b`,
+      `(${g("hh")}\\d+)\\s*h\\s*(${g("hm")}\\d+)\\s*(?:m|min|mins)?\\b`,
+      `(${g("n3")}${NUM})[\\s-]+(${g("u3")}${UNIT})\\b(${g("hf")}\\s+and\\s+a\\s+half)?`,
+      `(${g("n4")}\\d+)\\s*(${g("u4")}h|m|min|mins|s|sec|secs|d)\\b`,
+    ].join("|");
+  };
+  const COMP = `(?:${comp(false)})`;
+  const DUR = `${COMP}(?:(?:\\s*,\\s*|\\s+and\\s+|\\s+)${COMP})*`;
+  const COMP_RE = new RegExp(comp(true), "gi");
+  const DOWN = { years: ["months", 12], months: ["days", 30], weeks: ["days", 7], days: ["hours", 24], hours: ["minutes", 60], minutes: ["seconds", 60] };
+
+  function parseDuration(s) {
+    const d = { years: 0, months: 0, weeks: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
+    const add = (unit, amount) => {
+      if (unit === "fortnight") { unit = "weeks"; amount *= 2; }
+      const whole = Math.floor(amount), frac = amount - whole;
+      d[unit] += whole;
+      if (frac > 1e-9 && DOWN[unit]) add(DOWN[unit][0], frac * DOWN[unit][1]);
+      else if (frac > 1e-9) d[unit] += frac;
+    };
+    let any = false;
+    for (const m of s.matchAll(COMP_RE)) {
+      const x = m.groups;
+      any = true;
+      if (x.n1) add(unitKey(x.u1), num(x.n1) + 0.5);
+      else if (x.u2) add(unitKey(x.u2), 0.5);
+      else if (x.q) add("minutes", 15);
+      else if (x.hh) { add("hours", +x.hh); add("minutes", +x.hm); }
+      else if (x.n3) add(unitKey(x.u3), num(x.n3) + (x.hf ? 0.5 : 0));
+      else if (x.n4) add(unitKey(x.u4), +x.n4);
+    }
+    return any ? d : null;
+  }
+  const subDay = d => d.hours || d.minutes || d.seconds;
+  function shift(now, d, sign = 1) {
+    const y = now.getFullYear() + sign * d.years, mo = now.getMonth() + sign * d.months;
+    const day = Math.min(now.getDate(), daysIn(y, mo));
+    return new Date(y, mo, day + sign * (d.days + 7 * d.weeks), now.getHours() + sign * d.hours,
+      now.getMinutes() + sign * d.minutes, now.getSeconds() + sign * Math.round(d.seconds));
+  }
+  function durText(d) {
+    const out = [];
+    for (const [k, l] of [["years", "y"], ["months", "mo"], ["weeks", "w"], ["days", "d"], ["hours", "h"], ["minutes", "min"], ["seconds", "s"]])
+      if (d[k]) out.push(`${+d[k].toFixed(2)} ${l}`);
+    return out.join(" ");
+  }
+  const durSeconds = d => Math.round(((((d.years * 365 + d.months * 30 + d.weeks * 7 + d.days) * 24 + d.hours) * 60 + d.minutes) * 60) + d.seconds);
+
+  // ---------- calendar helpers (local time, weeks start Monday) ----------
+  const daysIn = (y, m) => new Date(y, m + 1, 0).getDate();
+  const day0 = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const dow = d => (d.getDay() + 6) % 7; // Mon=0
+  const weekStart = d => addDays(day0(d), -dow(d));
+  const sameDay = (a, b) => a && b && a.getTime() === b.getTime();
+
+  const WD = { monday: 0, mon: 0, tuesday: 1, tues: 1, tue: 1, wednesday: 2, wed: 2, thursday: 3, thurs: 3, thur: 3,
+    friday: 4, fri: 4, saturday: 5, sunday: 6 };
+  const WD_RE = "monday|tuesday|wednesday|thursday|friday|saturday|sunday|tues|thurs|thur|mon|wed|fri";
+  const MONTHS = { january: 0, jan: 0, february: 1, feb: 1, march: 2, mar: 2, april: 3, apr: 3, may: 4, june: 5, jun: 5,
+    july: 6, jul: 6, august: 7, aug: 7, september: 8, sept: 8, sep: 8, october: 9, oct: 9, november: 10, nov: 10, december: 11, dec: 11 };
+  const MO_RE = "january|february|march|april|may|june|july|august|september|october|november|december|sept|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec";
+  const RR_DAY = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
+
+  // a date with no year: this year, or next year if it already passed
+  function futureDate(now, m, d, y) {
+    if (y) return new Date(y, m, d);
+    const t = new Date(now.getFullYear(), m, d);
+    return t < day0(now) ? new Date(now.getFullYear() + 1, m, d) : t;
+  }
+  const validDMY = (y, m, d) => m >= 0 && m < 12 && d >= 1 && d <= daysIn(y, m);
+
+  // ---------- rules ----------
+  // Each rule returns a "part"; adjacent parts (date + time, recurrence + time ...) are merged afterwards.
+  const DAYPART_HOUR = { morning: 9, afternoon: 15, evening: 19, night: 21, tonight: 20 };
+  const R = [];
+  const rule = (src, fn) => R.push({ re: new RegExp(src, "gi"), fn });
+
+  rule(`\\b(?:right\\s+)?now\\b`, (m, c) => ({ kind: "instant", date: c.now }));
+  rule(`\\b(?:in|within|after)\\s+(?:the\\s+next\\s+)?(${DUR})`, (m, c) => rel(c, m[1], 1));
+  rule(`(${DUR})\\s+(?:from\\s+now|from\\s+today|later)\\b`, (m, c) => rel(c, m[1], 1));
+  rule(`(${DUR})\\s+ago\\b`, (m, c) => rel(c, m[1], -1));
+  rule(`\\b(?:for\\s+)?(${DUR})`, (m) => { const d = parseDuration(m[1]); return d && { kind: "duration", dur: d }; });
+  function rel(c, s, sign) {
+    const d = parseDuration(s);
+    if (!d) return null;
+    const t = shift(c.now, d, sign);
+    return subDay(d) ? { kind: "instant", date: t } : { kind: "date", date: day0(t) };
+  }
+
+  rule(`\\b(?:the\\s+)?day\\s+after\\s+tomorrow\\b`, (m, c) => ({ kind: "date", date: addDays(day0(c.now), 2) }));
+  rule(`\\b(?:the\\s+)?day\\s+before\\s+yesterday\\b`, (m, c) => ({ kind: "date", date: addDays(day0(c.now), -2) }));
+  rule(`\\b(today|tonight|tomorrow|tomorow|tommorow|tmrw|tmr|yesterday)\\b`, (m, c) => {
+    const w = m[1].toLowerCase(), off = w === "today" || w === "tonight" ? 0 : w === "yesterday" ? -1 : 1;
+    return { kind: "date", date: addDays(day0(c.now), off), daypart: w === "tonight" ? "tonight" : null };
+  });
+  rule(`\\b(?:(this|in\\s+the|at)\\s+)?(morning|afternoon|evening|night)\\b`, (m, c) =>
+    ({ kind: "daypart", name: m[2].toLowerCase(), date: m[1] && /this/i.test(m[1]) ? day0(c.now) : null }));
+
+  // weekdays: "friday", "this friday", "next friday", "last friday", "friday next week"
+  rule(`\\b(?:(next|this|coming|last|past|on)\\s+)?(${WD_RE})\\b(?:\\s+(next\\s+week|this\\s+week|week))?`, (m, c) => {
+    const mod = (m[1] || "").toLowerCase(), target = WD[m[2].toLowerCase()], suffix = (m[3] || "").toLowerCase();
+    const today = day0(c.now);
+    let ahead = (target - dow(today) + 7) % 7;
+    if (mod === "last" || mod === "past") return { kind: "date", date: addDays(today, -(((dow(today) - target + 7) % 7) || 7)) };
+    if (mod === "this" && ahead === 0) return { kind: "date", date: today };
+    const coming = addDays(today, ahead || 7);
+    const inNextWeek = addDays(weekStart(today), 7 + target);
+    if (suffix === "this week") return { kind: "date", date: addDays(weekStart(today), target) };
+    if (suffix) return { kind: "date", date: inNextWeek };
+    if (mod === "next") {
+      // "next friday" on a Monday: the 16th or the 23rd? Both readings are common, so flag it.
+      return sameDay(coming, inNextWeek)
+        ? { kind: "date", date: coming }
+        : { kind: "date", date: c.opts.nextWeekday === "coming" ? coming : inNextWeek,
+            ambiguous: true, alternatives: [c.opts.nextWeekday === "coming" ? inNextWeek : coming] };
+    }
+    return { kind: "date", date: coming };
+  });
+  // "on mondays" → recurrence
+  rule(`\\bon\\s+(${WD_RE})s\\b`, (m) => ({ kind: "recur", freq: "WEEKLY", interval: 1, byday: [RR_DAY[WD[m[1].toLowerCase()]]] }));
+
+  // periods: next week / this month / last year / next weekend / the week after next
+  rule(`\\b(next|this|coming|last|past|the\\s+following|following)\\s+(week|weekend|month|year)\\b`, (m, c) =>
+    period(c, m[2].toLowerCase(), { next: 1, coming: 1, following: 1, this: 0, last: -1, past: -1 }[m[1].toLowerCase().replace(/^the\s+/, "")]));
+  rule(`\\bthe\\s+week\\s+after\\s+next\\b`, (m, c) => period(c, "week", 2));
+  function period(c, unit, off) {
+    const t = day0(c.now);
+    if (unit === "week") { const s = addDays(weekStart(t), 7 * off); return { kind: "range", from: s, to: addDays(s, 6), grain: "week" }; }
+    if (unit === "weekend") {
+      const sat = addDays(weekStart(t), 5 + 7 * off);
+      const r = { kind: "range", from: sat, to: addDays(sat, 1), grain: "weekend" };
+      if (off === 1 && dow(t) < 5) { // "next weekend" said on a weekday: this coming one, or the one after?
+        const coming = c.opts.nextWeekday === "coming";
+        const other = addDays(sat, -7);
+        r.ambiguous = true;
+        if (coming) { r.from = other; r.to = addDays(other, 1); r.alternatives = [sat]; } else r.alternatives = [other];
+      }
+      return r;
+    }
+    if (unit === "month") { const s = new Date(t.getFullYear(), t.getMonth() + off, 1); return { kind: "range", from: s, to: new Date(s.getFullYear(), s.getMonth() + 1, 0), grain: "month" }; }
+    const y = t.getFullYear() + off;
+    return { kind: "range", from: new Date(y, 0, 1), to: new Date(y, 11, 31), grain: "year" };
+  }
+  // end / beginning / middle of (next) week|month|year
+  rule(`\\b(?:by\\s+)?(?:the\\s+)?(end|beginning|start|middle|mid)\\s*(?:of|-)\\s*(?:the\\s+)?(?:(next|this|last)\\s+)?(week|month|year)\\b`, (m, c) => {
+    const p = period(c, m[3].toLowerCase(), { next: 1, last: -1 }[(m[2] || "").toLowerCase()] || 0);
+    const w = m[1].toLowerCase();
+    if (w === "beginning" || w === "start") return { kind: "date", date: p.from };
+    if (w === "end") {
+      if (p.grain === "week") return { kind: "date", date: addDays(p.from, 4), ambiguous: true, alternatives: [p.to], note: "end of week = Friday (or Sunday?)" };
+      return { kind: "date", date: p.to };
+    }
+    if (p.grain === "week") return { kind: "date", date: addDays(p.from, 2) };
+    if (p.grain === "month") return { kind: "date", date: new Date(p.from.getFullYear(), p.from.getMonth(), 15) };
+    return { kind: "date", date: new Date(p.from.getFullYear(), 6, 1) };
+  });
+
+  // holidays (fixed dates, and Easter computed)
+  function easter(y) { // anonymous Gregorian algorithm
+    const a = y % 19, b = Math.floor(y / 100), c2 = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25),
+      g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c2 / 4), k = c2 % 4,
+      l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+    return new Date(y, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 1);
+  }
+  const HOLIDAYS = {
+    "christmas eve": [11, 24], "christmas": [11, 25], "christmas day": [11, 25], "xmas": [11, 25], "boxing day": [11, 26],
+    "new year's eve": [11, 31], "new years eve": [11, 31], "new year's day": [0, 1], "new years day": [0, 1], "new year": [0, 1], "new year's": [0, 1],
+    "valentine's day": [1, 14], "valentines day": [1, 14], "halloween": [9, 31], "all saints": [10, 1], "may day": [4, 1],
+    "easter": "easter", "easter sunday": "easter", "easter monday": 1, "good friday": -2,
+  };
+  const HOL_RE = Object.keys(HOLIDAYS).sort((a, b) => b.length - a.length).map(k => k.replace(/'/g, "['’]?")).join("|");
+  rule(`\\b(?:on\\s+)?(${HOL_RE})\\b`, (m, c) => {
+    const key = m[1].toLowerCase().replace(/’/g, "'"), h = HOLIDAYS[key] ?? HOLIDAYS[key.replace("'", "")];
+    const on = y => (Array.isArray(h) ? new Date(y, h[0], h[1]) : addDays(easter(y), h === "easter" ? 0 : h));
+    let d = on(c.now.getFullYear());
+    if (d < day0(c.now)) d = on(c.now.getFullYear() + 1);
+    return { kind: "date", date: d, holiday: key };
+  });
+  // "the first monday of next month", "the last friday of october"
+  rule(`\\b(?:the\\s+)?(first|second|third|fourth|fifth|last|1st|2nd|3rd|4th|5th)\\s+(${WD_RE})\\s+(?:of|in)\\s+(?:(?:the\\s+)?(next|this|last)\\s+month|(${MO_RE})(?:\\s+(\\d{4}))?)`, (m, c) => {
+    const n = m[1].toLowerCase(), wd = WD[m[2].toLowerCase()], now = c.now;
+    let y = now.getFullYear(), mo;
+    if (m[3]) mo = now.getMonth() + { next: 1, this: 0, last: -1 }[m[3].toLowerCase()];
+    else { mo = MONTHS[m[4].toLowerCase()]; if (m[5]) y = +m[5]; else if (mo < now.getMonth()) y++; }
+    const first = new Date(y, mo, 1);
+    if (n === "last") { let d = new Date(y, mo + 1, 0); while (dow(d) !== wd) d = addDays(d, -1); return { kind: "date", date: d }; }
+    const k = { first: 1, "1st": 1, second: 2, "2nd": 2, third: 3, "3rd": 3, fourth: 4, "4th": 4, fifth: 5, "5th": 5 }[n];
+    const d = addDays(first, ((wd - dow(first) + 7) % 7) + 7 * (k - 1));
+    return d.getMonth() === first.getMonth() ? { kind: "date", date: d } : null;
+  });
+  // "the last day of the year", "the first day of next month"
+  rule(`\\b(?:the\\s+)?(first|last)\\s+day\\s+of\\s+(?:the\\s+)?(?:(next|this|last)\\s+)?(week|month|year)\\b`, (m, c) => {
+    const p = period(c, m[3].toLowerCase(), { next: 1, last: -1 }[(m[2] || "").toLowerCase()] || 0);
+    return { kind: "date", date: m[1].toLowerCase() === "first" ? p.from : p.to };
+  });
+  // "tuesday the 20th", "friday the 13th": the next date where both match
+  rule(`\\b(?:on\\s+)?(${WD_RE})\\s+(?:the\\s+)?(\\d{1,2}(?:st|nd|rd|th)?|${ORDW})\\b(?:\\s+of\\s+(${MO_RE}))?`, (m, c) => {
+    const wd = WD[m[1].toLowerCase()], d = ordNum(m[2]), now = c.now;
+    if (!d || d > 31) return null;
+    for (let k = 0; k < 24; k++) {
+      const y = now.getFullYear(), mo = m[3] ? MONTHS[m[3].toLowerCase()] + 12 * k : now.getMonth() + k;
+      const t = new Date(y, mo, d);
+      if (t.getDate() === d && t >= day0(now) && dow(t) === wd) return { kind: "date", date: t };
+    }
+    return null;
+  });
+  // "this time next week", "this time tomorrow"
+  rule(`\\bthis\\s+time\\s+(tomorrow|next\\s+(week|month|year))\\b`, (m, c) => {
+    const n = c.now, u = (m[2] || "day").toLowerCase();
+    const t = new Date(n.getFullYear() + (u === "year"), n.getMonth() + (u === "month"), n.getDate() + (u === "day" ? 1 : u === "week" ? 7 : 0), n.getHours(), n.getMinutes());
+    return { kind: "instant", date: t };
+  });
+
+  // absolute dates
+  rule(`\\b(?:on\\s+)?(?:the\\s+)?(\\d{1,2}|${ORDW})(?:st|nd|rd|th)?(?:\\s+of)?\\s+(${MO_RE})\\b(?:,?\\s+(\\d{4}))?`, (m, c) => dm(c, ordNum(m[1]), MONTHS[m[2].toLowerCase()], m[3]));
+  rule(`\\b(?:on\\s+)?(${MO_RE})\\s+(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s+(\\d{4}))?`, (m, c) => dm(c, +m[2], MONTHS[m[1].toLowerCase()], m[3]));
+  function dm(c, d, mo, y) {
+    const t = futureDate(c.now, mo, d, y && +y);
+    return validDMY(t.getFullYear(), mo, d) ? { kind: "date", date: t } : null;
+  }
+  rule(`\\b(in\\s+|during\\s+|next\\s+|this\\s+|last\\s+)?(${MO_RE})\\b(?:\\s+(\\d{4}))?`, (m, c) => {
+    const pre = (m[1] || "").trim().toLowerCase(), mo = MONTHS[m[2].toLowerCase()], y = m[3] && +m[3];
+    if (mo === 4 && m[2].toLowerCase() === "may" && !pre && !y) return null; // "may" is usually a verb
+    if (!pre && !y && m[2].length <= 3) return null;                          // bare "mar", "dec": too risky
+    const now = c.now;
+    let year = y || now.getFullYear();
+    if (!y && (pre === "next" ? mo <= now.getMonth() : pre === "last" ? false : mo < now.getMonth())) year++;
+    if (!y && pre === "last") year = mo < now.getMonth() ? now.getFullYear() : now.getFullYear() - 1;
+    return { kind: "range", from: new Date(year, mo, 1), to: new Date(year, mo + 1, 0), grain: "month" };
+  });
+  // "the 20th", "on the third" (an ordinal word needs "on": "the first file" is not a date)
+  rule(`\\b(?:on\\s+)?the\\s+(\\d{1,2})(?:st|nd|rd|th)\\b|\\bon\\s+the\\s+(${ORDW})\\b`, (m, c) => {
+    const d = ordNum(m[1] || m[2]), now = c.now;
+    for (let k = 0; k < 3; k++) {
+      const y = now.getFullYear(), mo = now.getMonth() + k;
+      const t = new Date(y, mo, d);
+      if (d <= daysIn(y, mo) && t >= day0(now)) return { kind: "date", date: t };
+    }
+    return null;
+  });
+  rule(`\\b(\\d{4})-(\\d{1,2})-(\\d{1,2})\\b`, (m) => validDMY(+m[1], +m[2] - 1, +m[3]) ? { kind: "date", date: new Date(+m[1], +m[2] - 1, +m[3]) } : null);
+  rule(`\\b(\\d{1,2})(?:/(\\d{1,2})(?:/(\\d{2,4}))?|\\.(\\d{1,2})\\.(\\d{2,4})?)(?![\\d.]*\\s*(?:${UNIT}|am|pm|h)\\b)`, (m, c) => {
+    const a = +m[1], b = +(m[2] || m[4]), ys = m[3] || m[5];
+    const y = ys ? (ys.length === 2 ? 2000 + +ys : +ys) : null;
+    const dmy = c.opts.dateOrder !== "MDY";
+    const [d, mo] = dmy ? [a, b - 1] : [b, a - 1];
+    const t = futureDate(c.now, mo, d, y);
+    if (!validDMY(t.getFullYear(), mo, d)) return null;
+    const r = { kind: "date", date: t };
+    if (a <= 12 && b <= 12 && a !== b && m[2]) { // slash form with both ≤ 12: 3/4 = 3 April or 4 March?
+      const [d2, mo2] = dmy ? [b, a - 1] : [a, b - 1];
+      r.ambiguous = true; r.alternatives = [futureDate(c.now, mo2, d2, y)];
+    }
+    return r;
+  });
+  rule(`\\b(?:in|during)\\s+(\\d{4})\\b`, (m) => ({ kind: "range", from: new Date(+m[1], 0, 1), to: new Date(+m[1], 11, 31), grain: "year" }));
+
+  // times
+  const MER = `(am|pm|a\\.m\\.|p\\.m\\.)`;
+  const merOf = s => (s ? (/^p/i.test(s) ? "pm" : "am") : null);
+  rule(`\\b(at\\s+|@\\s*|by\\s+|around\\s+)?(\\d{1,2})([:h.])(\\d{2})(?!\\d)\\s*${MER}?(?![a-z])`, (m) => {
+    const h = +m[2], mi = +m[4], sep = m[3];
+    if (h > 23 || mi > 59) return null;
+    if (sep !== ":" && !m[1] && !m[5] && h < 13) return null; // "1h30" / "1.30" alone is a duration or a number
+    return { kind: "time", h, m: mi, mer: merOf(m[5]) };
+  });
+  rule(`\\b(?:at\\s+|by\\s+|around\\s+)?(\\d{1,2})\\s*(?:${MER}|o'?clock)(?![a-z])`, (m) =>
+    +m[1] <= 12 || !m[2] ? (+m[1] <= 23 ? { kind: "time", h: +m[1], m: 0, mer: merOf(m[2]) } : null) : null);
+  rule(`\\b(at\\s+)?(\\d{1,2})h\\b(?!\\s*\\d)`, (m) => (m[1] || +m[2] >= 13) && +m[2] <= 23 ? { kind: "time", h: +m[2], m: 0, mer: null } : null);
+  rule(`\\b(?:at|around|by)\\s+(\\d{1,2}|${HOURW})\\b(?![:.h/]\\d)`, (m) => {
+    const h = num(m[1]);
+    return h <= 23 ? { kind: "time", h, m: 0, mer: null } : null;
+  });
+  rule(`\\b(?:at\\s+)?half\\s+(\\d{1,2}|${HOURW})\\b(?!\\s*(?:an?\\s+)?(?:hour|day|minute|week|month|year|past|after|to|till))`, (m) => {
+    const h = num(m[1]);
+    return h >= 1 && h <= 12 ? { kind: "time", h, m: 30, mer: null } : null;
+  });
+  rule(`\\b(?:at\\s+)?(noon|midday|midnight)\\b`, (m) => /midnight/i.test(m[1]) ? { kind: "time", h: 0, m: 0, mer: "am", midnight: true } : { kind: "time", h: 12, m: 0, mer: "pm" });
+  rule(`\\b(?:at\\s+)?(?:a\\s+)?(half|quarter|\\d{1,2}|${SMALL}|twenty(?:[\\s-](?:one|two|three|four|five|six|seven|eight|nine))?)(?:\\s+minutes?)?\\s+(past|after|to|till|before)\\s+(\\d{1,2}|${HOURW})\\b(?:\\s*${MER})?`, (m) => {
+    const w = m[1].toLowerCase(), mins = w === "half" ? 30 : w === "quarter" ? 15 : num(w), h = num(m[3]);
+    if (mins == null || mins >= 60 || h > 23) return null;
+    const after = /past|after/i.test(m[2]);
+    if (!after && w === "half") return null;
+    return after ? { kind: "time", h, m: mins, mer: merOf(m[4]) } : { kind: "time", h: h - 1 || 12, m: 60 - mins, mer: merOf(m[4]) };
+  });
+
+  // recurrence
+  rule(`\\b(?:every|each)\\s+(other\\s+)?(?:(${NUM})\\s+)?(day|weekday|weekend|morning|evening|night|week|month|year|hour|minute|days|weeks|months|hours|minutes|(?:${WD_RE})(?:\\s*(?:,|and|&)\\s*(?:${WD_RE}))*)\\b`, (m) => {
+    const what = m[3].toLowerCase(), interval = (m[1] ? 2 : 1) * (m[2] ? num(m[2]) : 1);
+    const base = { kind: "recur", interval };
+    if (/^(day|days)$/.test(what)) return { ...base, freq: "DAILY" };
+    if (/^(morning|evening|night)$/.test(what)) return { ...base, freq: "DAILY", daypart: what };
+    if (what === "weekday") return { ...base, freq: "WEEKLY", byday: ["MO", "TU", "WE", "TH", "FR"] };
+    if (what === "weekend") return { ...base, freq: "WEEKLY", byday: ["SA", "SU"] };
+    if (/^weeks?$/.test(what)) return { ...base, freq: "WEEKLY" };
+    if (/^months?$/.test(what)) return { ...base, freq: "MONTHLY" };
+    if (/^years?$/.test(what)) return { ...base, freq: "YEARLY" };
+    if (/^hours?$/.test(what)) return { ...base, freq: "HOURLY" };
+    if (/^minutes?$/.test(what)) return { ...base, freq: "MINUTELY" };
+    return { ...base, freq: "WEEKLY", byday: what.split(/\s*(?:,|and|&)\s*/).map(x => RR_DAY[WD[x]]) };
+  });
+  rule(`\\b(daily|nightly|weekly|monthly|yearly|annually|hourly)\\b`, (m) => {
+    const w = m[1].toLowerCase();
+    return { kind: "recur", interval: 1, freq: w === "nightly" ? "DAILY" : w === "annually" ? "YEARLY" : w.toUpperCase(), daypart: w === "nightly" ? "night" : null };
+  });
+
+  // ---------- time resolution ----------
+  const PM_HINT = new Set(["afternoon", "evening", "night", "tonight"]);
+  function hour24(t, daypart, date, now) {
+    let h = t.h, amb = false, alt = null, altNextDay = false;
+    if (t.mer === "pm" && h < 12) h += 12;
+    else if (t.mer === "am" && h === 12) h = 0;
+    else if (!t.mer && h >= 1 && h <= 12) {
+      if (daypart && PM_HINT.has(daypart)) { if (!(daypart === "night" && h <= 4) && h < 12) h += 12; }
+      else if (daypart === "morning") { if (h === 12) h = 0; }
+      else if (date && sameDay(date, day0(now))) {
+        // today, no am/pm: take the next of the two readings that is still ahead
+        const am = new Date(date.getFullYear(), date.getMonth(), date.getDate(), h % 12, t.m);
+        const pm = new Date(date.getFullYear(), date.getMonth(), date.getDate(), (h % 12) + 12, t.m);
+        if (am > now) { h = h % 12; amb = true; alt = (h % 12) + 12; }
+        else if (pm > now) { h = (h % 12) + 12; amb = true; alt = h - 12; altNextDay = true; } // tonight, or tomorrow morning
+        else if (h <= 6) h = (h % 12) + 12;                 // both passed: tomorrow, 1–6 → afternoon
+        else if (h <= 11) { amb = true; alt = h + 12; }      // tomorrow, 7–11 → morning, but ask
+        else h = 12;
+      } else if (h <= 6) h += 12;            // 1–6 → afternoon
+      else if (h <= 11) { amb = true; alt = h + 12; } // 7–11 → morning, but ask
+    }
+    return { h, m: t.m, ambiguous: amb, altHour: alt, altNextDay };
+  }
+
+  // ---------- merge + resolve ----------
+  const GLUE = /^[\s,]*(?:(?:at|on|in\s+the|the|around|by|from|-|and)[\s,]*)?$/i;
+
+  function parse(text, options = {}) {
+    const now = options.now || new Date();
+    const c = { now, opts: { nextWeekday: options.nextWeekday || "coming", dateOrder: options.dateOrder || "DMY" } };
+    const low = text.toLowerCase();
+    let cands = [];
+    for (const { re, fn } of R) {
+      re.lastIndex = 0;
+      for (const m of low.matchAll(re)) {
+        const p = fn(m, c);
+        if (p) cands.push({ ...p, start: m.index, end: m.index + m[0].length });
+      }
+    }
+    // longest match wins, no overlaps
+    cands.sort((a, b) => (b.end - b.start) - (a.end - a.start) || a.start - b.start);
+    const taken = [];
+    for (const p of cands) if (!taken.some(q => p.start < q.end && q.start < p.end)) taken.push(p);
+    taken.sort((a, b) => a.start - b.start);
+    // a duration counted from a date: "a week from tomorrow", "three days before christmas"
+    for (let i = 0; i + 1 < taken.length; i++) {
+      const a = taken[i], b = taken[i + 1];
+      const link = /^\s+(from|after|before)\s+$/i.exec(low.slice(a.end, b.start));
+      if (a.kind !== "duration" || !link || !(b.kind === "date" || b.kind === "instant")) continue;
+      const sign = /before/i.test(link[1]) ? -1 : 1;
+      const base = b.kind === "date" ? b.date : b.date;
+      const t = shift(base, a.dur, sign);
+      taken.splice(i, 2, b.kind === "date" && !subDay(a.dur)
+        ? { kind: "date", date: day0(t), start: a.start, end: b.end }
+        : { kind: "instant", date: t, start: a.start, end: b.end });
+    }
+    // group adjacent parts
+    const groups = [];
+    for (const p of taken) {
+      const g = groups[groups.length - 1];
+      if (g && GLUE.test(low.slice(g[g.length - 1].end, p.start)) && compatible(g, p)) g.push(p);
+      else groups.push([p]);
+    }
+    return groups.map(g => resolve(g, text, c)).filter(Boolean);
+  }
+  function compatible(g, p) {
+    const kinds = new Set(g.map(x => x.kind));
+    if (p.kind === "duration" || kinds.has("duration")) return false;
+    if (p.kind === "instant" || kinds.has("instant")) return false;
+    if (kinds.has(p.kind) && p.kind !== "daypart") return false;
+    if ((p.kind === "date" && kinds.has("range")) || (p.kind === "range" && kinds.has("date"))) return false;
+    return true;
+  }
+
+  function resolve(g, text, c) {
+    const now = c.now;
+    const span = text.slice(g[0].start, g[g.length - 1].end);
+    const by = k => g.find(p => p.kind === k);
+    const base = { text: span, start: g[0].start, end: g[g.length - 1].end };
+    const dur = by("duration"), inst = by("instant"), rec = by("recur");
+    if (dur) return { ...base, type: "duration", value: durText(dur.dur), seconds: durSeconds(dur.dur), parts: dur.dur };
+    if (inst) return { ...base, type: "datetime", value: iso(inst.date, true), grain: "minute", past: inst.date < now && !sameMinute(inst.date, now) };
+
+    const date = by("date"), range = by("range"), time = by("time"), dp = by("daypart");
+    const daypart = (dp && dp.name) || (date && date.daypart) || (rec && rec.daypart) || null;
+
+    if (rec) {
+      const t = time ? hour24(time, daypart, null, now) : daypart ? { h: DAYPART_HOUR[daypart], m: 0, approx: true } : null;
+      const rr = [`FREQ=${rec.freq}`, rec.interval > 1 ? `INTERVAL=${rec.interval}` : "", rec.byday ? `BYDAY=${rec.byday.join(",")}` : "",
+        t ? `BYHOUR=${t.h};BYMINUTE=${t.m}` : ""].filter(Boolean).join(";");
+      return { ...base, type: "recurrence", rrule: rr, time: t ? pad(t.h) + ":" + pad(t.m) : null, next: nextOccurrence(rec, t, now),
+        ambiguous: !!(t && t.ambiguous), alternatives: t && t.ambiguous ? [pad(t.altHour) + ":" + pad(t.m)] : [] };
+    }
+
+    let day = date ? date.date : dp && dp.date ? dp.date : range && (time || dp) ? range.from : null;
+    let ambiguous = !!((date && date.ambiguous) || (range && range.ambiguous));
+    let altDays = (date && date.alternatives) || [];
+    const notes = [];
+    if (date && date.note) notes.push(date.note);
+    if (range && (time || dp)) { ambiguous = true; notes.push(`no day given inside the ${range.grain}, used its first day`); }
+
+    if (!time && !dp && !daypart) {
+      if (range) return { ...base, type: "range", grain: range.grain, from: iso(range.from), to: iso(range.to), value: `${iso(range.from)}/${iso(range.to)}`,
+        ambiguous, alternatives: (range.alternatives || []).map(s => `${iso(s)}/${iso(addDays(s, Math.round((range.to - range.from) / 864e5)))}`) };
+      return { ...base, type: "date", grain: "day", value: iso(day), ambiguous, alternatives: altDays.map(d => iso(d)),
+        past: day < day0(now), note: notes.join("; ") || undefined };
+    }
+
+    let t, approx = false;
+    if (time) {
+      t = hour24(time, daypart, day || day0(now), now);
+      if (time.midnight) day = addDays(day || day0(now), 1);
+    } else { t = { h: DAYPART_HOUR[daypart], m: 0 }; approx = true; }
+    if (!day) { // time alone: today if still ahead, otherwise tomorrow
+      day = day0(now);
+      if (new Date(day.getFullYear(), day.getMonth(), day.getDate(), t.h, t.m) <= now) day = addDays(day, 1);
+    }
+    const at = new Date(day.getFullYear(), day.getMonth(), day.getDate(), t.h, t.m);
+    if (t.ambiguous) { ambiguous = true; }
+    const alts = altDays.map(d => iso(new Date(d.getFullYear(), d.getMonth(), d.getDate(), t.h, t.m), true));
+    const altDay = t.altNextDay ? addDays(day, 1) : day;
+    if (t.ambiguous && t.altHour != null) alts.push(iso(new Date(altDay.getFullYear(), altDay.getMonth(), altDay.getDate(), t.altHour, t.m), true));
+    if (approx) notes.push(`"${daypart}" with no time, defaulted to ${pad(t.h)}:00`);
+    return { ...base, type: "datetime", grain: approx ? "daypart" : "minute", value: iso(at, true), ambiguous, alternatives: alts,
+      past: at < now, note: notes.join("; ") || undefined };
+  }
+
+  function nextOccurrence(rec, t, now) {
+    const h = t ? t.h : 9, m = t ? t.m : 0;
+    for (let k = 0; k < 400; k++) {
+      const d = addDays(day0(now), k), at = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
+      if (at <= now) continue;
+      if (rec.byday && !rec.byday.includes(RR_DAY[dow(d)])) continue;
+      return iso(at, true);
+    }
+    return null;
+  }
+
+  const pad = n => String(n).padStart(2, "0");
+  const sameMinute = (a, b) => Math.abs(a - b) < 60000;
+  function iso(d, withTime) {
+    const s = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    return withTime ? `${s}T${pad(d.getHours())}:${pad(d.getMinutes())}` : s;
+  }
+
+  return { parse, parseDuration };
+})();
+if (typeof module !== "undefined") module.exports = NLUEntities;
+
+// Dependency-free trainer: annotated Markdown in, model.json out.
+// Runs in Node (train.js), in a browser Web Worker (on-device retraining), anywhere with JavaScript.
+// Needs the feature functions of web/runtime.js (NLURuntime).
+//
+//   intent : TF-IDF (same features as the runtime) + multinomial logistic regression, L-BFGS
+//   slots  : linear-chain CRF, L-BFGS (the runtime decodes it with Viterbi)
+//   export : weak intent weights dropped, the rest stored as 1-byte integers (format 2)
+
+const NLUTrainer = (() => {
+  const R = typeof NLURuntime !== "undefined" ? NLURuntime : require("./runtime.js");
+  const { tokenize, intentFeatures, tokenFeatures } = R;
+
+  // ---------- dataset (same Markdown format as nlu/dataset.py) ----------
+  const SPAN_RE = /\[([^\]]+)\]\(([a-z_]+)\)/g;
+  const HEADER_RE = /^##\s*intent:\s*([a-z_]+)\s*$/;
+  function parseLine(line) {
+    let text = "", pos = 0;
+    const spans = [];
+    for (const m of line.matchAll(SPAN_RE)) {
+      text += line.slice(pos, m.index);
+      const start = text.length;
+      text += m[1];
+      spans.push([start, text.length, m[2]]);
+      pos = m.index + m[0].length;
+    }
+    return { text: text + line.slice(pos), spans };
+  }
+  function parseDataset(md) {
+    const out = [];
+    let intent = null;
+    for (const raw of md.split("\n")) {
+      const line = raw.trim();
+      const h = HEADER_RE.exec(line);
+      if (h) { intent = h[1]; continue; }
+      if (line.startsWith("- ") && intent) out.push({ intent, ...parseLine(line.slice(2).trim()) });
+    }
+    return out;
+  }
+  function bio(text, spans) {
+    const toks = tokenize(text);
+    const labels = toks.map(([, s, e]) => {
+      for (const [ss, se, name] of spans) if (s >= ss && e <= se) return (s === ss ? "B-" : "I-") + name;
+      return "O";
+    });
+    return { toks, labels };
+  }
+
+  // ---------- helpers ----------
+  function b64(bytes) {
+    let s = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+
+  // ---------- intent: TF-IDF ----------
+  function tfidf(texts, minDf = 2) {
+    const docs = texts.map(t => { const c = new Map(); for (const f of intentFeatures(t)) c.set(f, (c.get(f) || 0) + 1); return c; });
+    const df = new Map();
+    for (const d of docs) for (const f of d.keys()) df.set(f, (df.get(f) || 0) + 1);
+    const vocab = [...df.keys()].filter(f => df.get(f) >= minDf).sort();
+    const index = new Map(vocab.map((f, i) => [f, i]));
+    const n = texts.length;
+    const idf = new Float64Array(vocab.length);
+    vocab.forEach((f, i) => { idf[i] = Math.log((1 + n) / (1 + df.get(f))) + 1; });
+    const rows = docs.map(d => {
+      const idx = [], val = [];
+      let norm = 0;
+      for (const [f, c] of d) {
+        const j = index.get(f);
+        if (j === undefined) continue;
+        const v = (1 + Math.log(c)) * idf[j];
+        idx.push(j); val.push(v); norm += v * v;
+      }
+      norm = Math.sqrt(norm) || 1;
+      return { idx: Int32Array.from(idx), val: Float64Array.from(val, v => v / norm) };
+    });
+    return { vocab, idf, rows };
+  }
+
+  // ---------- intent: logistic regression ----------
+  // minimise  sum_i w_i * crossentropy_i  +  |W|^2 / (2C)   (intercepts not penalised), as scikit-learn does
+  function logreg(rows, y, K, nf, { C = 8, maxIter = 200, tol = 1e-4, onStep } = {}) {
+    const n = rows.length, P = K * nf + K;
+    const counts = new Float64Array(K);
+    for (const k of y) counts[k]++;
+    const sw = y.map(k => n / (K * counts[k])); // class_weight="balanced"
+    const scores = new Float64Array(K);
+    function fg(w, g) {
+      g.fill(0);
+      let f = 0;
+      for (let i = 0; i < n; i++) {
+        const { idx, val } = rows[i];
+        let mx = -Infinity;
+        for (let k = 0; k < K; k++) {
+          let s = w[K * nf + k];
+          const base = k * nf;
+          for (let q = 0; q < idx.length; q++) s += w[base + idx[q]] * val[q];
+          scores[k] = s; if (s > mx) mx = s;
+        }
+        let z = 0;
+        for (let k = 0; k < K; k++) { scores[k] = Math.exp(scores[k] - mx); z += scores[k]; }
+        f += sw[i] * (Math.log(z) + mx - (Math.log(scores[y[i]]) + mx));
+        for (let k = 0; k < K; k++) {
+          const d = sw[i] * (scores[k] / z - (k === y[i] ? 1 : 0));
+          if (d === 0) continue;
+          const base = k * nf;
+          for (let q = 0; q < idx.length; q++) g[base + idx[q]] += d * val[q];
+          g[K * nf + k] += d;
+        }
+      }
+      for (let p = 0; p < K * nf; p++) { f += w[p] * w[p] / (2 * C); g[p] += w[p] / C; }
+      return f;
+    }
+    return lbfgs(fg, new Float64Array(P), { maxIter, tol, onStep });
+  }
+
+  function lbfgs(fg, x, { m = 10, maxIter = 200, tol = 1e-4, onStep } = {}) {
+    const P = x.length;
+    let g = new Float64Array(P), f = fg(x, g);
+    const S = [], Y = [], rho = [];
+    const dot = (a, b) => { let s = 0; for (let i = 0; i < P; i++) s += a[i] * b[i]; return s; };
+    const xn = new Float64Array(P), gn = new Float64Array(P), d = new Float64Array(P);
+    let it = 0;
+    for (; it < maxIter; it++) {
+      let gmax = 0;
+      for (let i = 0; i < P; i++) gmax = Math.max(gmax, Math.abs(g[i]));
+      if (gmax < tol) break;
+      // two-loop recursion: d = -H g
+      for (let i = 0; i < P; i++) d[i] = -g[i];
+      const alpha = new Array(S.length);
+      for (let j = S.length - 1; j >= 0; j--) { alpha[j] = rho[j] * dot(S[j], d); for (let i = 0; i < P; i++) d[i] -= alpha[j] * Y[j][i]; }
+      const gamma = S.length ? dot(S[S.length - 1], Y[Y.length - 1]) / dot(Y[Y.length - 1], Y[Y.length - 1]) : 1 / Math.sqrt(dot(g, g));
+      for (let i = 0; i < P; i++) d[i] *= gamma;
+      for (let j = 0; j < S.length; j++) { const b = rho[j] * dot(Y[j], d); for (let i = 0; i < P; i++) d[i] += S[j][i] * (alpha[j] - b); }
+      // backtracking line search (Armijo)
+      let slope = dot(g, d);
+      if (slope >= 0) { for (let i = 0; i < P; i++) d[i] = -g[i]; S.length = Y.length = rho.length = 0; slope = dot(g, d); }
+      let step = 1, fn;
+      for (let ls = 0; ls < 30; ls++) {
+        for (let i = 0; i < P; i++) xn[i] = x[i] + step * d[i];
+        fn = fg(xn, gn);
+        if (fn <= f + 1e-4 * step * slope) break;
+        step *= 0.5;
+      }
+      const s = new Float64Array(P), yv = new Float64Array(P);
+      for (let i = 0; i < P; i++) { s[i] = xn[i] - x[i]; yv[i] = gn[i] - g[i]; }
+      const sy = dot(s, yv);
+      if (sy > 1e-10) { S.push(s); Y.push(yv); rho.push(1 / sy); if (S.length > m) { S.shift(); Y.shift(); rho.shift(); } }
+      x.set(xn); g.set(gn);
+      const rel = Math.abs(f - fn) / Math.max(1, Math.abs(f));
+      f = fn;
+      if (onStep && it % 10 === 0) onStep(it, f);
+      if (rel < 1e-9) break;
+    }
+    return { w: x, iterations: it, loss: f };
+  }
+
+  // ---------- slots: linear-chain CRF (what sklearn-crfsuite trained), L2 penalty, L-BFGS ----------
+  // Parameters exist only for (attribute, label) pairs seen in the gold data, like crfsuite's default.
+  function crf(seqs, labels, { c2 = 0.05, maxIter = 150, keep = 0.01, onStep } = {}) {
+    const L = labels.length;
+    const attrId = new Map(), attrNames = [];
+    const pairs = []; // per attribute: Map label -> param index
+    let P = 0;
+    const enc = seqs.map(({ feats, gold }) => feats.map((fs, t) => {
+      const ids = [];
+      for (const f of fs) {
+        let a = attrId.get(f);
+        if (a === undefined) { a = attrNames.length; attrId.set(f, a); attrNames.push(f); pairs.push(new Map()); }
+        if (!pairs[a].has(gold[t])) pairs[a].set(gold[t], P++);
+        ids.push(a);
+      }
+      return Int32Array.from(ids);
+    }));
+    // flatten (label, param) lists per attribute
+    const aLab = pairs.map(m => Int32Array.from(m.keys())), aPar = pairs.map(m => Int32Array.from(m.values()));
+    const TB = P; // transitions start here
+    const NP = P + L * L;
+    let maxT = 0;
+    for (const s of seqs) maxT = Math.max(maxT, s.gold.length);
+    const psi = new Float64Array(maxT * L), al = new Float64Array(maxT * L), be = new Float64Array(maxT * L), c = new Float64Array(maxT);
+    const M = new Float64Array(L * L);
+
+    function fg(w, g) {
+      g.fill(0);
+      let f = 0;
+      for (let q = 0; q < L * L; q++) M[q] = Math.exp(w[TB + q]);
+      for (let i = 0; i < seqs.length; i++) {
+        const X = enc[i], gold = seqs[i].gold, T = gold.length;
+        if (!T) continue;
+        let goldScore = 0;
+        for (let t = 0; t < T; t++) {
+          const row = t * L;
+          for (let y = 0; y < L; y++) psi[row + y] = 0;
+          for (const a of X[t]) { const lb = aLab[a], pr = aPar[a]; for (let q = 0; q < lb.length; q++) psi[row + lb[q]] += w[pr[q]]; }
+          goldScore += psi[row + gold[t]];
+          if (t) goldScore += w[TB + gold[t - 1] * L + gold[t]];
+          for (let y = 0; y < L; y++) psi[row + y] = Math.exp(Math.max(-300, Math.min(300, psi[row + y])));
+        }
+        // forward (scaled)
+        let logZ = 0;
+        for (let t = 0; t < T; t++) {
+          let sum = 0;
+          for (let y = 0; y < L; y++) {
+            let v;
+            if (!t) v = psi[y];
+            else { v = 0; for (let a = 0; a < L; a++) v += al[(t - 1) * L + a] * M[a * L + y]; v *= psi[t * L + y]; }
+            al[t * L + y] = v; sum += v;
+          }
+          c[t] = sum; logZ += Math.log(sum);
+          for (let y = 0; y < L; y++) al[t * L + y] /= sum;
+        }
+        // backward (same scaling)
+        for (let y = 0; y < L; y++) be[(T - 1) * L + y] = 1;
+        for (let t = T - 2; t >= 0; t--) for (let a = 0; a < L; a++) {
+          let v = 0;
+          for (let b = 0; b < L; b++) v += M[a * L + b] * psi[(t + 1) * L + b] * be[(t + 1) * L + b];
+          be[t * L + a] = v / c[t + 1];
+        }
+        f += logZ - goldScore;
+        // expected minus observed counts
+        for (let t = 0; t < T; t++) {
+          for (const a of X[t]) {
+            const lb = aLab[a], pr = aPar[a];
+            for (let q = 0; q < lb.length; q++) g[pr[q]] += al[t * L + lb[q]] * be[t * L + lb[q]];
+            const pg = pairs[a].get(gold[t]);
+            g[pg] -= 1;
+          }
+          if (t) {
+            for (let a = 0; a < L; a++) {
+              const fa = al[(t - 1) * L + a] / c[t];
+              if (!fa) continue;
+              for (let b = 0; b < L; b++) g[TB + a * L + b] += fa * M[a * L + b] * psi[t * L + b] * be[t * L + b];
+            }
+            g[TB + gold[t - 1] * L + gold[t]] -= 1;
+          }
+        }
+      }
+      for (let p = 0; p < NP; p++) { f += c2 * w[p] * w[p]; g[p] += 2 * c2 * w[p]; }
+      return f;
+    }
+    const res = lbfgs(fg, new Float64Array(NP), { maxIter, tol: 1e-3, onStep });
+    const w = res.w, state = {};
+    for (let a = 0; a < attrNames.length; a++) {
+      const out = [], lb = aLab[a], pr = aPar[a];
+      for (let q = 0; q < lb.length; q++) if (Math.abs(w[pr[q]]) >= keep) out.push(lb[q], Math.round(w[pr[q]] * 100) / 100);
+      if (out.length) state[attrNames[a]] = out;
+    }
+    const trans = [];
+    for (let a = 0; a < L; a++) { const r = []; for (let b = 0; b < L; b++) r.push(Math.round(w[TB + a * L + b] * 1e4) / 1e4); trans.push(r); }
+    return { state, trans, params: NP, iterations: res.iterations };
+  }
+
+  // ---------- train + export ----------
+  function train(examples, opts = {}) {
+    const { prune = 0.2, C = 8, c2 = 0.05, slotPrune = 0.2, slotIter = 150, log = () => {} } = opts;
+    const t0 = now();
+    const intents = [...new Set(examples.map(e => e.intent))].sort();
+    const K = intents.length;
+    const y = examples.map(e => intents.indexOf(e.intent));
+    log(`${examples.length} sentences, ${K} intents`);
+
+    const { vocab, idf, rows } = tfidf(examples.map(e => e.text));
+    const nf = vocab.length;
+    log(`intent features: ${nf}`);
+    const lr = logreg(rows, y, K, nf, { C, onStep: (it, f) => log(`intent model: step ${it}, loss ${f.toFixed(1)}`) });
+    const tIntent = now() - t0;
+
+    // prune + 1-byte weights: keep weights with |w| >= prune, store round(w / scale) in -127..127
+    let mx = 0;
+    for (let p = 0; p < K * nf; p++) if (Math.abs(lr.w[p]) >= prune) mx = Math.max(mx, Math.abs(lr.w[p]));
+    const scale = mx / 127 || 1;
+    const keep = [], cols = [];
+    let kept = 0;
+    for (let j = 0; j < nf; j++) {
+      const c = [];
+      for (let k = 0; k < K; k++) {
+        const w = lr.w[k * nf + j];
+        if (Math.abs(w) < prune) continue;
+        const q = Math.round(w / scale);
+        if (q) c.push(k, q);
+      }
+      if (c.length) { keep.push(j); cols.push(c); kept += c.length / 2; }
+    }
+    const bytes = new Uint8Array(cols.reduce((s, c) => s + 1 + c.length, 0));
+    let o = 0;
+    for (const c of cols) { bytes[o++] = c.length / 2; for (let q = 0; q < c.length; q += 2) { bytes[o++] = c[q]; bytes[o++] = c[q + 1] & 0xff; } }
+    log(`kept ${kept} of ${K * nf} intent weights (${(100 * kept / (K * nf)).toFixed(0)}%)`);
+
+    // slots
+    const t1 = now();
+    const labelSet = new Set(["O"]);
+    // out-of-scope sentences carry no values the agent will use; left in, they teach the tagger
+    // that words like "reports" after "called" are not names ("delete the folder called reports")
+    const seqs = examples.filter(e => e.intent !== "out_of_scope").map(e => {
+      const { toks, labels } = bio(e.text, e.spans);
+      labels.forEach(l => labelSet.add(l));
+      return { feats: tokenFeatures(e.text, toks), labels };
+    });
+    const labels = [...labelSet].sort();
+    for (const s of seqs) s.gold = s.labels.map(l => labels.indexOf(l));
+    const tag = crf(seqs, labels, { c2, keep: slotPrune, maxIter: slotIter, onStep: (it, f) => log(`slot model: step ${it}, loss ${f.toFixed(1)}`) });
+    const tSlots = now() - t1;
+
+    const model = {
+      version: (d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`)(new Date()),
+      format: 2,
+      trainer: "js",
+      intents,
+      vocab: keep.map(j => vocab[j]),
+      idf: b64(new Uint8Array(Float32Array.from(keep, j => idf[j]).buffer)),
+      scale,
+      weights: b64(bytes),
+      intercept: Array.from(lr.w.subarray(K * nf), v => Math.round(v * 1e4) / 1e4),
+      labels,
+      state: tag.state,
+      trans: tag.trans,
+      stats: { examples: examples.length, features: keep.length, weights_kept: kept, weights_total: K * nf,
+        prune, slot_prune: slotPrune, lbfgs_iterations: lr.iterations, slot_iterations: tag.iterations, train_seconds: Math.round((tIntent + tSlots) / 100) / 10,
+        intent_seconds: Math.round(tIntent / 100) / 10, slot_seconds: Math.round(tSlots / 100) / 10 },
+    };
+    log(`done in ${model.stats.train_seconds}s`);
+    return model;
+  }
+
+  // ---------- evaluation (same rules as evaluate.py) ----------
+  function evaluate(nlu, examples, threshold = 0.45) {
+    let ok = 0, tp = 0, fp = 0, fn = 0;
+    const errors = [];
+    for (const e of examples) {
+      const r = nlu.parse(e.text);
+      const pred = r.confidence >= threshold ? r.intent : "out_of_scope";
+      if (pred === e.intent) ok++; else errors.push(`INTENT  ${e.text}  want=${e.intent} got=${r.intent} (${r.confidence.toFixed(2)})`);
+      const gold = new Set(e.spans.map(([s, t, n]) => n + "=" + e.text.slice(s, t)));
+      const got = new Set(e.intent === "out_of_scope" ? [] : Object.entries(r.slots).map(([n, v]) => n + "=" + v));
+      for (const g of got) if (gold.has(g)) tp++; else fp++;
+      for (const g of gold) if (!got.has(g)) fn++;
+      const same = gold.size === got.size && [...gold].every(g => got.has(g));
+      if (!same) errors.push(`SLOTS   ${e.text}  want=${[...gold].join(",")} got=${[...got].join(",")}`);
+    }
+    const p = tp / Math.max(1, tp + fp), rc = tp / Math.max(1, tp + fn);
+    return { accuracy: 100 * ok / examples.length, n: examples.length, slotF1: 2 * p * rc / Math.max(1e-9, p + rc), errors };
+  }
+
+  return { parseDataset, train, evaluate };
+})();
+if (typeof module !== "undefined") module.exports = NLUTrainer;
+
+const EngineText = (() => { const module = { exports: {} };
+// Words, as the engine reads them: any alphabet, file names kept whole ("seed.md"), the original
+// spelling kept beside the lowercase so values come back as they were typed ("Gab", "Kraków").
+
+const WORD = /[\p{L}\p{N}](?:[\p{L}\p{N}'’._:-]*[\p{L}\p{N}])?/gu;
+
+function tokens(text) {
+  return [...String(text).matchAll(WORD)].map(m => ({ w: m[0].toLowerCase().replace(/’/g, "'"), o: m[0] }));
+}
+
+const words = text => tokens(text).map(t => t.w);
+const join = toks => toks.map(t => t.o).join(" ");
+const pick = (variants, random = Math.random) => variants[Math.floor(random() * variants.length) % variants.length];
+
+// "{duration}" in a reply → the value as it is said
+function fill(template, values) {
+  return template.replace(/\{([@\w.]+)\}/g, (all, k) => (values[k] !== undefined && values[k] !== null ? values[k] : all));
+}
+
+// one letter apart (insert, delete, substitute, swap): "timr" → "timer"
+function close(a, b) {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 1 || Math.min(a.length, b.length) < 4) return false;
+  let i = 0;
+  while (i < a.length && a[i] === b[i]) i++;
+  const ra = a.slice(i + 1), rb = b.slice(i + 1);
+  return ra === b.slice(i) || a.slice(i) === rb || ra === rb || (a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2));
+}
+
+if (typeof module !== "undefined") module.exports = { tokens, words, join, pick, fill, close };
+
+return module.exports; })();
+const EngineFiles = (() => { const module = { exports: {} };
+// Reading the Markdown files a pack is made of: front matter, sections, bullet lines.
+// No knowledge of what a skill is; skills.js and content.js give the sections their meaning.
+
+function frontMatter(md) {
+  const m = md.match(/^---\n([\s\S]*?)\n---\n?/);
+  if (!m) return { meta: {}, body: md };
+  const meta = {};
+  let list = null;
+  for (const raw of m[1].split("\n")) {
+    const line = raw.replace(/\s+#.*$/, "");
+    const item = line.match(/^\s*-\s+(.*)$/);
+    if (item && list) { meta[list].push(item[1].trim()); continue; }
+    const kv = line.match(/^([\w-]+):\s*(.*)$/);
+    if (!kv) continue;
+    if (kv[2] === "") { list = kv[1]; meta[list] = []; } else { list = null; meta[kv[1]] = kv[2].trim(); }
+  }
+  return { meta, body: md.slice(m[0].length) };
+}
+
+// "## People say" → { "people say": { text, lines } }; lines are the bullets, without "- "
+function sections(body) {
+  const out = { "": { text: "", lines: [] } };
+  let cur = out[""];
+  for (const line of body.split("\n")) {
+    const h = line.match(/^##\s+(.+?)\s*$/);
+    if (h) { cur = out[h[1].toLowerCase()] = { title: h[1], text: "", lines: [] }; continue; }
+    cur.text += line + "\n";
+    const b = line.match(/^\s*-\s+(.*\S)\s*$/);
+    if (b) cur.lines.push(b[1]);
+  }
+  return out;
+}
+
+// "- done: Timer set. | OK." → { done: ["Timer set.", "OK."] }
+function keyed(lines) {
+  const out = {};
+  for (const l of lines) {
+    const m = l.match(/^([\w -]+?):\s+(.*)$/);
+    if (m) out[m[1].trim()] = m[2].split(/\s+\|\s+/);
+  }
+  return out;
+}
+
+if (typeof module !== "undefined") module.exports = { frontMatter, sections, keyed };
+
+return module.exports; })();
+const EnginePatterns = (() => { const module = { exports: {} };
+// "People say" patterns, read exactly. TermNL's syntax:
+//   (a/the)   optional, one of these words        to/into   one of these words
+//   {name}    a value, read by its kind           (from (the) {place})   optional groups nest
+// A pattern reads a sentence only if it covers every word of it, and every value reads whole.
+
+const { tokens, close } = typeof EngineText !== "undefined" ? EngineText : require("./text.js");
+
+function compile(pattern) {
+  const lex = pattern.toLowerCase().replace(/[?!,.](?=\s|$)/g, "").match(/\(|\)|\{[\w]+\}|[^\s(){}]+/g) || [];
+  let i = 0;
+  function seq() {
+    const out = [];
+    while (i < lex.length && lex[i] !== ")") {
+      const t = lex[i++];
+      if (t === "(") { out.push({ opt: seq() }); i++; } // the ")"
+      else if (t[0] === "{") out.push({ slot: t.slice(1, -1) });
+      else out.push({ alt: t.split("/").map(w => tokens(w).map(x => x.w).join(" ")) });
+    }
+    return out;
+  }
+  const items = seq();
+  return { pattern, items, slots: slotsOf(items) };
+}
+const slotsOf = items => items.flatMap(it => (it.slot ? [it.slot] : it.opt ? slotsOf(it.opt) : []));
+
+// every full reading of the sentence: { values, literals, typos }
+function* walk(items, k, toks, ti, acc, read) {
+  if (k === items.length) { yield { ...acc, ti }; return; }
+  const it = items[k];
+  if (it.alt) {
+    // a word with an apostrophe or a dot is one token, a phrase is several: compare word by word
+    for (const a of it.alt) {
+      const ws = a.split(" ");
+      if (ti + ws.length > toks.length) continue;
+      let typos = 0, ok = true;
+      for (let j = 0; j < ws.length; j++) {
+        const w = toks[ti + j].w;
+        if (w === ws[j]) continue;
+        if (close(w, ws[j])) typos++; else { ok = false; break; }
+      }
+      if (ok) yield* walk(items, k + 1, toks, ti + ws.length, { ...acc, literals: acc.literals + ws.length, typos: acc.typos + typos }, read);
+    }
+    return;
+  }
+  if (it.opt) {
+    for (const r of walk(it.opt, 0, toks, ti, acc, read)) yield* walk(items, k + 1, toks, r.ti, r, read);
+    yield* walk(items, k + 1, toks, ti, acc, read);
+    return;
+  }
+  for (let end = ti + 1; end <= toks.length; end++) {
+    const text = toks.slice(ti, end).map(t => t.o).join(" ");
+    const v = read(it.slot, text);
+    if (v) yield* walk(items, k + 1, toks, end, { ...acc, values: { ...acc.values, [it.slot]: { text, ...v } } }, read);
+  }
+}
+
+// the best reading of a sentence by one compiled pattern, or null. read(slot, text) → value or null
+function match(compiled, sentence, read) {
+  const toks = typeof sentence === "string" ? tokens(sentence) : sentence;
+  let best = null;
+  for (const r of walk(compiled.items, 0, toks, 0, { values: {}, literals: 0, typos: 0 }, read)) {
+    if (r.ti !== toks.length) continue;
+    const typed = Object.values(r.values).filter(v => v.iso || v.seconds !== undefined).length;
+    const score = 3 * Object.keys(r.values).length + typed + r.literals - 2 * r.typos;
+    if (!best || score > best.score) best = { values: r.values, literals: r.literals, typos: r.typos, score, pattern: compiled.pattern };
+  }
+  return best;
+}
+
+// sentences for the model: each pattern with its optional parts on and off, values from samples
+function expand(compiled, samples, limit = 24) {
+  const outs = [];
+  function* gen(items, k, acc) {
+    if (k === items.length) { yield acc; return; }
+    const it = items[k];
+    if (it.alt) { for (const a of it.alt) yield* gen(items, k + 1, acc.concat(a)); return; }
+    if (it.opt) { for (const o of gen(it.opt, 0, [])) yield* gen(items, k + 1, acc.concat(o)); yield* gen(items, k + 1, acc); return; }
+    const s = samples[it.slot] || ["something"];
+    yield* gen(items, k + 1, acc.concat(s[(acc.length + k) % s.length]));
+  }
+  for (const words of gen(compiled.items, 0, [])) { outs.push(words.join(" ")); if (outs.length >= 400) break; }
+  if (outs.length <= limit) return outs;
+  return Array.from({ length: limit }, (_, i) => outs[Math.floor(i * outs.length / limit)]); // spread over all forms
+}
+
+if (typeof module !== "undefined") module.exports = { compile, match, expand };
+
+return module.exports; })();
+const EngineKinds = (() => { const module = { exports: {} };
+// The kinds of value a skill file can ask for, in the words it writes them ("a duration"), and how each
+// is read from what was typed. A value is read whole or not at all: "mum next friday" is no date.
+// Dates, times and durations come from ptiLU's rule-based parser (web/entities.js).
+
+const E = typeof NLUEntities !== "undefined" ? NLUEntities : require("../web/entities.js");
+
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+  "October", "November", "December"];
+const sayDay = d => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+const sayTime = d => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+const sayAt = iso => { const d = new Date(iso); return iso.length > 10 ? `${sayDay(d)} at ${sayTime(d)}` : sayDay(d); };
+
+function sayDuration(p) {
+  const parts = [["hour", p.hours + 24 * (p.days + 7 * p.weeks)], ["minute", p.minutes], ["second", p.seconds]]
+    .filter(([, n]) => n).map(([u, n]) => `${n} ${u}${n === 1 ? "" : "s"}`);
+  return parts.join(" and ") || null;
+}
+
+// the one entity that covers the whole text, if any
+function whole(text, now) {
+  const t = text.trim();
+  const found = E.parse(t, { now }).filter(e => e.start === 0 && e.end === t.length);
+  return found[0] || null;
+}
+
+const KINDS = {
+  "a duration": (text) => {
+    const p = E.parseDuration(text);
+    const said = p && sayDuration(p);
+    return said && /\d|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|sixty|half|an? /i.test(text)
+      ? { said, seconds: ((p.days + 7 * p.weeks) * 24 * 3600) + p.hours * 3600 + p.minutes * 60 + p.seconds } : null;
+  },
+  "a date and time": (text, now) => {
+    const e = whole(text, now);
+    if (!e || (e.type !== "datetime" && e.type !== "date")) return null;
+    const iso = e.type === "date" ? e.value + "T09:00" : e.value; // a day without a time: 9:00
+    return { said: sayAt(iso), iso, ambiguous: !!e.ambiguous, alternatives: (e.alternatives || []).map(a => ({ iso: a, said: sayAt(a) })) };
+  },
+  "a date": (text, now) => {
+    const e = whole(text, now);
+    return e && e.type === "date" ? { said: sayDay(new Date(e.value)), iso: e.value } : null;
+  },
+  "a name": text => (text.split(/\s+/).length <= 3 ? { said: text.replace(/^\p{Ll}/u, c => c.toUpperCase()) } : null),
+  "a place": text => (text.split(/\s+/).length <= 4 ? { said: text.replace(/(^|\s)\p{Ll}/gu, c => c.toUpperCase()) } : null),
+  "some text": text => (text.trim() ? { said: text.trim() } : null),
+};
+
+// "a duration" → reader; "one of: low, medium, high" → a reader for that list
+function reader(kind) {
+  const list = kind.match(/^one of:\s*(.+)$/);
+  if (list) {
+    const items = list[1].split(/\s*,\s*/).map(s => s.toLowerCase());
+    return text => (items.includes(text.toLowerCase()) ? { said: text.toLowerCase() } : null);
+  }
+  if (!KINDS[kind]) throw new Error(`unknown kind of value: "${kind}"`);
+  return KINDS[kind];
+}
+
+// values of a kind found anywhere in a sentence, for when no pattern read it: dates and durations only,
+// as their shape gives them away; a name or a text can't be told from the words around it
+function findIn(kind, sentence, now) {
+  if (kind === "a duration") {
+    for (const e of E.parse(sentence, { now })) if (e.type === "duration") { const v = KINDS[kind](e.text); if (v) return { text: e.text, ...v }; }
+  }
+  if (kind === "a date and time" || kind === "a date") {
+    for (const e of E.parse(sentence, { now })) { const v = KINDS[kind](e.text, now); if (v) return { text: e.text, ...v }; }
+  }
+  const list = kind.match(/^one of:\s*(.+)$/);
+  if (list) for (const w of sentence.toLowerCase().split(/[^\p{L}\p{N}]+/u)) { const v = reader(kind)(w); if (v) return { text: w, ...v }; }
+  return null;
+}
+
+if (typeof module !== "undefined") module.exports = { reader, findIn, sayDay, sayTime };
+
+return module.exports; })();
+const EngineSkills = (() => { const module = { exports: {} };
+// A skill file read into what the engine uses, and checked: a mistake stops with the file and the reason.
+
+const F = typeof EngineFiles !== "undefined" ? EngineFiles : require("./files.js");
+const P = typeof EnginePatterns !== "undefined" ? EnginePatterns : require("./patterns.js");
+const K = typeof EngineKinds !== "undefined" ? EngineKinds : require("./kinds.js");
+
+const LEARNED = /^(.*?)\s+←\s+"(.*)"\s*(?:\((.*)\))?$/;
+
+function readSkill(name, md, pack) {
+  const { meta, body } = F.frontMatter(md);
+  const s = F.sections(body);
+  const fail = why => { throw new Error(`${pack}/skills/${name}/skill.md: ${why}`); };
+  if (!meta.does) fail("no `does:` line");
+  const needs = {};
+  for (const line of (s["what it needs"] || { lines: [] }).lines) {
+    const m = line.match(/^\{(\w+)\}:\s*(.+)$/);
+    if (!m) fail(`can't read "${line}" under What it needs`);
+    const [kind, rest = ""] = m[2].split(/\.\s+(?=If it)/);
+    const ask = rest.match(/^If it's missing, ask:\s*(.+)$/);
+    const dflt = rest.match(/^If it's not said:\s*(.+?)\.?$/);
+    try { K.reader(kind.replace(/\.$/, "")); } catch (e) { fail(e.message); }
+    needs[m[1]] = { kind: kind.replace(/\.$/, ""), ask: ask ? ask[1].split(/\s+\|\s+/) : null, default: dflt ? dflt[1] : null };
+  }
+  const patterns = [];
+  for (const line of (s["people say"] || { lines: [] }).lines) patterns.push({ ...P.compile(line), own: true });
+  for (const line of (s["learned"] || { lines: [] }).lines) {
+    const m = line.match(LEARNED);
+    patterns.push({ ...P.compile(m ? m[1] : line), own: false, quote: m ? m[2] : null, on: m ? m[3] : null });
+  }
+  for (const p of patterns) for (const slot of p.slots) if (!needs[slot]) fail(`{${slot}} in "${p.pattern}" isn't under What it needs`);
+  const replies = F.keyed((s["replies"] || { lines: [] }).lines);
+  if (!replies.done) fail("no `done:` reply");
+  const samples = {};
+  for (const [k, v] of Object.entries(F.keyed((s["samples"] || { lines: [] }).lines))) samples[k] = v;
+  return {
+    name, pack, does: meta.does, label: meta.label || meta.does,
+    acts: meta.acts === "yes", approve: meta.approve === "yes", role: meta.role || null,
+    needs, patterns, also: (s["also said"] || { lines: [] }).lines, replies, samples,
+    command: ((s["does"] || { text: "" }).text.trim().split("\n")[0]) || null,
+    tests: [], md,
+  };
+}
+
+// a skill's own words: what its patterns, sentences and samples say (the taught-words check)
+function vocabulary(skill, wordsOf) {
+  const v = new Set();
+  for (const p of skill.patterns) for (const w of wordsOf(p.pattern.replace(/\{\w+\}|[()]/g, " ").replace(/\//g, " "))) v.add(w);
+  for (const l of skill.also) for (const w of wordsOf(l)) v.add(w);
+  return v;
+}
+
+if (typeof module !== "undefined") module.exports = { readSkill, vocabulary, LEARNED };
+
+return module.exports; })();
+const EngineContent = (() => { const module = { exports: {} };
+// Questions about written content: found by word matching (BM25), answered with sentences that exist in
+// the files, always with where they come from. Nothing is composed; below the bar it says it has nothing.
+//   a file's front matter may list the `questions:` it answers and an `answer:` written for them
+//   "tell me more" goes on in the same section, then the next; a new question looks in the same file first
+
+const F = typeof EngineFiles !== "undefined" ? EngineFiles : require("./files.js");
+const T = typeof EngineText !== "undefined" ? EngineText : require("./text.js");
+
+const stem = w => w.replace(/'s$/, "").replace(/(ing|ed|es|s)$/, m => (w.length > m.length + 3 ? "" : m));
+
+function plain(md) {
+  return md.replace(/```[\s\S]*?```/g, " ").replace(/`([^`]*)`/g, "$1").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(?<![\w/])\*([^*\s][^*]*)\*(?!\w)/g, "$1").replace(/^\s*\|.*\|\s*$/gm, " ");
+}
+function sentencesOf(text) {
+  const out = [];
+  for (const block of plain(text).split(/\n\s*\n|\n(?=\s*[-*]\s)/)) {
+    const flat = block.replace(/^\s*[-*]\s+/gm, "").replace(/\s+/g, " ").trim();
+    if (flat.length < 3 || /^#/.test(flat)) continue;
+    out.push(...flat.split(/(?<=[.!?])\s+(?=[\p{L}“"(])/u));
+  }
+  return out;
+}
+
+class Content {
+  constructor(docs, small, topics = []) {
+    this.small = small;
+    this.topics = topics; // what the content is about, in a few words (pack.md `about:`) // words that carry no topic: "the", "what", "about"…
+    this.docs = docs.map(({ id, md }) => {
+      const { meta, body } = F.frontMatter(md);
+      const title = meta.title || (body.match(/^#\s+(.+)$/m) || [, id])[1];
+      const secs = [];
+      let cur = { heading: title, text: "" };
+      for (const line of body.split("\n")) {
+        const h = line.match(/^#{1,3}\s+(.+?)\s*$/);
+        if (h) { if (cur.text.trim()) secs.push(cur); cur = { heading: h[1], text: "" }; } else cur.text += line + "\n";
+      }
+      if (cur.text.trim()) secs.push(cur);
+      return { id, title, questions: meta.questions || [], answer: meta.answer || null, next: meta.next ? meta.next.split(/\s*,\s*/) : [],
+        sections: secs.map(s => ({ heading: s.heading, sentences: sentencesOf(s.text) })).filter(s => s.sentences.length) };
+    });
+    // the units searched: every section, and every question a file says it answers
+    this.units = [];
+    this.docs.forEach((d, di) => {
+      d.sections.forEach((s, si) => this.units.push({ di, si, head: new Set(this.terms(`${d.title} ${s.heading}`)),
+        terms: this.terms(`${d.title} ${s.heading} ${s.heading} ${s.sentences.join(" ")}`) }));
+      d.questions.forEach(q => this.units.push({ di, si: 0, question: q, head: new Set(this.terms(q)), terms: this.terms(q) }));
+    });
+    this.df = new Map();
+    for (const u of this.units) for (const t of new Set(u.terms)) this.df.set(t, (this.df.get(t) || 0) + 1);
+    this.avg = this.units.reduce((a, u) => a + u.terms.length, 0) / Math.max(1, this.units.length);
+  }
+
+  terms(text) { return T.words(text).filter(w => !this.small.has(w)).map(stem); }
+  idf(t) { const n = this.df.get(t) || 0; return Math.log(1 + (this.units.length - n + 0.5) / (n + 0.5)); }
+
+  // the best unit for a question, and how much of the question it covers (0..1, by weight of the words)
+  search(question, prefer = null) {
+    const q = [...new Set(this.terms(question))];
+    if (!q.length) return null;
+    const total = q.reduce((a, t) => a + this.idf(t), 0);
+    let best = null;
+    for (const u of this.units) {
+      const tf = new Map();
+      for (const t of u.terms) tf.set(t, (tf.get(t) || 0) + 1);
+      let score = 0, covered = 0, onTopic = false;
+      for (const t of q) {
+        const f = tf.get(t);
+        if (!f) continue;
+        covered += this.idf(t);
+        if (u.head.has(t)) onTopic = true;
+        score += this.idf(t) * (f * 2.2) / (f + 1.2 * (0.25 + 0.75 * u.terms.length / this.avg));
+      }
+      if (u.question) score *= 1.5;
+      if (prefer !== null && u.di === prefer) score *= 1.3;
+      if (!best || score > best.score) best = { ...u, score, coverage: covered / total, onTopic, asked: q.length };
+    }
+    return best && best.score > 0 ? best : null;
+  }
+
+  // a question → { say, source, chips, frame } or null
+  answer(question, frame = null) {
+    const hit = this.search(question, frame ? frame.di : null);
+    // the bar: half of what was asked is there, and the topic is what the section is about (its title, its
+    // heading, or a question the file says it answers): "what is the weather" isn't answered by a section
+    // that mentions the weather in passing. To widen what a file answers, add `questions:` to it
+    if (!hit || hit.coverage < 0.5 || !hit.onTopic) return null;
+    const d = this.docs[hit.di];
+    if (hit.question && d.answer && hit.coverage >= 0.75) return this.reply(hit.di, hit.si, [0], d.answer, `${d.title}, written answer`);
+    const s = d.sections[hit.si];
+    const q = new Set(this.terms(question));
+    let at = 0, most = -1;
+    s.sentences.forEach((x, i) => { const n = this.terms(x).filter(t => q.has(t)).length; if (n > most) { most = n; at = i; } });
+    return this.reply(hit.di, hit.si, ...this.from(s, at), this.where(d, s));
+  }
+
+  // "tell me more": the next sentence not said yet in this section, then the next section
+  more(frame) {
+    const d = this.docs[frame.di];
+    for (let si = frame.si; si < d.sections.length; si++) {
+      const said = si === frame.si ? frame.said : [];
+      const i = d.sections[si].sentences.findIndex((_, k) => !said.includes(k) && (si !== frame.si || k > Math.max(-1, ...said)));
+      if (i >= 0) {
+        const [more, say] = this.from(d.sections[si], i);
+        return this.reply(frame.di, si, si === frame.si ? said.concat(more) : more, say, this.where(d, d.sections[si]));
+      }
+    }
+    return null;
+  }
+
+  // a sentence that ends on ":" opens a list: the list comes with it
+  from(section, at) {
+    const said = [at];
+    if (/:$/.test(section.sentences[at])) for (let i = at + 1; i < Math.min(at + 5, section.sentences.length); i++) said.push(i);
+    else if (section.sentences[at].split(/\s+/).length < 7 && at + 1 < section.sentences.length) said.push(at + 1); // "From TermNL: the skill file." says little alone
+    return [said, said.map(i => section.sentences[i]).join(" ")];
+  }
+  where(d, s) { return s.heading === d.title ? d.title : `${d.title}, ${s.heading}`; }
+
+  reply(di, si, said, say, source) {
+    const d = this.docs[di];
+    const chips = d.sections.filter((_, k) => k !== si).slice(0, 3).map(s => s.heading)
+      .concat(d.next.map(id => (this.docs.find(x => x.id === id) || {}).title).filter(Boolean));
+    return { say, source, chips, frame: { kind: "content", di, si, said } };
+  }
+
+}
+
+if (typeof module !== "undefined") module.exports = { Content };
+
+return module.exports; })();
+const EngineLoad = (() => { const module = { exports: {} };
+// Reading the packs. `fromFiles` takes the files as text and works anywhere (the page gets them built in);
+// `load` reads them from disk (Node).
+//   packs/conversation.md          yes, no, fillers, small words, follow-ups, the engine's own replies
+//   packs/<pack>/pack.md           `kind: skills` or `kind: content`, and for content the files it reads
+//   packs/<pack>/skills/<x>/       skill.md (+ tests.md, sentences never trained on)
+//   packs/<pack>/out-of-scope.md   what this pack should not try to do
+//   packs/<pack>/content/*.md      written content
+
+const F = typeof EngineFiles !== "undefined" ? EngineFiles : require("./files.js");
+const T = typeof EngineText !== "undefined" ? EngineText : require("./text.js");
+const { readSkill } = typeof EngineSkills !== "undefined" ? EngineSkills : require("./skills.js");
+
+const list = lines => lines.flatMap(l => l.split(/\s*,\s*/)).map(w => T.words(w).join(" ")).filter(Boolean);
+
+function conversation(md) {
+  const s = F.sections(F.frontMatter(md).body);
+  const get = k => list((s[k] || { lines: [] }).lines);
+  return {
+    yes: get("yes"), no: get("no"), fillers: get("fillers").sort((a, b) => b.length - a.length),
+    small: new Set(get("small words").flatMap(w => w.split(" "))), "follow-up": get("follow-up").sort((a, b) => b.length - a.length),
+    more: get("more"), questions: get("question words"), chips: (s["chips"] || { lines: [] }).lines,
+    replies: F.keyed((s["replies"] || { lines: [] }).lines),
+  };
+}
+
+// files: { "conversation.md", packs: { <pack>: { "pack.md", "out-of-scope.md", skills: { <name>: { "skill.md", "tests.md" } },
+//          docs: [{ id, md }] } } }
+function fromFiles(files) {
+  const talk = conversation(files["conversation.md"]);
+  const skills = [], docs = [], outOfScope = [], asks = [], topics = [];
+  for (const [pack, p] of Object.entries(files.packs)) {
+    const { meta, body } = F.frontMatter(p["pack.md"]);
+    if (p["out-of-scope.md"]) outOfScope.push(...Object.values(F.sections(p["out-of-scope.md"])).flatMap(x => x.lines));
+    if (meta.kind === "content") {
+      if (meta.about) topics.push(meta.about);
+      docs.push(...p.docs);
+      asks.push(...(F.sections(body)["also said"] || { lines: [] }).lines);
+      continue;
+    }
+    for (const [name, f] of Object.entries(p.skills || {})) {
+      const skill = readSkill(name, f["skill.md"], pack);
+      if (f["tests.md"]) skill.tests = Object.values(F.sections(f["tests.md"])).flatMap(x => x.lines);
+      skills.push(skill);
+    }
+  }
+  return { talk, skills, docs, outOfScope, asks, topics };
+}
+
+// Node: the files from engine/packs, and the content files a pack lists from the repository
+function files(dir) {
+  const fs = require("fs"), path = require("path");
+  dir = dir || path.join(__dirname, "packs");
+  const root = path.join(__dirname, ".."), read = f => fs.readFileSync(f, "utf8"), has = f => fs.existsSync(f);
+  const out = { "conversation.md": read(path.join(dir, "conversation.md")), packs: {} };
+  for (const pack of fs.readdirSync(dir).filter(d => has(path.join(dir, d, "pack.md"))).sort()) {
+    const pdir = path.join(dir, pack), p = out.packs[pack] = { "pack.md": read(path.join(pdir, "pack.md")), skills: {}, docs: [] };
+    if (has(path.join(pdir, "out-of-scope.md"))) p["out-of-scope.md"] = read(path.join(pdir, "out-of-scope.md"));
+    const { meta } = F.frontMatter(p["pack.md"]);
+    for (const f of meta.files || []) p.docs.push({ id: path.basename(f, ".md").toLowerCase(), md: read(path.join(root, f)) });
+    const cdir = path.join(pdir, "content");
+    if (has(cdir)) for (const f of fs.readdirSync(cdir).filter(f => f.endsWith(".md")).sort()) p.docs.push({ id: path.basename(f, ".md"), md: read(path.join(cdir, f)) });
+    const sdir = path.join(pdir, "skills");
+    if (has(sdir)) for (const name of fs.readdirSync(sdir).sort()) {
+      if (!has(path.join(sdir, name, "skill.md"))) continue;
+      p.skills[name] = { "skill.md": read(path.join(sdir, name, "skill.md")) };
+      if (has(path.join(sdir, name, "tests.md"))) p.skills[name]["tests.md"] = read(path.join(sdir, name, "tests.md"));
+    }
+  }
+  return out;
+}
+
+const load = dir => fromFiles(files(dir));
+
+if (typeof module !== "undefined") module.exports = { load, files, fromFiles, conversation };
+
+return module.exports; })();
+const EngineCore = (() => { const module = { exports: {} };
+// The dialogue: one turn, ending in act, ask, approve or abstain.
+//
+//   1. clean      fillers off ("please", "can you")
+//   2. answer     a question is waiting: yes, no, or the value it asked for
+//   3. read       a "People say" pattern reads the whole sentence: sure, no model involved
+//   4. follow     "and tomorrow?", "tell me more": completed by the turn before (its frame)
+//   5. propose    the model proposes a skill; the check decides: every word that isn't a value must be
+//                 one the skill was taught, or it asks. A question goes to the content
+//   6. next       a value to ask, an approval, or act
+//
+// The engine runs nothing itself but what it owns (what it keeps about you). Commands come back filled
+// in, for the device to run.
+
+const T = typeof EngineText !== "undefined" ? EngineText : require("./text.js");
+const P = typeof EnginePatterns !== "undefined" ? EnginePatterns : require("./patterns.js");
+const K = typeof EngineKinds !== "undefined" ? EngineKinds : require("./kinds.js");
+const S = typeof EngineSkills !== "undefined" ? EngineSkills : require("./skills.js");
+
+const SURE = 0.7, PROPOSE = 0.3; // below PROPOSE the model proposes nothing; the taught-words check guards what it does propose
+
+class Engine {
+  constructor({ skills, content = null, talk, model = null, memory = {}, now = () => new Date(), random = Math.random }) {
+    Object.assign(this, { skills, content, talk, model, memory, now, random });
+    this.pending = null; // the question waiting for an answer
+    this.frame = null; // the last thing done: a skill and its values, or a place in the content
+    this.inbox = []; // what it couldn't do, waiting to be taught
+    this.vocab = new Map(skills.map(s => [s.name, S.vocabulary(s, T.words)]));
+    this.byName = new Map(skills.map(s => [s.name, s]));
+  }
+
+  say(key, values = {}) { return T.fill(T.pick(this.talk.replies[key] || [key], this.random), values); }
+  turn(outcome, say, extra = {}) { return { outcome, say, chips: [], ...extra }; }
+  abstain(sentence, why) {
+    this.inbox.push({ sentence, why, on: this.now().toISOString().slice(0, 10) });
+    return this.turn("abstain", this.say("cant"), { why });
+  }
+
+  respond(raw) {
+    this.asked = /\?\s*$/.test(String(raw));
+    const sentence = this.clean(raw);
+    if (!sentence) return this.turn("abstain", this.say("cant"), { why: "nothing said" });
+    const ws = T.words(sentence);
+
+    // 2. a question is waiting
+    const p = this.pending;
+    this.pending = null;
+    if (p) {
+      const yes = this.isWord("yes", ws), no = this.isWord("no", ws);
+      if (p.type === "confirm") {
+        if (yes) {
+          // a yes to "I don't know … yet" is worth teaching: it waits in the inbox with the skill it meant
+          if (p.unsure) this.inbox.push({ sentence: p.sentence, why: `you said yes to ${p.skill.label}`, suggest: p.skill.name, on: this.now().toISOString().slice(0, 10) });
+          return this.finish(p.skill, p.values, p.why, true, p.sentence);
+        }
+        if (no) {
+          if (p.unsure) this.inbox.push({ sentence: p.sentence, why: `not ${p.skill.name}`, on: this.now().toISOString().slice(0, 10) });
+          return this.turn("abstain", this.say("ok no"), { why: "said no" });
+        }
+      }
+      if (p.type === "choose") {
+        const late = /\b(evening|tonight|night|pm|afternoon|later)\b/i.test(sentence), early = /\b(morning|am|early)\b/i.test(sentence);
+        const i = p.choices.findIndex((c, k) => c.said.toLowerCase().includes(sentence.toLowerCase()) || sentence === String(k + 1) ||
+          (late && +c.iso.slice(11, 13) >= 12) || (early && +c.iso.slice(11, 13) < 12));
+        if (i >= 0) return this.next(p.skill, { ...p.values, [p.slot]: { ...p.values[p.slot], ...p.choices[i], ambiguous: false } }, p.why, sentence);
+      }
+      if (p.type === "value" && !this.readByPattern(sentence)) {
+        const need = p.skill.needs[p.slot];
+        const v = K.reader(need.kind)(sentence, this.now()) || K.findIn(need.kind, sentence, this.now());
+        if (v) return this.next(p.skill, { ...p.values, [p.slot]: { text: v.text || sentence, ...v } }, p.why, sentence);
+        if (!no) { this.pending = p; return this.turn("ask", T.pick(need.ask, this.random), { skill: p.skill.name, why: "not a value of that kind" }); }
+        return this.turn("abstain", this.say("ok no"), { why: "said no" });
+      }
+    }
+
+    // 3. a pattern reads the whole sentence
+    const read = this.readByPattern(sentence);
+    if (read) {
+      const why = `pattern "${read.pattern}" (${read.skill.name})`;
+      if (read.typos && read.skill.acts) return this.confirm(read.skill, read.values, why + ", with a typo", sentence, true);
+      return this.next(read.skill, read.values, why, sentence);
+    }
+
+    // 4. a follow-up of the turn before
+    const f = this.follow(sentence, ws);
+    if (f) return f;
+
+    // 5. the model proposes, the check decides
+    return this.propose(sentence, ws);
+  }
+
+  clean(raw) {
+    let s = String(raw).trim().replace(/[?!.]+$/, "").trim();
+    for (let changed = true; changed;) {
+      changed = false;
+      for (const f of this.talk.fillers) {
+        if (s.toLowerCase().startsWith(f + " ")) { s = s.slice(f.length + 1).replace(/^,\s*/, "").trim(); changed = true; }
+        if (s.toLowerCase().endsWith(" " + f)) { s = s.slice(0, -f.length - 1).replace(/,$/, "").trim(); changed = true; }
+      }
+    }
+    return s;
+  }
+  isWord(list, ws) { const s = ws.join(" "); return this.talk[list].some(w => s === w || s.startsWith(w + " ")); }
+
+  // a value read by its kind; a name or a text made only of small words ("for", "the") is no value
+  reader(skill) {
+    const now = this.now();
+    return (slot, text) => {
+      const kind = skill.needs[slot].kind;
+      if (/^(some text|a name|a place)$/.test(kind) && T.words(text).every(w => this.talk.small.has(w))) return null;
+      return K.reader(kind)(text, now);
+    };
+  }
+  readByPattern(sentence, only = null) {
+    const toks = T.tokens(sentence);
+    let best = null;
+    for (const skill of only ? [only] : this.skills) {
+      for (const pat of skill.patterns) {
+        const m = P.match(pat, toks, this.reader(skill));
+        if (m && (!best || m.score > best.score)) best = { ...m, skill };
+      }
+    }
+    return best;
+  }
+
+  follow(sentence, ws) {
+    const fr = this.frame;
+    if (!fr) return null;
+    const more = this.isWord("more", ws), lead = this.talk["follow-up"].find(w => ws.join(" ").startsWith(w + " "));
+    if (fr.kind === "content") {
+      if (more) {
+        const r = this.content.more(fr);
+        if (!r) return this.turn("act", this.say("no more", { title: this.content.docs[fr.di].title }), { why: "end of the file" });
+        this.frame = r.frame;
+        return this.turn("act", r.say, { source: r.source, chips: r.chips, why: "more of the same file" });
+      }
+      return null; // a new question: the content search prefers the same file (step 5)
+    }
+    if (!lead) return null;
+    const rest = sentence.split(/\s+/).slice(lead.split(" ").length).join(" ");
+    const skill = this.byName.get(fr.skill);
+    const again = this.readByPattern(rest, skill);
+    if (again) return this.next(skill, { ...fr.values, ...again.values }, `follow-up of ${skill.name}`, sentence);
+    const values = { ...fr.values };
+    let found = false;
+    for (const [slot, need] of Object.entries(skill.needs)) {
+      const v = K.findIn(need.kind, rest, this.now());
+      if (v) { values[slot] = v; found = true; }
+    }
+    return found ? this.next(skill, values, `follow-up of ${skill.name}`, sentence) : null;
+  }
+
+  propose(sentence, ws) {
+    const ranked = this.model ? this.model.classify(sentence) : [];
+    const [intent, conf] = ranked[0] || [null, 0];
+    const skill = this.byName.get(intent);
+    let unknown = null, values = {};
+    // small talk is cheap to get wrong but still wrong: the model alone says hello only when sure
+    if (skill && conf >= (skill.role ? SURE : PROPOSE)) {
+      // the values its shape gives away, then the words left: are they all the skill's own?
+      let left = sentence;
+      for (const [slot, need] of Object.entries(skill.needs)) {
+        const v = K.findIn(need.kind, sentence, this.now());
+        if (v) { values[slot] = v; left = left.replace(new RegExp(v.text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), " "); }
+      }
+      const own = this.vocab.get(skill.name);
+      unknown = T.words(left).filter(w => !this.talk.small.has(w) && !own.has(w) && ![...own].some(o => T.close(w, o)));
+      if (!unknown.length) {
+        const why = `model ${conf.toFixed(2)} (${skill.name}), every word taught`;
+        if (conf < SURE && skill.acts) return this.confirm(skill, values, why, sentence, true);
+        return this.next(skill, values, why, sentence);
+      }
+    }
+    // a question about the content: the model says so, or the sentence is shaped like a question.
+    // A command is never answered with a quote ("move ideas to documnet" is in the review, word for word)
+    if (this.content && (intent === "ask" || this.asked || this.talk.questions.some(w => ws[0] === w))) {
+      const r = this.content.answer(sentence, this.frame && this.frame.kind === "content" ? this.frame : null);
+      if (r) { this.frame = r.frame; return this.turn("act", r.say, { source: r.source, chips: r.chips, why: "content" }); }
+    }
+    if (skill && unknown && unknown.length && !skill.role) {
+      return this.confirm(skill, values, `model ${conf.toFixed(2)} (${skill.name}), untaught: ${unknown.join(", ")}`, sentence, true,
+        this.say("unknown word", { word: unknown.slice(0, 2).map(w => `“${w}”`).join(", "), label: skill.label }));
+    }
+    const why = intent ? `model ${conf.toFixed(2)} (${intent}), nothing in the content` : "nothing read it";
+    if (this.content && (intent === "ask" || this.asked || this.talk.questions.includes(ws[0]))) {
+      this.inbox.push({ sentence, why, on: this.now().toISOString().slice(0, 10) });
+      return this.turn("abstain", this.say("nothing written"), { why });
+    }
+    return this.abstain(sentence, why);
+  }
+
+  confirm(skill, values, why, sentence, unsure, say) {
+    this.pending = { type: "confirm", skill, values, why, sentence, unsure };
+    return this.turn("ask", say || this.say("not sure", { label: skill.label }), { chips: this.talk.chips, skill: skill.name, why });
+  }
+
+  // 6. what's still missing, an approval, or act
+  next(skill, values, why, sentence) {
+    values = { ...values };
+    for (const [slot, need] of Object.entries(skill.needs)) {
+      if (values[slot]) continue;
+      if (need.default) { values[slot] = { text: need.default, said: this.reads(need.default) }; continue; }
+      if (need.ask) {
+        this.pending = { type: "value", skill, slot, values, why, sentence };
+        return this.turn("ask", T.pick(need.ask, this.random), { skill: skill.name, values: this.said(values), why });
+      }
+    }
+    for (const [slot, v] of Object.entries(values)) {
+      if (v.ambiguous && v.alternatives && v.alternatives.length) {
+        const choices = [{ iso: v.iso, said: v.said }, ...v.alternatives];
+        this.pending = { type: "choose", skill, slot, values, why, sentence, choices };
+        return this.turn("ask", this.say("which one", { a: choices[0].said, b: choices[1].said }), { chips: choices.map(c => c.said), skill: skill.name, why });
+      }
+    }
+    if (skill.approve) {
+      this.pending = { type: "confirm", skill, values, why, sentence };
+      return this.turn("approve", T.fill(T.pick(skill.replies.approve || [this.say("not sure", { label: skill.label })], this.random), this.said(values)),
+        { chips: this.talk.chips, skill: skill.name, values: this.said(values), why });
+    }
+    return this.finish(skill, values, why, false, sentence);
+  }
+
+  finish(skill, values, why, approved, sentence) {
+    const said = this.said(values);
+    let command = skill.command ? T.fill(skill.command, Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v.iso || v.seconds || v.said]))) : null;
+    let key = "done";
+    if (command && command.startsWith("memory.")) { key = this.remember(skill.command, values, sentence) || key; command = null; }
+    this.frame = { kind: "skill", skill: skill.name, values };
+    const reply = T.pick(skill.replies[key] || skill.replies.done, this.random);
+    return this.turn("act", T.fill(reply, { ...said, ...this.readings(reply) }), { skill: skill.name, values: said, command, why, approved });
+  }
+
+  // what the engine keeps about you: each value with the sentence you said it in, refused if the
+  // sentence doesn't hold it (Nod's rule for memory)
+  remember(command, values, sentence) {
+    const [op, key, slot] = command.split(/\s+/);
+    if (op === "memory.forget") { const had = Object.keys(this.memory).length; for (const k of Object.keys(this.memory)) delete this.memory[k]; return had ? null : "empty"; }
+    if (op === "memory.recall") return Object.keys(this.memory).length ? null : "empty";
+    const v = values[(slot || "").replace(/[{}]/g, "")];
+    if (!v || !String(sentence).toLowerCase().includes(String(v.text).toLowerCase())) return "refused";
+    this.memory[key] = { value: v.said, quote: sentence, on: this.now().toISOString().slice(0, 10) };
+    return null;
+  }
+
+  said(values) { return Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v.said || v.text])); }
+  reads(text) { return text === "home" && this.memory.place ? this.memory.place.value : text; }
+
+  // {@time}, {@date}, {@me}, {@me.name}, {@skills}, {@content}: the device and the engine, read now
+  readings(reply) {
+    const out = {}, now = this.now();
+    for (const [, k] of reply.matchAll(/\{(@[\w.]+)\}/g)) {
+      if (k === "@time") out[k] = K.sayTime(now);
+      else if (k === "@date") out[k] = K.sayDay(now);
+      else if (k.startsWith("@me.")) out[k] = (this.memory[k.slice(4)] || {}).value || "";
+      else if (k === "@me") out[k] = Object.entries(this.memory).map(([n, m]) => this.say("me " + n, { value: m.value })).join(" ");
+      else if (k === "@skills") out[k] = this.skills.filter(s => !s.role).map(s => s.label).join(", ");
+      else if (k === "@content") out[k] = this.content ? this.content.topics.join(", ") : "";
+    }
+    return out;
+  }
+}
+
+if (typeof module !== "undefined") module.exports = { Engine, SURE, PROPOSE };
+
+return module.exports; })();
+const EngineLearn = (() => { const module = { exports: {} };
+// Teaching, from the inbox: a sentence becomes a pattern with placeholders, written under "## Learned" in
+// the skill's own file, with the sentence it came from. It works at once: patterns are read before any
+// model. Nod's rule, kept: the pattern is accepted only if it reads its own sentence back to exactly the
+// values that were marked. Lines under "## People say" are the person's: teaching never changes them.
+
+const T = typeof EngineText !== "undefined" ? EngineText : require("./text.js");
+const P = typeof EnginePatterns !== "undefined" ? EnginePatterns : require("./patterns.js");
+const K = typeof EngineKinds !== "undefined" ? EngineKinds : require("./kinds.js");
+
+const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// marks: { slot: "the words in the sentence that are this value" }
+function teach(engine, sentence, skillName, marks = {}) {
+  const skill = engine.byName.get(skillName);
+  if (!skill) return { ok: false, why: `no skill called ${skillName}` };
+  const clean = engine.clean(sentence);
+  let pattern = T.words(clean).join(" ");
+  for (const [slot, text] of Object.entries(marks)) {
+    if (!skill.needs[slot]) return { ok: false, why: `${skillName} has no value {${slot}}` };
+    const words = T.words(text).join(" ");
+    const re = new RegExp(`(^| )${esc(words)}(?= |$)`);
+    if (!re.test(pattern)) return { ok: false, why: `"${text}" isn't in the sentence` };
+    pattern = pattern.replace(re, `$1{${slot}}`);
+  }
+  const compiled = { ...P.compile(pattern), own: false, quote: clean, on: engine.now().toISOString().slice(0, 10) };
+  const back = P.match(compiled, clean, engine.reader(skill));
+  const same = back && Object.keys(marks).every(k => back.values[k] && T.words(back.values[k].text).join(" ") === T.words(marks[k]).join(" "))
+    && Object.keys(back.values).length === Object.keys(marks).length;
+  if (!same) return { ok: false, why: "the pattern doesn't read its own sentence back to the marked values" };
+  if (skill.patterns.some(p => p.pattern === pattern)) return { ok: false, why: "already known" };
+  skill.patterns.push(compiled);
+  for (const w of T.words(pattern.replace(/\{\w+\}/g, " "))) engine.vocab.get(skill.name).add(w);
+  const line = `- ${pattern}  ← "${clean}" (${compiled.on})`;
+  skill.md = /\n## Learned\n/.test(skill.md) ? skill.md.replace(/\n## Learned\n((?:- .*\n?)*)/, (all, body) => `\n## Learned\n${body.replace(/\n?$/, "\n")}${line}\n`)
+    : skill.md.replace(/\n?$/, "\n\n## Learned\n" + line + "\n");
+  engine.inbox = engine.inbox.filter(e => e.sentence !== clean && e.sentence !== sentence);
+  return { ok: true, pattern, line, md: skill.md };
+}
+
+// a learned line can be taken back; a line the person wrote can't be changed from here
+function unlearn(engine, skillName, pattern) {
+  const skill = engine.byName.get(skillName);
+  const i = skill ? skill.patterns.findIndex(p => p.pattern === pattern) : -1;
+  if (i < 0) return { ok: false, why: "no such pattern" };
+  if (skill.patterns[i].own) return { ok: false, why: "written by you under People say: edit the file instead" };
+  skill.patterns.splice(i, 1);
+  skill.md = skill.md.replace(new RegExp(`\\n- ${esc(pattern)}  ← .*`), "");
+  return { ok: true, md: skill.md };
+}
+
+if (typeof module !== "undefined") module.exports = { teach, unlearn };
+
+return module.exports; })();
+const EngineTrain = (() => { const module = { exports: {} };
+// node engine/train.js: the packs → engine/model.json
+// The model only proposes where a sentence goes (a skill, "ask" for the content, or out_of_scope); the
+// patterns and the check decide. So it learns from the pack files alone: every pattern with its
+// optional parts on and off, every "Also said" line, the content's questions and headings, and each
+// pack's out-of-scope lines. No values to tag: values come from the patterns and their kinds.
+const P = typeof EnginePatterns !== "undefined" ? EnginePatterns : require("./patterns.js");
+const { Content } = typeof EngineContent !== "undefined" ? EngineContent : require("./content.js");
+
+const KIND_SAMPLES = {
+  "a duration": ["10 minutes", "an hour", "five minutes", "30 seconds", "2 hours", "twenty minutes"],
+  "a date and time": ["tomorrow at 9", "next friday at 3pm", "tonight", "in two hours", "on monday", "at 6pm"],
+  "a date": ["tomorrow", "next friday", "monday"],
+  "a name": ["Gab", "Eva", "Sam"], "a place": ["Munich", "Paris", "Kyoto"],
+  "some text": ["call mum", "buy milk", "water the plants"],
+};
+
+function examples(packs) {
+  const out = [];
+  const add = (intent, text) => out.push({ intent, text, spans: [] });
+  for (const s of packs.skills) {
+    const samples = {};
+    for (const [slot, need] of Object.entries(s.needs)) {
+      const list = need.kind.match(/^one of:\s*(.+)$/);
+      samples[slot] = s.samples[slot] || (list ? list[1].split(/\s*,\s*/) : KIND_SAMPLES[need.kind]);
+    }
+    for (const p of s.patterns) for (const t of P.expand(p, samples, 12)) add(s.name, t);
+    for (const t of s.also) add(s.name, t);
+  }
+  for (const t of packs.asks) add("ask", t);
+  for (const d of packs.docs) {
+    for (const doc of new Content([d], packs.talk.small).docs) {
+      for (const q of doc.questions) add("ask", q);
+      add("ask", `what is ${doc.title}`); add("ask", `tell me about ${doc.title}`);
+      for (const sec of doc.sections) add("ask", `tell me about ${sec.heading.toLowerCase()}`);
+    }
+  }
+  for (const t of packs.outOfScope) add("out_of_scope", t);
+  return out;
+}
+
+if (typeof require !== "undefined" && require.main === module) {
+  const fs = require("fs"), path = require("path");
+  const ex = examples(require("./load.js").load());
+  const model = require("../web/trainer.js").train(ex, { log: () => {} });
+  const file = path.join(__dirname, "model.json");
+  fs.writeFileSync(file, JSON.stringify(model));
+  const by = {};
+  for (const e of ex) by[e.intent] = (by[e.intent] || 0) + 1;
+  console.log(`${ex.length} sentences, ${Object.keys(by).length} intents, trained in ${model.stats.train_seconds}s, ` +
+    `${(fs.statSync(file).size / 1024).toFixed(0)} KB → engine/model.json`);
+}
+
+if (typeof module !== "undefined") module.exports = { examples };
+
+return module.exports; })();
+const FILES = {"conversation.md":"# Conversation\n\nWhat every pack shares: how people say yes and no, the words that carry no request, and what the\nengine says in its own name. One line can hold several words, separated by commas.\n\n## Yes\n- yes, yeah, yep, yup, sure, ok, okay, go ahead, do it, please do, correct, right, exactly, of course\n\n## No\n- no, nope, nah, cancel, don't, do not, never mind, not now, stop, wrong\n\n## Fillers\nTaken off the start or the end of a sentence, never from the middle.\n- please, can you, could you, would you, will you, can you please, could you please, i want you to\n- i'd like you to, just, quickly, for me, now please, so, ok so\n\n## Small words\nWords that say nothing about which skill is meant: the taught-words check doesn't count them.\n- the, a, an, to, me, my, i, i'm, it, it's, is, are, be, of, for, in, on, at, and, or, this, that\n- you, your, can, could, would, will, please, now, just, some, any, do, does, did, what, what's\n- with, from, about, there, here, up, so, then, also, us, we, our, mine, again, one, by, as\n\n## Follow-up\nA sentence starting with these may complete the request before it.\n- and, and what about, what about, how about, and for, same for, also, and also, then\n\n## More\n- more, tell me more, go on, continue, and then, what else, keep going, anything else, more please\n\n## Question words\nA sentence starting with one of these is a question, and may be answered from the content.\n- what, what's, who, who's, why, how, when, where, which, is, are, does, do, did, tell, explain, describe\n\n## Chips\n- yes\n- no\n\n## Replies\n- cant: I can't do that yet. | That's not something I can do yet.\n- not sure: Do you want me to {label}?\n- unknown word: I don't know {word} yet. Do you want me to {label}?\n- ok no: OK, I won't. | Alright, never mind.\n- which one: {a}, or {b}?\n- nothing written: I don't have anything written about that. | Nothing I've been given covers that.\n- no more: That's all I have written about {title}.\n- me name: You're {value}.\n- me place: You live in {value}.\n","packs":{"about":{"pack.md":"---\nname: about\nkind: content\nabout: ptiLU itself\nfiles:\n- README.md\n- ENGINE.md\n- REVIEW-2026-10-21.md\n---\n# About ptiLU\n\nQuestions about ptiLU itself, answered from its own documents: the README, the engine's plan and the\nreview of 21 October. Any Markdown file can be listed here; headings make the sections.\n\n## Also said\nHow people ask about content, for the model to tell a question from a command.\n- what is it\n- tell me about it\n- how does it work\n- why did you build it\n- who made this\n- what went wrong\n- explain the engine\n- what does it mean\n- what is designing by abstention\n- how do you measure it\n","skills":{},"docs":[{"id":"readme","md":"# ptiLU\n\n**ptiLU** (*p'tit LU*): **P**rivate, **T**eachable, **I**nterpretable **L**anguage **U**nderstanding.\nA model of about 350 KB that understands short commands on the device, offline, and says\n\"I can't\" rather than guessing. Formerly MiniOS NLU.\n\nThe first ptiLU is a tiny, CPU-only natural language understanding model for a mini operating system running on an Orange Pi Zero 2W (Armbian). It understands an English command, picks the intent, extracts the parameters, and a small dialogue manager decides what to do and what to answer.\n\nInspired by Snips NLU: no deep learning, no network, deterministic at runtime.\n\n## Why this exists\n\nAssistants today usually sit on a large language model, a cloud connection, or both. For a\nsmall device that should do a handful of things well (make a folder, set a reminder, tell the\ntime) that is far more than needed, and it comes with the wrong trade-offs: heavy, opaque,\nonline, and confidently wrong when it hasn't understood.\n\nThis project tries the opposite: small, single-purpose \"mini-brains\" that run on the CPU of a\ncheap single-board computer, or offline in a phone's browser. It started as a way to replace a\nMiniLM sentence-embedding model with something lighter that needs no retraining from scratch\neach time a capability is added.\n\nWhat it aims for:\n\n- **Small and local.** The model is about 350 KB and trains in about a minute, on a laptop or on\n  the phone itself.\n- **Designed by abstention.** What it leaves out is part of the design: no cloud, no large\n  model, no generated text, no account, nothing collected beyond what a skill declares it\n  sends (the weather skill sends a place name). And it abstains at run time too: below its confidence threshold it says it can't,\n  before changing anything it asks when unsure, and what it didn't understand waits in an\n  inbox to be taught, never guessed. A confident wrong action is worse than \"I can't do that\".\n- **Readable without machine-learning knowledge.** What a skill understands, asks and answers\n  is written in a Markdown file. Adding a skill means writing a file, not changing the engine.\n- **Teachable by the person using it.** In that inbox, on the phone, a sentence can be added to\n  a skill, become a new skill with its own answer, or be refused; the model retrains right there.\n- **Toward permacomputing.** Plain JavaScript and Python with no frameworks or dependencies, a\n  model of about 350 KB, plain-text skill files: it should keep running offline on modest or\n  old hardware for years and stay readable by whoever inherits it. (Training and the demo\n  still rely on a modern browser and GitHub Pages.)\n\nWhat it is not: a general conversational assistant. It recognises the words its skills were\ntaught, not meaning. \"Is precipitation likely tomorrow?\" fails until a weather example uses\n\"precipitation\"; open questions are refused.\n\n## How it works\n\n- **Intent:** TF-IDF features (words, word pairs, character 3–4-grams) and a logistic regression.\n- **Slots:** a linear-chain CRF tagger (BIO labels).\n- **Training:** plain JavaScript, no dependencies (`web/trainer.js`). The same file trains in Node (`node train.js`) and in the browser, so the PWA can retrain itself on the phone. Weak weights are dropped and the rest stored as 1-byte numbers: 358 KB for 22 skills.\n- **Skills as folders:** every skill is `skills/<name>/`: a `skill.md` in plain Markdown and, only where needed, a short `skill.js`. The `skill.md` holds the example sentences, the values the skill takes and their types (`## Slots`: text, place, date or time, duration, a value from a list), the questions to ask when one is missing or wrong, what it says, the API request it makes, and whether it changes something (`acts: yes`) or needs the network (`uses: network`). The examples are also the training data: `node skills.js` turns them into sentences and checks every file, stopping with the file and the reason when something doesn't add up. `web/agent.js` is the dialogue only and knows no skill by name; `web/services.js` holds what skills share (dates in words, folders, network, memory). See `skills/README.md`.\n- **Real APIs:** weather and the time in other places come from Open-Meteo (free, no key). Only the place name and its coordinates are sent; your name and place are stored on the device only.\n- **Inbox:** every sentence the agent can't handle lands in an inbox on the device (plus any reply you flag as wrong). For each one: add it to an existing skill (tap words, then pick which of the skill's declared values they are), make a new skill from it with the answer it should give, or mark it \"not for me\". Retrain on the phone, keep the trained model across reloads, and export what was taught: training lines for existing skills, and a draft `skills/<name>/skill.md` for each new skill, ready to commit.\n- **Runtime:** the model runs in plain JavaScript (`web/runtime.js`) and in dependency-free Python (`nlu/`), both reading the same `model.json`; `python evaluate.py` checks the Python side. The dialogue, the date parser and the skills run in JavaScript only for now. How the Pi will run them (a Python port, or one JavaScript brain with the Pi executing declared commands) is still open: see `HANDOFF.md`.\n- **Dates, times, durations:** a rule-based parser (`web/entities.js`), not part of the model. It reads \"next friday at 3pm\", \"in 2 days\", \"next year\", \"timer 1h30\", \"every weekday at 8\" and flags what is ambiguous (\"next friday\" on a Monday, \"at 9\", \"3/4\") or already past, so the agent asks instead of guessing. Every skill that needs time shares it; adding one needs no retraining of this layer.\n- **Dialogue:** asks for missing or invalid values with the skill's own questions, confirms risky actions (power), asks \"Do you want me to…?\" when unsure before anything that changes something, offers a choice when a date or time is ambiguous (\"20:00 today, or 08:00 tomorrow?\"), says it needs the network when a skill does, abstains below a confidence threshold, and finds list values named anywhere in the sentence (\"it's too loud\", \"rebot the pi\") when the model didn't mark them.\n\nTry it: the `docs/` folder is a Progressive Web App that runs the model fully offline. Commands are simulated: the trace shows the shell command that would run on the device.\n\n## Skills\n\nThe values each skill takes, as declared in its `skill.md`. Dates, times and durations are read\nby the date parser, not marked by the model.\n\n| skill | values | changes something |\n|---|---|---|\n| `create_folder` | name, location | yes |\n| `create_file` | name, file_type, location | yes |\n| `open_file` | name, location | yes |\n| `open_app` | app (from a list) | yes |\n| `adjust_volume`, `adjust_brightness` | direction (from a list), level | yes |\n| `power` | power_action (from a list) | confirms every time |\n| `system_status` | metric | no |\n| `get_time` | place | no |\n| `get_date` | day (date) | no |\n| `get_weather` | place (home by default), day (date); needs the network | no |\n| `set_timer` | duration | yes |\n| `set_reminder` | task, when (date and time) | yes |\n| `remember_me` | name, place | yes |\n| `recall_me` | none | no |\n| `forget_me` | none | yes |\n| `greet`, `thanks`, `help` | none | no |\n| `affirm`, `deny`, `out_of_scope` | none (the dialogue's yes, no and \"I can't\") | no |\n\n## Layout\n\n```\ndata/\n  synth_*.md            externally generated batches, cleaned\n  synth_moved.md        time requests that were labelled out_of_scope before the time skills\n  test.md               handwritten held-out set\n  skills.md             generated from skills/ (don't edit)\nnlu/\n  features.py           tokenizer and features (mirrored in web/runtime.js)\n  dataset.py            annotated Markdown parser\n  runtime.py            dependency-free inference (the Pi side)\nskills/                 one folder per skill: skill.md + optional skill.js (see skills/README.md)\nweb/\n  runtime.js            JS inference, same model.json\n  trainer.js            JS training: TF-IDF + logistic regression (L-BFGS), CRF, pruning, export\n  inbox.js              inbox storage, triage decisions, Markdown export (on the device)\n  entities.js           rule-based dates, times, durations, recurrences\n  agent.js              dialogue: routes to skills, questions, confirmations, choices, sequences\n  services.js           shared services for skills: dates in words, folders, network, memory\n  template.html         the page; build_web.py fills in model, code and data\npwa/                    PWA assets (manifest, icons, service worker template)\ndocs/                   built PWA, served by GitHub Pages\nmodels/model.json       exported model (with its held-out scores)\ntests/                  recorded API answers, expected dialogue transcript\n```\n\n## Data format\n\n```\n## intent: create_folder\n- make a folder called [reports](name) in [documents](location)\n```\n\n## Commands\n\n```\nnode train.js                    # compile the skills, train the shipped model, print held-out scores\npython build_web.py              # build the PWA in docs/ (standard library only)\nTZ=Europe/Berlin node test_entities.js   # date/time parser against fixed phrases\nTZ=Europe/Berlin node test_dialogue.js   # replay scripted conversations; fails if a reply changed\n                                         # (--update accepts the new replies, -v prints them)\npython evaluate.py               # the Python runtime (Pi side) against the test set\n```\n\nTraining takes about a minute on a laptop, in Node or in the browser (training files are listed in `data/manifest.json`). Inference runs in well under a millisecond per sentence.\n\nHeld-out, on the 144 handwritten test sentences that appear in no training file: intent accuracy 97.2%, slot F1 0.96.\n\nThe scikit-learn reference trainer, the dataset cleaning and cross-validation scripts and the raw generated batches were removed on 13 October 2026; they are in the git history before that date.\n"},{"id":"engine","md":"# The ptiLU engine\n\nBranch `engine`, started 20 November 2026. Gab: \"the engine is the correct direction\", after reading how\nNod (n8n Labs' personal agent) is built and setting it beside TermNL's skills. `main` is untouched: this\nis a new core in `engine/`, reusing what was measured and works (the model, the date parser).\n\n**What it is.** A teachable core that understands short requests and questions on the device, offline,\nwith no generated text. It has no domain of its own: domains come as **packs** of plain Markdown files.\nAnyone retrains it by writing sentences.\n\n**The rule that keeps it honest.** The engine never exists without a real pack on it, tested on real\nconversations. The first two packs are `everyday` (time, timers, reminders, you) and `about` (questions\nabout written content, with follow-ups: what my-agent was trying to do).\n\n## Four outcomes\n\nEvery turn ends in one of four, as in TermNL:\n\n- **act**: understood and complete. A command runs, or an answer is given.\n- **ask**: a value is missing or unclear, or the request isn't surely understood.\n- **approve**: the action is risky; the person says yes first.\n- **abstain**: \"I can't\", said plainly. The sentence waits in the inbox to be taught.\n\n## What was borrowed, and from where\n\n**From Nod: a small index first, the detail on demand.** Every pack declares its skills in one line\neach (`does: set timer`, `label: set a timer`). The engine reads only that index to decide *where* a\nsentence goes: a skill, the content, or nowhere. Then it opens the one skill file it needs, for its\nvalues, questions and replies. Each pack owns its vocabulary, so the content doesn't blur the commands.\n\n**From Nod: memory and content without embeddings.** Found by word matching (BM25), always with its\nsource. An answer is a sentence that exists in a file, never one composed by a model. What the engine\nkeeps about you is stored only with the quote you said it in, and refused if the quote doesn't hold\nthe value.\n\n**From Nod: learned skills.** A sentence taught in the inbox becomes a pattern with placeholders\n(\"remind me to {task} when I'm home\"), written under `## Learned` in that skill's file, with the\nsentence it came from. It works at once, without retraining. Lines you write yourself under\n`## People say` are yours: the engine never changes them.\n\n**From TermNL: the skill file.** Action × object, \"People say\" patterns read exactly before any model,\n\"What it needs\" in plain words, replies with variants, a `tests.md` per skill of sentences never trained on.\n\n**From ptiLU main: the model and the date parser.** Patterns come first; when none reads the sentence,\nthe trained model (TF-IDF + logistic regression, `web/trainer.js`) picks the skill. Measured on 20\nNovember on ptiLU's held-out sentences: the model 96.4%, nearest-sentence matching 89.7%. So the model\nstays as the fallback. Dates, times and durations come from `web/entities.js` (rule-based).\n\n**Not borrowed:** Nod's trust check exists in ptiLU already (`acts: yes`, `approve: yes`), and its LLM\nparts have no place here.\n\n## A skill file\n\n`engine/packs/<pack>/skills/<action-object>/skill.md`\n\n```markdown\n---\ndoes: set timer\nlabel: set a timer\nacts: yes          # changes something: when unsure, ask \"Do you want me to…?\" first\napprove: no        # yes: always ask first\n---\nWhat it does, for whoever reads this file.\n\n## People say\n- set a timer for {duration}\n- (start/set) (a/the) timer (for) {duration}\n\n## Also said\n- wake me in twenty minutes\n\n## What it needs\n- {duration}: a duration. If it's missing, ask: For how long? | How long should it run?\n\n## Does\ntimer.start {duration}\n\n## Replies\n- done: Timer set for {duration}. | OK, {duration} on the clock.\n\n## Learned\n- give me {duration} on the clock  ← \"give me 10 minutes on the clock\" (2026-11-20)\n```\n\nPatterns: `(a/the)` is optional, `to/into` is one of, `{name}` is a value. Kinds of value: *a duration*,\n*a date and time*, *a date*, *a name*, *a place*, *some text*, *one of: low, medium, high*. A reply can\nread the device: `{@time}`, `{@date}`, `{@me.name}`.\n\n## A content pack\n\n`engine/packs/<pack>/pack.md` says `kind: content` and lists the files it reads. Any Markdown file works:\nheadings make sections. A file can also say, in its front matter, which questions it answers:\n\n```markdown\n---\ntitle: ptiLU\nquestions:\n- what is ptilu\n- why is it so small\nanswer: A model of about 350 KB that understands short commands on the device, offline.\nnext: engine\n---\n```\n\nA question matching one of those gets the written answer. Otherwise the best section answers with its\nfirst sentences and says where they come from. \"Tell me more\" continues the same section, then the next;\n\"and how does it learn?\" stays in the same file first. Nothing found: \"I don't have anything written\nabout that.\"\n\n## The budget\n\nThe engine's own code (`engine/*.js`, without the packs, the tests and the reused model and date parser)\nstays under main's core: 1,009 lines in `web/agent.js`, `services.js`, `inbox.js` and `skills.js`. Every pack ships with tests of its own, and the conversations from\n`REVIEW-2026-10-21.md` that concern its skills are its acceptance test.\n\n## The model, rethought (20 November)\n\nGab: \"our current model was perhaps not trained in the best way or aligned with our new plan\". Nod's\nlesson is that the model is the first layer, never the last. So:\n\n- **It only proposes where a sentence goes**: a skill, `ask` (the content), or `out_of_scope`. No slot\n  model: values come from the patterns and their kinds.\n- **It learns from the pack files alone**: every pattern with its optional parts on and off, every \"Also\n  said\" line, the content's questions and headings, the out-of-scope lines. 332 sentences, trained in\n  0.2 s, 29 KB (main: 6,286 sentences, about a minute, 358 KB). Teaching on the phone retrains it at once.\n- **A check decides**: the skill acts only if every word that isn't a value is one the skill was taught\n  (or one letter from one). Otherwise it asks, naming the word: \"I don't know “clock” yet. Do you want me\n  to set a timer?\" A yes puts the sentence in the inbox with that skill already picked.\n- **Small talk only when sure**: a model guess never says hello or thank you below 0.7.\n- **A command is never answered with a quote**: the content is searched only for a question (a question\n  word, a \"?\", or the model saying `ask`). \"move ideas to documnet\" is in the review word for word; it\n  isn't an answer to itself.\n\n## Where it stands (20 November)\n\n`node engine/test.js`:\n\n| | sentences | right | asked first | \"I can't\" | wrong action |\n|---|---|---|---|---|---|\n| dialogue scripts | 15 scripts | all pass | | | |\n| `tests.md`, every skill | 46 | 29 | 10 | 7 | 0 |\n| main's handwritten held-out, skills in the packs | 51 | 25 | 19 | 7 | 0 |\n| main's handwritten held-out, skills elsewhere (files, weather…) | 140 | 135 | 5 | | 0 |\n| the 21 October conversations | 6 | 5 | 1 | | 0 |\n\nRead honestly:\n- **It never did the wrong thing**, including \"create a new seed.md inside ideas folder\" and \"xyzzy flurb\n  remind me plonk\", the two that broke main.\n- **It asks much more than main.** Main's model gets 50 of those 51 intents right, but that is the intent\n  alone, with no check, from 6,286 training sentences. The engine knows only the words its packs teach:\n  \"is it past midnight already\" is \"I can't\" until a time sentence uses \"midnight\". Each one taught in\n  the inbox becomes right at once. That is the trade, chosen: ask, never guess.\n- **The `tests.md` files were written alongside the patterns, so they aren't truly blind.** Sentences\n  written by someone else are the next real measure.\n- Main's held-out set wasn't used to tune anything here; it only measures.\n\n## Not done yet\n\n- Follow-ups carry only values with a shape (durations, dates): \"and 5 minutes\" works, \"and for buy milk\"\n  doesn't.\n- To try it on the phone: in the repository's Settings → Pages, set the branch to `engine` (folder\n  `/docs`). The engine is then at `/ptiLU/engine/`, and main's app stays at `/ptiLU/` (this branch still\n  holds it). Set it back to `main` afterwards.\n- TermNL's board skills as a pack, my-agent's content as a pack, the same engine on the board.\n\n## Run\n\n```\nnode engine/train.js            # the packs → engine/model.json\nnode engine/test.js             # the dialogue scripts, tests.md, the held-out set, the review, teaching\nnode engine/chat.js             # talk to it in the terminal (/inbox, /teach <skill> slot=words)\nnode engine/build.js            # engine/index.html and docs/engine/: the engine, packs and model in one offline page\n```\n\nCore size: 871 lines in `engine/*.js` (without test.js, chat.js and build.js), against 1,009 for main's\n`web/agent.js`, `services.js`, `inbox.js` and `skills.js`.\n"},{"id":"review-2026-10-21","md":"\n# Review of 21 October 2026: the vision, the technique, the derailment\n\nWritten at Gab's request (\"document this and push\") after a phone test of the `principles`\nbranch, and his question: \"So we created ptiLU with a vision, and built all of it to learn it\ncannot fulfil the vision, or rather to learn you derailed it? Be honest and critical.\"\nThe assessment below is Claude's; Gab's words are quoted.\n\n## The test that settled it\n\nA plain conversation on the phone, `principles` branch (2ce6ab3):\n\n- \"move ideas to documnet\" → \"I don't know “ideas”, “documnet” yet. Which file or folder?\"\n  The value finder marked nothing, so the values looked like untaught words.\n- \"move the ideas folder inside the document folder\", while that question was pending →\n  \"OK, move the ideas folder moves to Documents.\" The whole new sentence was taken as the name.\n- \"please create a new seed.md inside ideas folder\" → a *folder* named seed.md. The skill picker\n  saw \"create\", \"new\", \"folder\"; it can't see that \"seed.md\" has the shape of a file.\n- \"I don't know a folder called “ideas”\", a folder it had just created: no picture of the device.\n\nGab: \"This tells me our model is confidently doing the wrong thing. And rather than patching we\nshould reflect on the vast amount of code rules and principles that increase the state size and\nstill let it drift.\"\n\n## Both: the first use case outran the technique, and Claude derailed it\n\n**The technique's limit is real.** The model reads a sentence as a bag of words. It works where\nwords alone decide: few intents, closed values, short commands (time, date, weather, timers,\nreminders, volume, brightness, power, opening apps, sending to the phone). It cannot see\nstructure: which word is the action, which the object, what shape a value has, what exists on\nthe device. The first concrete test chosen for ptiLU, a mini OS that creates files and folders,\nneeds exactly that. The evidence was in the 13 October handoff: names containing \"and\", names\nwith an apostrophe, 5 of 9 held-out errors being values cut short or missed. Nobody said plainly\nthen: this model will carry closed commands, not file operations.\n\n**The derailment is real too, and it is Claude's.**\n- *Scope across sessions:* declarative requests, webhooks, Telegram, maps, value types, the\n  lexicon, proposed and built eagerly by Claude instances on a model whose first use case was\n  not proven. Gab pulled the webhooks back himself on 13 October (\"Back to light\").\n- *Patching in this session:* the night's diagnosis was sound (the model counts evidence for a\n  skill, never against; the cross-validation was leaking). After it, each phone test got code:\n  dropped values, folder checks, folder guessing, a runner-up rule (held, never pushed). At\n  01:47 Gab asked whether the fix would inflate the code; Claude said no; the core grew 9%.\n  Claude reported \"0 wrong actions\" on test sets that held no real conversation with files.\n  The brain's rule to ask \"what is it for?\" when a feature arrives was not followed once.\n\nGab, 10:29: \"I am feeling that the version on main was simpler and perhaps better. I think you\nhave overengineered without considering the purpose nor asking or validating the direction it\nshould have taken ... Or it is on me not being clear enough.\" Claude's reading: the purpose was\nclear (light, teachable, readable, no inflation); the failure to check against it was Claude's.\n\n## What the honest path would have been\n\nTest a few real conversations per skill early. Say around 13 October that this technique carries\nclosed commands, not file operations. Give files a grammar. Freeze the core. Grow through the\nskill files and the inbox.\n\n## What the day still established (measured)\n\n- Choosing the skill: 97.5% on handwritten sentences; the model alone is fine for closed commands.\n- The cross-validation used until 20 October leaked: random folds put each sentence's twin from\n  the same example line in training. Holding out whole example lines doubles the abstentions.\n- The model's confidence can't tell \"understood\" from \"recognised one word\" (\"xyzzy flurb remind\n  me plonk\" → set_reminder 0.99). The taught-words check (ask instead of act) cut wrong actions\n  without asking from 178 to 21–24 in 7,108 sentences under the strict cross-check, but it does\n  not see structure, so it let \"seed.md\" through.\n- The exact-match layer (example lines as patterns) changed no decision: removed.\n- Value typing for routing measured flat: removed.\n- Several commands per sentence: Gab, \"interesting on paper but bad in practice\": removed.\n- Folders were found right 99% of the time; the folder trouble came from names the model had\n  never seen and from having no picture of the device, not from the value finder.\n\n## Where the branches stand\n\n- `main` (17e13ff): the simpler version, unchanged. Gab: \"perhaps better\".\n- `principles` (2ce6ab3): four principles in the dialogue, two thresholds instead of seven, values\n  read for the chosen skill, the taught-words check, the tokenizer reading any alphabet. Core code\n  1,083 lines against 993 on main. Kept as a record; nothing is merged.\n- `act-ask-abstain`, `act-ask-cant`, `value-types`: superseded by `principles`.\n- Worth carrying to main if Gab wants, each small: the tokenizer fix (Kraków, Tübingen were cut),\n  the move skills' reply fix (they crashed: reply named `done`, not `say`), maybe the taught-words\n  check. Gab to say.\n\n## The direction proposed (not decided)\n\nFor a natural-language interface to a Linux board, a different technique for the shell part:\na small grammar of commands (create / open / move / delete / list + file / folder + in / to),\nvalues recognised by their shape and checked against the real disk, \"I can't\" for any phrasing\nit doesn't know. The ptiLU model stays for closed commands, where it works. Not an LLM: hundreds of\nMB, no \"why\", and the same memory wall MiniLM hit on Babiban. Babiban is the precedent: when the\nmodel didn't fit, a hand-written tagger and match grammar did. Gab to decide whether the file\nsystem belongs in ptiLU at all, and whether to pause.\n"},{"id":"ptilu","md":"---\ntitle: ptiLU\nquestions:\n- what is ptilu\n- what does ptilu mean\n- what is this\n- who are you\n- what does the name mean\nanswer: ptiLU (p'tit LU) stands for Private, Teachable, Interpretable Language Understanding: a small model that understands short commands on the device, offline, and says \"I can't\" rather than guessing.\nnext: engine\n---\n# ptiLU\n\nptiLU (p'tit LU) stands for Private, Teachable, Interpretable Language Understanding. It understands\nshort requests on the device, offline, and says \"I can't\" rather than guessing.\n\n## Why it is small\nAssistants usually sit on a large language model, a cloud connection, or both. For a small device that\nshould do a handful of things well, that is far more than needed: heavy, opaque, online, and confidently\nwrong when it hasn't understood. ptiLU tries the opposite: small, single-purpose minds that run on the CPU\nof a cheap board, or offline in a phone's browser.\n\n## How you teach it\nWhat it didn't understand waits in an inbox. There, a sentence can be added to a skill, become a new skill\nwith its own answer, or be refused. A taught sentence becomes a pattern with placeholders, written in the\nskill's own file, and works at once.\n"}]},"everyday":{"pack.md":"---\nname: everyday\nkind: skills\n---\n# Everyday\n\nWhat a phone or a small board can do alone, offline: the time and the date, timers and reminders, and\nwhat you tell it about yourself. Nothing here needs an account or the network.\n","skills":{"check-date":{"skill.md":"---\ndoes: check date\nlabel: tell the date\n---\nToday's date on this device.\n\n## People say\n- what's the date (today)\n- what is the date (today)\n- what day is it (today)\n- what's today's date\n- what is today's date\n- what's today\n- which day is it (today)\n- (tell me) the date (please)\n- what's the day today\n\n## Also said\n- what day of the week is it\n- can you tell me the date\n- what's the date, I need it for a form\n- is it friday today\n- which date are we\n\n## Replies\n- done: Today is {@date}. | It's {@date}.\n","tests.md":"# Tests: check-date\n\nSentences people would say, never trained on. Written alongside the patterns, so not truly blind: add your own.\n\n- what's the date today please\n- tell me today's date\n- what day are we\n- which day of the week is today\n- date please\n- do you know the date\n"},"check-time":{"skill.md":"---\ndoes: check time\nlabel: tell the time\n---\nThe time on this device.\n\n## People say\n- what time is it (now/please)\n- what's the time (now/please)\n- what is the time (now)\n- (tell me) the time (please)\n- time (please)\n- do you know what time it is\n- have you got the time\n\n## Also said\n- what's the time right now\n- could you tell me what time it is\n- what hour is it\n- is it late already\n- how late is it\n\n## Replies\n- done: It's {@time}. | {@time}.\n","tests.md":"# Tests: check-time\n\nSentences people would say, never trained on. Written alongside the patterns, so not truly blind: add your own.\n\n- what time is it right now\n- tell me the current time\n- do you have the time\n- time check\n- what's the clock say\n- is it noon yet\n"},"forget-me":{"skill.md":"---\ndoes: forget me\nlabel: forget what it knows about you\napprove: yes\n---\nClears everything it keeps about you. Asks first, every time.\n\n## People say\n- forget (everything) (about) me\n- forget my name\n- forget where i live\n- forget (everything) (what) you know about me\n- delete (everything) (you know) about me\n- (please) forget everything\n\n## Also said\n- erase what you know about me\n- wipe my data\n- I want you to forget me\n\n## Does\nmemory.forget\n\n## Replies\n- approve: Forget everything I know about you?\n- done: Done, I've forgotten everything about you.\n- empty: I didn't know anything about you.\n","tests.md":"# Tests: forget-me\n\nSentences people would say, never trained on. Written alongside the patterns, so not truly blind: add your own.\n\n- forget all about me\n- remove what you know about me\n- clear my details\n"},"greet":{"skill.md":"---\ndoes: greet\nlabel: say hello\nrole: talk\n---\n## People say\n- hi (there)\n- hello (there)\n- hey (there)\n- good morning/afternoon/evening\n- morning\n- hiya\n- yo\n\n## Also said\n- hello ptilu\n- hi, how are you\n- hey, good to see you\n\n## Replies\n- done: Hello! What can I do for you? | Hi. What do you need?\n","tests.md":"# Tests: greet\n\nSentences people would say, never trained on. Written alongside the patterns, so not truly blind: add your own.\n\n- hello hello\n- good morning ptilu\n- hey hey\n"},"help":{"skill.md":"---\ndoes: help\nlabel: say what it can do\nrole: talk\n---\n## People say\n- help\n- what can you do\n- what do you do\n- how can you help (me)\n- what are you able to do\n- what can i ask (you)\n\n## Also said\n- what are your skills\n- show me what you can do\n- I'm lost, help me\n\n## Replies\n- done: I can {@skills}. And I can answer questions about {@content}.\n","tests.md":"# Tests: help\n\nSentences people would say, never trained on. Written alongside the patterns, so not truly blind: add your own.\n\n- what are you good at\n- what can I say to you\n- help me please\n"},"recall-me":{"skill.md":"---\ndoes: recall me\nlabel: say what it knows about you\n---\nWhat it keeps about you, and nothing else.\n\n## People say\n- what's my name\n- what is my name\n- who am i\n- where do i live\n- what do you know about me\n- (do you) know my name\n- (do you) remember my name\n- what do you remember about me\n- tell me what you know about me\n\n## Also said\n- what have I told you about me\n- do you remember where I live\n- say my name\n\n## Does\nmemory.recall\n\n## Replies\n- done: {@me}\n- empty: I don't know anything about you yet. Tell me your name: \"call me …\".\n","tests.md":"# Tests: recall-me\n\nSentences people would say, never trained on. Written alongside the patterns, so not truly blind: add your own.\n\n- do you know who I am\n- what did I tell you my name was\n- what do you have on me\n"},"remember-name":{"skill.md":"---\ndoes: remember name\nlabel: remember your name\nacts: yes\n---\nWhat to call you. Kept on this device only, with the sentence you said it in.\n\n## People say\n- (you can) call me {name}\n- my name is {name}\n- my name's {name}\n- i'm called {name}\n- (remember (that)) my name is {name}\n- (please) call me {name} from now on\n\n## Also said\n- I'd like you to call me Sam\n- the name is Eva\n- you can address me as Gab\n\n## What it needs\n- {name}: a name. If it's missing, ask: What should I call you?\n\n## Samples\n- name: Gab | Eva | Sam | Noor | Kenji\n\n## Does\nmemory.set name {name}\n\n## Replies\n- done: Nice to meet you, {name}. | OK, I'll call you {name}.\n- refused: I didn't catch your name.\n","tests.md":"# Tests: remember-name\n\nSentences people would say, never trained on. Written alongside the patterns, so not truly blind: add your own.\n\n- call me Noor\n- my name is Kenji\n- you can call me Lou\n- from now on call me Gab\n"},"remember-place":{"skill.md":"---\ndoes: remember place\nlabel: remember where you live\nacts: yes\n---\nWhere home is. Kept on this device only, with the sentence you said it in.\n\n## People say\n- i live in {place}\n- (remember (that)) i live in {place}\n- my home is (in) {place}\n- home is {place}\n- i'm living in {place}\n- i've moved to {place}\n\n## Also said\n- I'm based in Munich\n- I stay in Lyon these days\n- my town is Kyoto\n\n## What it needs\n- {place}: a place. If it's missing, ask: Where do you live?\n\n## Samples\n- place: Munich | Paris | Kyoto | Lisbon | Shenzhen\n\n## Does\nmemory.set place {place}\n\n## Replies\n- done: OK, home is {place}. | Noted: you live in {place}.\n- refused: I didn't catch the place.\n","tests.md":"# Tests: remember-place\n\nSentences people would say, never trained on. Written alongside the patterns, so not truly blind: add your own.\n\n- I live in Lisbon\n- I moved to Berlin\n- home is Shenzhen now\n"},"set-reminder":{"skill.md":"---\ndoes: set reminder\nlabel: set a reminder\nacts: yes\n---\nA reminder on this device, once. A day without a time is 9:00. When a time could be two (\"at 9\"),\nit asks which one.\n\n## People say\n- remind me (to) {task} {when}\n- remind me {when} to {task}\n- {when} remind me to {task}\n- remind me to {task}\n- remind me (about) {task} {when}\n- remind me about {task}\n- remind me {when}\n- (set/add/make/create) a reminder (to/for/about) {task} {when}\n- (set/add/make/create) a reminder (for/at/on) {when}\n- (set/add/make/create) a reminder (to/for/about) {task}\n- (set/add/make/create) a reminder\n- don't let me forget to {task} ({when})\n- (ping/nudge) me {when} (to/about) {task}\n\n## Also said\n- I need a reminder to water the plants tonight\n- make sure I don't forget to pay the rent\n- can you remind me later\n- remember to buy milk tomorrow\n- I keep forgetting to call the bank, remind me on monday\n\n## What it needs\n- {task}: some text. If it's missing, ask: What should I remind you of? | Remind you to do what?\n- {when}: a date and time. If it's missing, ask: When? | When should I remind you?\n\n## Samples\n- task: call mum | buy milk | water the plants | send the invoice | oil the cedar box | book the dentist\n\n## Does\nreminder.add {when} {task}\n\n## Replies\n- done: I'll remind you to {task} on {when}. | OK: {task}, {when}.\n","tests.md":"# Tests: set-reminder\n\nSentences people would say, never trained on. Written alongside the patterns, so not truly blind: add your own.\n\n- remind me to call the bank tomorrow at 10\n- could you remind me to feed the cat tonight\n- set a reminder to print the tickets on friday\n- remind me next monday to pay the rent\n- don't let me forget to charge the camera\n- create a reminder\n"},"set-timer":{"skill.md":"---\ndoes: set timer\nlabel: set a timer\nacts: yes\n---\nA countdown on this device. It rings when the time is up.\n\n## People say\n- (set/start) (a/the) timer (for) {duration}\n- (set/start) (a/the) {duration} timer\n- timer (for) {duration}\n- {duration} timer\n- (set/start) (a/the) timer\n- countdown (of/for) {duration}\n- (set/start) (a) countdown (of/for) {duration}\n\n## Also said\n- wake me in twenty minutes\n- give me ten minutes\n- I need a timer\n- let me know when 5 minutes are up\n- time 3 minutes for the eggs\n- ring in an hour\n\n## What it needs\n- {duration}: a duration. If it's missing, ask: For how long? | How long should it run?\n\n## Does\ntimer.start {duration}\n\n## Replies\n- done: Timer set for {duration}. | OK, {duration} on the clock.\n","tests.md":"# Tests: set-timer\n\nSentences people would say, never trained on. Written alongside the patterns, so not truly blind: add your own.\n\n- put a timer on for 25 minutes\n- start a ten minute countdown\n- timer twelve minutes\n- could you set a timer of 45 seconds\n- I need a 2 hour timer\n- set the timer\n"},"thanks":{"skill.md":"---\ndoes: thank\nlabel: say thanks\nrole: talk\n---\n## People say\n- thanks (a lot)\n- thank you (very much/so much)\n- cheers\n- (great/perfect/nice) thanks\n- (that's) perfect\n\n## Also said\n- much appreciated\n- thanks for that\n- that's great, thank you\n\n## Replies\n- done: You're welcome. | Anytime.\n","tests.md":"# Tests: thanks\n\nSentences people would say, never trained on. Written alongside the patterns, so not truly blind: add your own.\n\n- thanks a bunch\n- many thanks\n- thank you kindly\n"}},"docs":[],"out-of-scope.md":"# Out of scope\n\nWhat this pack should not try to do. Taught as \"I can't\", never as a skill.\n\n- book me a flight to Lisbon\n- what's the weather like\n- play some jazz\n- send an email to Eva\n- order a pizza\n- translate this into French\n- write me a poem\n- what's the capital of Peru\n- turn on the lights in the kitchen\n- call mum\n- how much is a bitcoin\n- delete all my files\n- tell me a joke\n- what's the news today\n- can you code a website\n- open the terminal\n- make a folder called bikes\n- show me the map of Munich\n- who won the match last night\n- buy milk\n"}}};
+const MODEL = {"version":"2026-11-20 08:46","format":2,"trainer":"js","intents":["ask","check-date","check-time","forget-me","greet","help","out_of_scope","recall-me","remember-name","remember-place","set-reminder","set-timer","thanks"],"vocab":["b:10_minutes","b:2026_the","b:21_october","b:2_hours","b:30_seconds","b:3pm_</s>","b:<s>_a","b:<s>_add","b:<s>_call","b:<s>_can","b:<s>_countdown","b:<s>_create","b:<s>_delete","b:<s>_do","b:<s>_don","b:<s>_forget","b:<s>_good","b:<s>_hello","b:<s>_hey","b:<s>_hi","b:<s>_how","b:<s>_i","b:<s>_is","b:<s>_make","b:<s>_me","b:<s>_my","b:<s>_nudge","b:<s>_perfect","b:<s>_ping","b:<s>_please","b:<s>_remember","b:<s>_remind","b:<s>_set","b:<s>_show","b:<s>_start","b:<s>_tell","b:<s>_thank","b:<s>_thanks","b:<s>_that","b:<s>_the","b:<s>_time","b:<s>_timer","b:<s>_what","b:<s>_which","b:<s>_who","b:<s>_you","b:a_countdown","b:a_reminder","b:a_timer","b:about_a","b:about_buy","b:about_call","b:about_how","b:about_me","b:about_the","b:about_water","b:about_what","b:add_a","b:an_hour","b:are_you","b:at_3pm","b:buy_milk","b:call_me","b:call_mum","b:can_i","b:can_you","b:cedar_box","b:countdown_for","b:countdown_of","b:create_a","b:date_</s>","b:date_please","b:day_is","b:delete_everything","b:derailment_</s>","b:do_</s>","b:do_you","b:does_it","b:don_t","b:engine_</s>","b:eva_</s>","b:everything_</s>","b:everything_about","b:five_minutes","b:for_2","b:for_an","b:forget_everything","b:forget_me","b:forget_to","b:friday_at","b:from_now","b:gab_</s>","b:help_</s>","b:help_me","b:home_is","b:hour_</s>","b:hours_</s>","b:hours_timer","b:how_can","b:i_ask","b:i_live","b:i_m","b:i_need","b:in_lisbon","b:in_paris","b:in_two","b:is_</s>","b:is_eva","b:is_it","b:is_kyoto","b:is_ptilu","b:is_the","b:it_</s>","b:it_is","b:it_today","b:kenji_</s>","b:know_about","b:know_my","b:kyoto_</s>","b:let_me","b:lisbon_</s>","b:live_</s>","b:live_in","b:make_a","b:me_</s>","b:me_a","b:me_about","b:me_forget","b:me_gab","b:me_in","b:me_on","b:me_sam","b:me_the","b:me_to","b:me_what","b:mean_</s>","b:milk_</s>","b:minutes_</s>","b:monday_buy","b:morning_</s>","b:much_</s>","b:mum_</s>","b:munich_</s>","b:my_home","b:my_name","b:name_</s>","b:name_is","b:need_a","b:next_friday","b:now_</s>","b:now_on","b:nudge_me","b:october_2026","b:of_21","b:of_an","b:oil_the","b:on_</s>","b:on_monday","b:paris_</s>","b:perfect_</s>","b:ping_me","b:plants_</s>","b:please_</s>","b:ptilu_</s>","b:remember_my","b:remember_that","b:remind_me","b:reminder_</s>","b:reminder_about","b:reminder_buy","b:reminder_for","b:reminder_to","b:review_of","b:s_the","b:s_today","b:sam_</s>","b:seconds_</s>","b:seconds_timer","b:set_a","b:set_the","b:shenzhen_</s>","b:show_me","b:skills_</s>","b:start_a","b:start_the","b:t_let","b:technique_the","b:tell_me","b:thank_you","b:thanks_</s>","b:that_s","b:the_cedar","b:the_date","b:the_day","b:the_derailment","b:the_name","b:the_plants","b:the_technique","b:the_time","b:the_timer","b:the_vision","b:there_</s>","b:this_</s>","b:time_</s>","b:time_is","b:time_it","b:time_now","b:time_please","b:timer_</s>","b:timer_for","b:to_buy","b:to_call","b:to_oil","b:to_water","b:today_</s>","b:tonight_</s>","b:two_hours","b:vision_the","b:water_the","b:what_are","b:what_can","b:what_day","b:what_do","b:what_does","b:what_is","b:what_s","b:what_the","b:what_time","b:what_you","b:where_i","b:which_day","b:you_</s>","b:you_can","b:you_do","b:you_help","b:you_know","b:you_remember","b:you_tell","b:you_to","b:you_very","c:026","c:026>","c:10>","c:202","c:2026","c:21>","c:26>","c:30>","c:3pm","c:3pm>","c:<10","c:<10>","c:<20","c:<202","c:<21","c:<21>","c:<2>","c:<30","c:<30>","c:<3p","c:<3pm","c:<a>","c:<ab","c:<abo","c:<ad","c:<add","c:<al","c:<an","c:<an>","c:<and","c:<ar","c:<are","c:<as","c:<ask","c:<at","c:<at>","c:<ba","c:<bi","c:<bo","c:<boo","c:<box","c:<bu","c:<buy","c:<ca","c:<cal","c:<can","c:<ce","c:<ced","c:<co","c:<cou","c:<cr","c:<cre","c:<da","c:<dat","c:<day","c:<de","c:<del","c:<der","c:<di","c:<do","c:<do>","c:<doe","c:<don","c:<en","c:<eng","c:<ev","c:<eva","c:<eve","c:<ex","c:<fi","c:<fil","c:<fiv","c:<fo","c:<for","c:<fr","c:<fri","c:<fro","c:<ga","c:<gab","c:<go","c:<goo","c:<gr","c:<gre","c:<ha","c:<hav","c:<he","c:<hel","c:<hey","c:<hi","c:<hi>","c:<ho","c:<hom","c:<hou","c:<how","c:<i>","c:<in","c:<in>","c:<int","c:<is","c:<is>","c:<it","c:<it>","c:<ke","c:<ken","c:<kn","c:<kno","c:<ky","c:<kyo","c:<la","c:<lat","c:<le","c:<let","c:<li","c:<lik","c:<lis","c:<liv","c:<lo","c:<m>","c:<ma","c:<mak","c:<me","c:<me>","c:<mea","c:<mi","c:<mil","c:<min","c:<mo","c:<mon","c:<mor","c:<mu","c:<muc","c:<mum","c:<mun","c:<my","c:<my>","c:<na","c:<nam","c:<ne","c:<nee","c:<nex","c:<ni","c:<no","c:<now","c:<nu","c:<nud","c:<oc","c:<oct","c:<of","c:<of>","c:<oi","c:<oil","c:<on","c:<on>","c:<ou","c:<out","c:<pa","c:<par","c:<pe","c:<per","c:<pi","c:<pin","c:<pl","c:<pla","c:<ple","c:<pt","c:<pti","c:<re","c:<rem","c:<rev","c:<ri","c:<s>","c:<sa","c:<sam","c:<say","c:<se","c:<sec","c:<set","c:<sh","c:<she","c:<sho","c:<sk","c:<ski","c:<so","c:<st","c:<sta","c:<t>","c:<te","c:<tec","c:<tel","c:<th","c:<tha","c:<the","c:<thi","c:<ti","c:<tim","c:<to","c:<to>","c:<tod","c:<tom","c:<ton","c:<tw","c:<two","c:<ve","c:<ver","c:<vi","c:<vis","c:<wa","c:<wat","c:<we","c:<wh","c:<wha","c:<whe","c:<whi","c:<who","c:<why","c:<wo","c:<wor","c:<wr","c:<yo","c:<you","c:ab>","c:abl","c:abo","c:abou","c:add","c:add>","c:ail","c:ailm","c:ake","c:ake>","c:al>","c:all","c:all>","c:alle","c:am>","c:ame","c:ame>","c:an>","c:and","c:and>","c:ank","c:ank>","c:anks","c:ant","c:ants","c:ar>","c:are","c:are>","c:ari","c:aris","c:art","c:art>","c:as>","c:ase","c:ase>","c:ask","c:ask>","c:asu","c:asur","c:at>","c:ate","c:ate>","c:ater","c:ath","c:ave","c:ave>","c:ay>","c:ber","c:ber>","c:bon","c:bon>","c:boo","c:book","c:bou","c:bout","c:box","c:box>","c:buy","c:buy>","c:cal","c:call","c:can","c:can>","c:ced","c:ceda","c:ch>","c:che","c:chn","c:chni","c:com","c:con","c:cond","c:cou","c:coun","c:cre","c:crea","c:ct>","c:cto","c:ctob","c:dar","c:dar>","c:dat","c:date","c:day","c:day>","c:dd>","c:de>","c:del","c:dele","c:der","c:der>","c:dera","c:dge","c:dge>","c:do>","c:doe","c:does","c:don","c:don>","c:dow","c:down","c:ds>","c:ean","c:ean>","c:eas","c:ease","c:easu","c:eat","c:eat>","c:eate","c:ech","c:echn","c:eci","c:eco","c:econ","c:ect","c:ect>","c:ed>","c:eda","c:edar","c:eed","c:eed>","c:ele","c:elet","c:ell","c:ell>","c:ello","c:elp","c:elp>","c:emb","c:embe","c:eme","c:emem","c:emi","c:emin","c:en>","c:eng","c:engi","c:enj","c:enji","c:ent","c:ent>","c:enti","c:enz","c:enzh","c:er>","c:era","c:erai","c:ere","c:ere>","c:erf","c:erfe","c:ery","c:ery>","c:eryt","c:es>","c:est","c:est>","c:et>","c:ete","c:ete>","c:eva","c:eva>","c:eve","c:ever","c:evi","c:evie","c:ew>","c:ext","c:ext>","c:ey>","c:fec","c:fect","c:fil","c:file","c:fiv","c:five","c:fol","c:fold","c:for","c:for>","c:forg","c:fri","c:frid","c:fro","c:from","c:gab","c:gab>","c:ge>","c:get","c:get>","c:ght","c:ght>","c:gin","c:gine","c:goo","c:good","c:gre","c:grea","c:han","c:hank","c:hat","c:hat>","c:hav","c:have","c:he>","c:hel","c:hell","c:help","c:hen","c:hen>","c:henz","c:her","c:here","c:hes","c:hey","c:hey>","c:hi>","c:hic","c:hich","c:hin","c:hing","c:his","c:his>","c:hni","c:hniq","c:ho>","c:hom","c:home","c:hou","c:hour","c:how","c:how>","c:ht>","c:hy>","c:ich","c:ich>","c:id>","c:ida","c:iday","c:iew","c:iew>","c:igh","c:ight","c:ike","c:ike>","c:il>","c:ile","c:ilk","c:ilk>","c:ill","c:ill>","c:ills","c:ilm","c:ilme","c:ilu","c:ilu>","c:ime","c:ime>","c:imer","c:in>","c:ind","c:ind>","c:inde","c:ine","c:ine>","c:ing","c:ing>","c:int","c:inu","c:inut","c:ion","c:ion>","c:iqu","c:ique","c:is>","c:isb","c:isbo","c:isi","c:isio","c:it>","c:itc","c:ite","c:ite>","c:ive","c:ive>","c:ji>","c:ke>","c:ken","c:kenj","c:kil","c:kill","c:kno","c:know","c:ks>","c:kyo","c:kyot","c:lan","c:lant","c:lat","c:late","c:ld>","c:lde","c:lder","c:le>","c:lea","c:leas","c:led","c:led>","c:let","c:let>","c:lete","c:lig","c:ligh","c:lik","c:like","c:lis","c:lisb","c:liv","c:live","c:lk>","c:ll>","c:lle","c:lled","c:llo","c:llo>","c:lls","c:lls>","c:lme","c:lmen","c:lo>","c:lp>","c:ls>","c:lu>","c:mak","c:make","c:mbe","c:mber","c:me>","c:mea","c:mean","c:meas","c:mem","c:memb","c:men","c:ment","c:mer","c:mer>","c:mil","c:milk","c:min","c:mind","c:minu","c:mon","c:mond","c:mor","c:morn","c:morr","c:muc","c:much","c:mum","c:mum>","c:mun","c:muni","c:my>","c:nam","c:name","c:nch","c:nd>","c:nda","c:nday","c:nde","c:nder","c:nds","c:nds>","c:ne>","c:nee","c:need","c:nex","c:next","c:ng>","c:ngi","c:ngin","c:nic","c:nich","c:nig","c:nigh","c:nin","c:ning","c:niq","c:niqu","c:nji","c:nji>","c:nk>","c:nks","c:nks>","c:noo","c:now","c:now>","c:nt>","c:ntd","c:ntdo","c:nte","c:nten","c:nti","c:nts","c:nts>","c:nud","c:nudg","c:nut","c:nute","c:nzh","c:nzhe","c:obe","c:ober","c:oct","c:octo","c:od>","c:oda","c:oday","c:oes","c:oes>","c:of>","c:oil","c:oil>","c:ok>","c:old","c:olde","c:om>","c:ome","c:ome>","c:omo","c:omor","c:on>","c:ond","c:onda","c:onds","c:oni","c:onig","c:ood","c:ood>","c:ook","c:ook>","c:or>","c:org","c:orge","c:ork","c:orn","c:orni","c:orr","c:orro","c:ot>","c:oto","c:oto>","c:ou>","c:oul","c:ould","c:oun","c:ount","c:our","c:our>","c:ours","c:out","c:out>","c:ow>","c:own","c:own>","c:ox>","c:par","c:pari","c:per","c:perf","c:pin","c:ping","c:pla","c:plan","c:ple","c:plea","c:pm>","c:pti","c:ptil","c:que","c:que>","c:rai","c:rail","c:ran","c:re>","c:rea","c:reat","c:rec","c:rem","c:reme","c:remi","c:ren","c:rev","c:revi","c:rfe","c:rfec","c:rge","c:rget","c:rid","c:rida","c:ris","c:ris>","c:rni","c:rnin","c:rom","c:rom>","c:row","c:row>","c:rro","c:rrow","c:rs>","c:rt>","c:ry>","c:ryt","c:ryth","c:sam","c:sam>","c:say","c:say>","c:sbo","c:sbon","c:se>","c:sec","c:seco","c:sed","c:sed>","c:set","c:set>","c:she","c:shen","c:sho","c:show","c:sio","c:sion","c:sk>","c:ski","c:skil","c:st>","c:sta","c:star","c:sur","c:sure","c:tar","c:tart","c:tch","c:tco","c:tdo","c:tdow","c:te>","c:tec","c:tech","c:tel","c:tell","c:ten","c:tent","c:ter","c:ter>","c:tes","c:tes>","c:th>","c:tha","c:than","c:that","c:the","c:the>","c:ther","c:thi","c:thin","c:this","c:til","c:tilu","c:tim","c:time","c:tio","c:tion","c:to>","c:tob","c:tobe","c:tod","c:toda","c:tom","c:tomo","c:ton","c:toni","c:tra","c:tran","c:ts>","c:two","c:two>","c:uch","c:uch>","c:udg","c:udge","c:ue>","c:uld","c:uld>","c:um>","c:uni","c:unic","c:unt","c:untd","c:ur>","c:ure","c:ure>","c:urs","c:urs>","c:ut>","c:ute","c:utes","c:uy>","c:va>","c:ve>","c:ver","c:very","c:vie","c:view","c:vis","c:visi","c:wat","c:wate","c:wen","c:went","c:wha","c:what","c:whe","c:wher","c:whi","c:whic","c:who","c:who>","c:why","c:why>","c:wn>","c:wo>","c:wor","c:work","c:xt>","c:yot","c:yoto","c:you","c:you>","c:yth","c:ythi","c:zhe","c:zhen","w:10","w:2","w:2026","w:21","w:30","w:3pm","w:a","w:about","w:add","w:an","w:and","w:are","w:ask","w:at","w:book","w:box","w:buy","w:call","w:called","w:can","w:cedar","w:countdown","w:create","w:date","w:day","w:delete","w:derailment","w:do","w:does","w:don","w:engine","w:eva","w:everything","w:five","w:for","w:forget","w:friday","w:from","w:gab","w:good","w:great","w:have","w:hello","w:help","w:hey","w:hi","w:home","w:hour","w:hours","w:how","w:i","w:in","w:is","w:it","w:kenji","w:know","w:kyoto","w:late","w:let","w:like","w:lisbon","w:live","w:m","w:make","w:me","w:mean","w:milk","w:minutes","w:monday","w:morning","w:much","w:mum","w:munich","w:my","w:name","w:need","w:next","w:now","w:nudge","w:october","w:of","w:oil","w:on","w:paris","w:perfect","w:ping","w:plants","w:please","w:ptilu","w:remember","w:remind","w:reminder","w:review","w:s","w:sam","w:say","w:seconds","w:set","w:shenzhen","w:show","w:skills","w:start","w:t","w:technique","w:tell","w:thank","w:thanks","w:that","w:the","w:there","w:this","w:time","w:timer","w:to","w:today","w:tomorrow","w:tonight","w:two","w:very","w:vision","w:water","w:what","w:where","w:which","w:who","w:why","w:you"],"idf":"aJebQMh/rUDIf61AhVGXQGiXm0CFUZdAJWmFQIVRl0DIf61AyH+tQDaGoECFUZdANoagQMpbpkB5tLZA81eKQMh/rUDIf61AyH+tQMh/rUBol5tAJWmFQHm0tkA9yIdAyH+tQGiXm0DIf61AebS2QMh/rUB5tLZAaJebQKSMk0CMtmVAebS2QPUzg0ABokdAyH+tQMpbpkB5tLZApIyTQMh/rUDKW6ZABqU6QMh/rUDKW6ZAebS2QGiXm0AbAUNAvyCNQHm0tkDIf61AebS2QHm0tkBCI4FANoagQGiXm0DKW6ZAhVGXQPUzg0DIf61AhVGXQD1lfkA2hqBAaJebQHm0tkBol5tAebS2QIVRl0CFUZdAhVGXQIVRl0B5tLZAylumQHm0tkDIf61AylumQKSMk0B5tLZAyH+tQMpbpkDIf61AebS2QHm0tkCFUZdAebS2QGiXm0Bol5tAebS2QMh/rUCFUZdAebS2QHm0tkB5tLZAebS2QMh/rUD1M4NApIyTQMpbpkB5tLZAebS2QIVRl0DKW6ZAyH+tQHm0tkB5tLZApIyTQHm0tkB5tLZAJWmFQHm0tkDIf61ANoagQCVphUDIf61AebS2QMh/rUCHLZBAebS2QMh/rUDIf61AyH+tQMh/rUDKW6ZA81eKQCffcEDIf61AO2BOQHm0tkB5tLZAylumQIctkEB5tLZAaJebQMh/rUDIf61AyH+tQL8gjUAlaYVAebS2QHm0tkB5tLZAylumQHm0tkB5tLZAJWmFQKSMk0A2hqBAebS2QIVRl0DKW6ZAebS2QMh/rUDIf61AyH+tQMh/rUB5tLZAebS2QD1lfkDIf61AebS2QMh/rUAlaYVAhVGXQKSMk0DIf61AebS2QPNXikA2hqBAaJebQGiXm0CHLZBAhVGXQMh/rUDzV4pAebS2QMh/rUB5tLZAylumQD1lfkDIf61AebS2QHm0tkB5tLZAaJebQMh/rUB5tLZAyH+tQKGCREDKW6ZANoagQHm0tkB5tLZAvyCNQHm0tkDIf61AebS2QPjkbUDKW6ZA81eKQGiXm0DIf61AyH+tQHm0tkBol5tAyH+tQHm0tkB5tLZAylumQCffcECFUZdAylumQMpbpkB5tLZAhy2QQKSMk0C/II1ApIyTQMh/rUD45G1AebS2QMh/rUDIf61AyH+tQMh/rUD1M4NA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yH+tQMh/rUDIf61AyH+tQMh/rUCkjJNApIyTQMpbpkDKW6ZAylumQMpbpkDKW6ZAyH+tQMh/rUAp8ldAKfJXQPNXikDzV4pAJWmFQMh/rUA2hqBANoagQHm0tkCkjJNApIyTQMh/rUDIf61A9TODQPUzg0DIf61AebS2QMh/rUDIf61APWV+QD1lfkDKW6ZAebS2QHm0tkDIf61AyH+tQD3Ih0A9yIdAGG00QIf+c0DJLVBA+ORtQBhtNEDzV4pAGwFDQMpbpkDKW6ZA60Z3QOtGd0B5tLZAwbx6QMG8ekA2hqBANoagQMpbpkDKW6ZAJbA+QMh/rUDIf61AyH+tQMh/rUDFdV5AebS2QHm0tkB5tLZAQiOBQEIjgUDIf61APWV+QMh/rUDIf61AyH+tQMh/rUAlaYVAJWmFQKSMk0DIf61AyH+tQPjkbUD45G1AylumQMpbpkDKW6ZAebS2QHm0tkDIf61AvyCNQIctkEDKW6ZAylumQKSMk0DIf61ANoagQHm0tkB5tLZAebS2QHm0tkDKW6ZAyH+tQKSMk0CFUZdAPWV+QHZAM0B5tLZAebS2QMh/rUDIf61AebS2QHm0tkDIf61AyH+tQMh/rUDKW6ZAebS2QD3Ih0A9yIdAPciHQIctkECHLZBAv2r3PzaGoEDIf61AebS2QIctkECHLZBAyH+tQMh/rUDJLVBAyS1QQD1lfkA9ZX5AtQMiQBhtNEDBvHpAPWV+QD1lfkA2hqBAebS2QMh/rUDKW6ZAylumQGiXm0Bol5tAebS2QHm0tkDrRndAQiOBQEIjgUB5tLZAQiOBQD1lfkA9ZX5AGwFDQBsBQ0CFUZdAhVGXQMpbpkDKW6ZAylumQIVRl0CFUZdAh/5zQMpbpkDKW6ZAyH+tQHm0tkDzV4pA81eKQMpbpkDKW6ZAylumQMpbpkDIf61AyH+tQDaGoECFUZdAhVGXQHm0tkCH/nNAh/5zQKSMk0BCI4FAQiOBQHm0tkB5tLZAyH+tQPjkbUD45G1AyH+tQMh/rUDBvHpAwbx6QHm0tkB5tLZAyH+tQMh/rUDIf61AyH+tQMpbpkC/II1AvyCNQDaGoEA2hqBAJWmFQHm0tkB5tLZAyH+tQMh/rUB5tLZAyH+tQDaGoEDKW6ZAyH+tQMh/rUBUn0xAqwxrQD1lfkBol5tAvyCNQL8gjUDKW6ZAylumQMh/rUDIf61AxXVeQMG8ekDBvHpAebS2QHm0tkB5tLZAylumQMpbpkDIf61AyH+tQMh/rUChgkRAebS2QHm0tkBCI4FAQiOBQNTxU0DBvHpAQiOBQN6uLUDeri1AtwhSQD1lfkA9ZX5AebS2QMh/rUDIf61AylumQMh/rUDIf61AyH+tQF9TaED45G1AvyCNQIctkECFUZdAPciHQD3Ih0DKW6ZAylumQMpbpkDKW6ZAyH+tQD1lfkDzV4pAvyCNQHm0tkB9jypAhy2QQBhtNEB5tLZAyH+tQMh/rUDIf61AyH+tQMG8ekDBvHpApIyTQKSMk0DIf61AyH+tQHm0tkB5tLZAyH+tQMh/rUDKW6ZAyH+tQMpbpkDKW6ZAPWV+QPUzg0B5tLZApIyTQKSMk0DIf61AyH+tQHm0tkB5tLZAyH+tQMh/rUA9yIdAaJebQGiXm0B5tLZAebS2QPQzY0CMtmVAyH+tQHm0tkB5tLZAebS2QMh/rUDIf61AebS2QMh/rUDIf61AhVGXQMG8ekD1M4NAyH+tQMh/rUD1M4NA9TODQHm0tkB5tLZAQiOBQEIjgUAp8ldAylumQMpbpkChgkRAoYJEQMpbpkDIf61AjLZlQKsMa0DrRndAwbx6QHm0tkBCI4FA81eKQGiXm0DsKxVAGyYYQMpbpkA9yIdApIyTQMpbpkAlaYVAPciHQBhtNEAYbTRAebS2QHm0tkAp8ldAyH+tQMh/rUC/II1AvyCNQMh/rUDIf61AvyCNQL8gjUB5tLZAebS2QF9TaECkjJNApIyTQMpbpkDKW6ZAylumQMpbpkDKW6ZAebS2QHm0tkBol5tAebS2QHm0tkBCI4FAQiOBQMG8ekDIf61AebS2QEIjgUBCI4FA3q4tQMG8ekDBvHpAPWV+QMpbpkCH/nNAvyCNQL8gjUDIf61AyH+tQMh/rUDIf61A+ORtQPjkbUB5tLZAebS2QN6uLUDeri1AaJebQDaGoEDIf61AyH+tQMpbpkDKW6ZAyH+tQMh/rUA9ZX5ApIyTQHm0tkB5tLZAhVGXQMh/rUDIf61AGwFDQKGCRECkjJNApIyTQHm0tkB5tLZAaJebQIVRl0DIf61AyH+tQGiXm0CFUZdAuCEhQN6uLUCFUZdAQiOBQHm0tkBol5tAebS2QD3Ih0DIf61AebS2QD1lfkA9yIdAebS2QPNXikB5tLZAQiOBQIVRl0AlaYVAhVGXQDaGoEDIf61APciHQDaGoEDIf61AylumQMpbpkCkjJNAhVGXQJ7JYEA9ZX5ApIyTQMh/rUDIf61AylumQHm0tkDIf61AyH+tQMpbpkDIf61AyH+tQMh/rUBCI4FAQiOBQIctkECMtmVAh/5zQAGiR0DFdV5AyH+tQCVphUDIf61AebS2QMh/rUB5tLZAyH+tQIVRl0DKW6ZAPciHQFOaD0DIf61APWV+QMG8ekA9ZX5AebS2QMpbpkBol5tAebS2QOtGd0BCI4FAyH+tQIVRl0Bol5tAyH+tQMh/rUAlaYVAebS2QKsMa0DIf61AyH+tQMh/rUD45G1Ahy2QQD3Ih0CHLZBA81eKQBsBQ0DIf61A60Z3QMh/rUB5tLZAaJebQIy2ZUB5tLZAebS2QHm0tkD1M4NAyH+tQMpbpkChgkRAylumQIVRl0Bol5tAGyYYQMh/rUDKW6ZAh/5zQMktUECeyWBAvyCNQMh/rUC/II1ApIyTQHm0tkDIf61A+ORtQN6uLUA2hqBAyH+tQMpbpkDIf61AoYJEQA==","scale":0.026766252194641092,"weights":"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","intercept":[0.4379,-0.532,-0.5426,-0.3221,0.5746,-0.4137,1.0941,-0.5507,-0.1525,-0.0326,0.1251,0.1531,0.1614],"labels":["O"],"state":{},"trans":[[0]],"stats":{"examples":332,"features":1234,"weights_kept":3388,"weights_total":16731,"prune":0.2,"slot_prune":0.2,"lbfgs_iterations":51,"slot_iterations":0,"train_seconds":0.2,"intent_seconds":0.2,"slot_seconds":0}};
+</script>
+<script>
+const store = { get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const packs = EngineLoad.fromFiles(FILES);
+const memory = store.get("ptilu.engine.me") || {};
+const engine = new EngineCore.Engine({ skills: packs.skills, talk: packs.talk, memory,
+  content: packs.docs.length ? new EngineContent.Content(packs.docs, packs.talk.small, packs.topics) : null,
+  model: new NLURuntime.NLU(MODEL) });
+const taught = store.get("ptilu.engine.taught") || [];
+for (const t of taught) EngineLearn.teach(engine, t.sentence, t.skill, t.marks);
+const retrain = () => { engine.model = new NLURuntime.NLU(NLUTrainer.train(EngineTrain.examples(packs), { log: () => {} })); };
+if (taught.length) retrain();
+
+const $ = s => document.querySelector(s), log = $("#log");
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+function say(text) {
+  const me = el("div", "turn me", text); log.append(me);
+  const r = engine.respond(text);
+  store.set("ptilu.engine.me", engine.memory);
+  const t = el("div", "turn"); t.append(el("div", "", r.say));
+  t.append(el("div", "why", `${r.outcome} · ${r.why || ""}${r.command ? " → " + r.command : ""}${r.source ? " · from " + r.source : ""}`));
+  if (r.chips && r.chips.length) { const c = el("div", "chips"); for (const x of r.chips) { const b = el("button", "", x); b.onclick = () => say(x); c.append(b); } t.append(c); }
+  log.append(t); log.scrollTop = log.scrollHeight;
+}
+$("form.say").onsubmit = e => { e.preventDefault(); const v = $("#q").value.trim(); if (v) say(v); $("#q").value = ""; };
+$("#tab").onclick = () => { document.body.classList.toggle("inbox"); $("#tab").textContent = document.body.classList.contains("inbox") ? "Chat" : "Inbox"; drawInbox(); };
+
+// the inbox: pick the skill a sentence meant, mark its values, and it's learned at once
+function drawInbox() {
+  const box = $("#inbox"); box.innerHTML = "";
+  if (!engine.inbox.length) box.append(el("p", "why", "Nothing waiting. What I can't do lands here, to be taught."));
+  for (const item of engine.inbox) {
+    const d = el("div", "item"); d.append(el("div", "", item.sentence), el("div", "why", item.why));
+    const sel = el("select"); sel.append(el("option", "", "teach it to…"));
+    for (const s of engine.skills) { const o = el("option", "", s.label); o.value = s.name; sel.append(o); }
+    const slots = el("div"), msg = el("div", "why");
+    sel.onchange = () => {
+      slots.innerHTML = "";
+      const s = engine.byName.get(sel.value); if (!s) return;
+      for (const slot of Object.keys(s.needs)) { const i = el("input"); i.placeholder = `${slot}: the words that are it`; i.dataset.slot = slot; slots.append(i); }
+      const b = el("button", "go", "Teach"); slots.append(b);
+      b.onclick = () => {
+        const marks = {};
+        for (const i of slots.querySelectorAll("input")) if (i.value.trim()) marks[i.dataset.slot] = i.value.trim();
+        const r = EngineLearn.teach(engine, item.sentence, sel.value, marks);
+        msg.textContent = r.ok ? "Learned: " + r.pattern : "Not learned: " + r.why;
+        if (r.ok) { taught.push({ sentence: item.sentence, skill: sel.value, marks }); store.set("ptilu.engine.taught", taught); retrain(); setTimeout(drawInbox, 900); }
+      };
+    };
+    const no = el("button", "", "not for me"); no.onclick = () => { engine.inbox.splice(engine.inbox.indexOf(item), 1); drawInbox(); };
+    d.append(sel, no, slots, msg); box.append(d);
+    if (item.suggest) { sel.value = item.suggest; sel.onchange(); }
+  }
+  if (taught.length) {
+    const lines = taught.map(t => `${t.skill}: ${(engine.byName.get(t.skill).patterns.find(p => p.quote === engine.clean(t.sentence)) || {}).pattern}  ← "${t.sentence}"`);
+    box.append(el("h3", "", "Taught on this phone"), el("pre", "", lines.join("\n") + "\n\nCopy these under ## Learned in each skill.md to keep them."));
+  }
+}
+say("hello");
+</script>
+</body>
+</html>
