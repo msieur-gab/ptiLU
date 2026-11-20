@@ -58,6 +58,7 @@ const packs = EngineLoad.fromFiles(FILES);
 const engine = new EngineCore.Engine({ skills: packs.skills, talk: packs.talk, memory: store.get("ptilu.engine.me") || {},
   content: packs.docs.length ? new EngineContent.Content(packs.docs, packs.talk.small, packs.topics) : null,
   model: new NLURuntime.NLU(MODEL) });
+if (MEANING && engine.content) engine.content.setMeaning(EngineContent.decodeMeaning(MEANING));
 const taught = store.get("ptilu.engine.taught") || [];
 for (const t of taught) EngineLearn.teach(engine, t.sentence, t.skill, t.marks);
 const taughtQ = store.get("ptilu.engine.taughtQ") || [];
@@ -103,20 +104,44 @@ function renderUser(text, typing) {
   return el;
 }
 
+// by meaning: the MiniLM worker, loaded the first time words find nothing (about 33 MB, then cached)
+let worker = null, waiting = new Map(), nextId = 0;
+function embed(text) {
+  if (!worker) {
+    worker = new Worker("meaning/worker.js");
+    worker.onmessage = e => { const w = waiting.get(e.data.id); if (w) { waiting.delete(e.data.id); w(e.data); } };
+  }
+  return new Promise(res => { const id = ++nextId; waiting.set(id, res); worker.postMessage({ id, type: "embed", text }); });
+}
+
 // the engine answers in a millisecond; a short pause, longer for a longer reply, makes it a conversation
 let busy = false;
 function send(text, instant = false) {
   text = String(text).trim();
   if (!text || busy) return false;
-  const r = engine.respond(text);
+  let r = engine.respond(text);
   store.set("ptilu.engine.me", engine.memory);
   updateCount();
-  const after = () => {};
-  if (instant) { renderAgent(renderUser(text, false), r); after(); return true; }
+  if (instant) { renderAgent(renderUser(text, false), r); return true; }
   busy = true;
   const el = renderUser(text, true);
-  const pause = 450 + Math.min(r.say.length * 6, 450) + Math.random() * 250;
-  setTimeout(() => { renderAgent(el, r); after(); busy = false; }, pause);
+  const t0 = Date.now();
+  const show = r2 => {
+    const pause = Math.max(0, 450 + Math.min(r2.say.length * 6, 450) + Math.random() * 250 - (Date.now() - t0));
+    setTimeout(() => { renderAgent(el, r2); updateCount(); busy = false; }, pause);
+  };
+  if (r.outcome === "abstain" && r.meaning && MEANING) {
+    const note = setTimeout(() => el.querySelector(".typing")?.setAttribute("title", "reading it by meaning"), 0);
+    const first = !worker;
+    if (first) el.insertAdjacentHTML("beforeend", `<div class="pending">reading it by meaning · loading the model once, about 33 MB</div>`);
+    embed(text).then(out => {
+      clearTimeout(note); el.querySelector(".pending")?.remove();
+      const m = out.ok ? engine.byMeaning(text, out.vec) : null;
+      show(m ? { ...m, why: `${m.why}${out.ms !== undefined ? ` · ${out.ms} ms` : ""}` } : r);
+    });
+    return true;
+  }
+  show(r);
   return true;
 }
 $("form").addEventListener("submit", e => { e.preventDefault(); if (send($("q").value)) $("q").value = ""; });

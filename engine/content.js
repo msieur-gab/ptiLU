@@ -113,6 +113,48 @@ class Content {
     return all.filter(x => x.score > 0.5).sort((a, b) => b.score - a.score)
       .filter(x => !seen.has(x.q.toLowerCase()) && seen.add(x.q.toLowerCase())).slice(0, n);
   }
+  // ---- by meaning (an embedding model, optional): what to embed, and the nearest by cosine ----
+  // the listed questions as they are; each passage with its file's title in front (my-agent's finding)
+  meaningItems() {
+    const out = [];
+    this.docs.forEach(d => d.questions.forEach(x => out.push({ key: `q|${d.id}|${x.q}`, text: x.q })));
+    for (const u of this.units) if (!u.question) {
+      const d = this.docs[u.di], s = d.sections[u.si];
+      out.push({ key: `p|${d.id}|${u.si}|${u.from}`, text: `${d.title}. ${s.heading}. ${s.sentences.slice(u.from, u.to).join(" ")}` });
+    }
+    return out;
+  }
+  setMeaning(m) { // { dims, keys: [...], vectors: Float32Array (keys.length × dims) }
+    this.meaning = m;
+    this.byKey = new Map(m.keys.map((k, i) => [k, i]));
+  }
+  // the nearest listed question and passage to a sentence's vector, each with its cosine
+  nearestByMeaning(vec, frame = null) {
+    const m = this.meaning;
+    if (!m) return null;
+    const all = m.keys.map((key, i) => {
+      let c = 0;
+      for (let j = 0; j < m.dims; j++) c += vec[j] * m.vectors[i * m.dims + j];
+      const id = key.split("|")[1];
+      if (frame && this.docs[frame.di].id === id) c += 0.02; // the window: the file the conversation is in, a little
+      return { key, score: c };
+    }).sort((a, b) => b.score - a.score);
+    const qs = all.filter(x => x.key.startsWith("q|")), ps = all.filter(x => x.key.startsWith("p|"));
+    // a listed question wins over a passage unless the passage is clearly nearer
+    const top = qs[0] && (!ps[0] || qs[0].score >= ps[0].score - 0.03) ? qs[0] : ps[0];
+    const seen = new Set();
+    return { top, questions: qs.filter(x => { const q = this.questionOf(x.key).toLowerCase(); return !seen.has(q) && seen.add(q); }).slice(0, 4) };
+  }
+  // answer the nearest item: a listed question's answer, or a passage from its best sentence
+  answerKey(key) {
+    const [kind, id, a, b] = key.split("|");
+    const di = this.docs.findIndex(d => d.id === id), d = this.docs[di];
+    if (kind === "q") { const q = d.questions.find(x => x.q === a); return q ? this.listed(di, q) : null; }
+    const s = d.sections[+a];
+    return this.reply(di, +a, ...this.from(s, +b), this.where(d, s));
+  }
+  questionOf(key) { const [kind, id, a] = key.split("|"); return kind === "q" ? a : null; }
+
   get questionsByFile() { return this.docs.map((d, di) => ({ di, title: d.title, questions: d.questions.map(x => x.q) })).filter(x => x.questions.length); }
 
   // a question taught from the inbox: it points to a passage of a file, as a `questions:` line would
@@ -278,4 +320,11 @@ class Content {
 
 }
 
-if (typeof module !== "undefined") module.exports = { Content, setOffTopic: n => { OFF_TOPIC = n; } };
+// engine/meaning.json (int8 vectors, one scale each) → what setMeaning takes
+function decodeMeaning(m) {
+  const bin = atob(m.int8), vectors = new Float32Array(bin.length);
+  for (let i = 0; i < bin.length; i++) { const b = bin.charCodeAt(i); vectors[i] = (b > 127 ? b - 256 : b) * m.scales[Math.floor(i / m.dims)]; }
+  return { dims: m.dims, keys: m.keys, vectors };
+}
+
+if (typeof module !== "undefined") module.exports = { Content, decodeMeaning, setOffTopic: n => { OFF_TOPIC = n; } };

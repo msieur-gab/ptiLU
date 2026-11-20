@@ -10,7 +10,8 @@ const mods = [["EngineText", "text.js"], ["EngineFiles", "files.js"], ["EnginePa
   ["EngineLearn", "learn.js"], ["EngineTrain", "train.js"]]
   .map(([name, f]) => `const ${name} = (() => { const module = { exports: {} };\n${here(f)}\nreturn module.exports; })();`).join("\n");
 const built = new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC";
-const data = `const BUILT = "${built}";\nconst FILES = ${JSON.stringify(files())};\nconst MODEL = ${here("model.json")};`;
+const meaning = fs.existsSync(path.join(__dirname, "meaning.json")) ? here("meaning.json") : "null"; // built by engine/meaning/embed.mjs
+const data = `const BUILT = "${built}";\nconst FILES = ${JSON.stringify(files())};\nconst MODEL = ${here("model.json")};\nconst MEANING = ${meaning};`;
 // the look is main's page, read from its template (web/template.html): one design system, not a copy of it
 const style = here("../web/template.html").match(/<style>([\s\S]*?)<\/style>/)[1];
 const page = here("page.html").replace("/*STYLE*/", () => style).replace("/*SCRIPTS*/", () => [raw, mods, data].join("\n").replace(/<\/script/g, "<\\/script"));

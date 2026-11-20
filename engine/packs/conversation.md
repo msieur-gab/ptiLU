@@ -44,6 +44,7 @@ A sentence starting with one of these is a question, and may be answered from th
 - unknown word: I don't know {word} yet. Do you want me to {label}?
 - ok no: OK, I won't. | Alright, never mind.
 - which one: {a}, or {b}?
+- do you mean: I'm not sure I have that. Do you mean one of these?
 - nothing written: I don't have anything written about that. | Nothing I've been given covers that.
 - no more: That's all I have written about {title}.
 - me name: You're {value}.

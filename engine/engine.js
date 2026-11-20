@@ -16,7 +16,9 @@ const P = typeof EnginePatterns !== "undefined" ? EnginePatterns : require("./pa
 const K = typeof EngineKinds !== "undefined" ? EngineKinds : require("./kinds.js");
 const S = typeof EngineSkills !== "undefined" ? EngineSkills : require("./skills.js");
 
-const SURE = 0.7, PROPOSE = 0.3; // below PROPOSE the model proposes nothing; the taught-words check guards what it does propose
+const SURE = 0.7, PROPOSE = 0.3;
+// cosines of the meaning model: chosen on my-agent's held-out questions (no off-topic one reaches floor)
+const MEANING = { floor: 0.42, sure: 0.55 }; // below PROPOSE the model proposes nothing; the taught-words check guards what it does propose
 
 class Engine {
   constructor({ skills, content = null, talk, model = null, memory = {}, now = () => new Date(), random = Math.random }) {
@@ -188,11 +190,29 @@ class Engine {
         this.say("unknown word", { word: unknown.slice(0, 2).map(w => `“${w}”`).join(", "), label: skill.label }));
     }
     const why = intent ? `model ${conf.toFixed(2)} (${intent}), nothing in the content` : "nothing read it";
+    // with a meaning model, the host may still ask it (byMeaning) before this "I can't" stands
+    const meaning = !!(this.content && this.content.meaning);
     if (this.content && isQuestion) {
       this.inbox.push({ sentence, why, on: this.now().toISOString().slice(0, 10) });
-      return this.turn("abstain", this.say("nothing written"), { why });
+      return this.turn("abstain", this.say("nothing written"), { why, meaning });
     }
-    return this.abstain(sentence, why);
+    return { ...this.abstain(sentence, why), meaning };
+  }
+
+  // after an "I can't" on the content, by meaning (an embedding model the host runs): sure enough, the
+  // nearest answer; less sure, "Do you mean…?" with the nearest listed questions, for the person to pick;
+  // below that, the "I can't" stands. The model only finds; the answer is still the files' own words
+  byMeaning(sentence, vec) {
+    const n = this.content && this.content.nearestByMeaning(vec, this.frame && this.frame.kind === "content" ? this.frame : null);
+    if (!n || !n.top) return null;
+    const drop = () => { this.inbox = this.inbox.filter(e => e.sentence !== sentence); };
+    if (n.top.score >= MEANING.sure) {
+      const r = this.content.answerKey(n.top.key);
+      if (r) { drop(); this.frame = r.frame; return this.turn("act", r.say, { source: r.source, chips: r.chips, why: `meaning ${n.top.score.toFixed(2)}` }); }
+    }
+    const qs = n.questions.filter(x => x.score >= MEANING.floor);
+    if (qs.length) return this.turn("ask", this.say("do you mean"), { chips: qs.map(x => this.content.questionOf(x.key)), why: `meaning ${qs[0].score.toFixed(2)}, not sure` });
+    return null;
   }
 
   confirm(skill, values, why, sentence, unsure, say) {
@@ -278,4 +298,4 @@ class Engine {
   }
 }
 
-if (typeof module !== "undefined") module.exports = { Engine, SURE, PROPOSE };
+if (typeof module !== "undefined") module.exports = { Engine, SURE, PROPOSE, MEANING };

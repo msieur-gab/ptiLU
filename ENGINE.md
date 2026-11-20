@@ -212,6 +212,24 @@ talk's speaker notes, adapted for reading), copied word for word into one Markdo
 questions, each pointing with `see:` to the sentence where its answer starts. All 25 land on their
 passage. The questions are Claude's suggestions; the answers are only Gab's sentences.
 
+## By meaning (MiniLM), 20 November
+
+When words find nothing, the page asks a small embedding model, all-MiniLM-L6-v2 (8-bit, 23 MB, the
+files and the worker pattern of my-agent's `feat/nlu` branch), loaded the first time it is needed and
+served from this site. It compares the question with every listed question and passage, embedded at
+build time (`engine/meaning/embed.mjs` → `engine/meaning.json`, 451 items, 243 KB).
+
+- **Sure (cosine 0.55 or more):** the nearest listed question's answer, or the nearest passage.
+- **Less sure (0.42 to 0.55):** "Do you mean one of these?" with the nearest listed questions, to tap.
+- **Below:** the "I can't" stands. The model only finds; the answer is still the files' own words.
+
+Measured with `engine/meaning/check.mjs` on my-agent's held-out questions, through the whole engine:
+48 of 56 right (39 by words, 9 by meaning), 4 "do you mean", 3 nothing, 1 wrong (by words, a ptiLU
+document); none of the 25 off-topic questions answered; 1 request answered by meaning ("can you build our
+mobile app" → Pebbble, at 0.55). Gab's two sentences: "launching without advertising" → Vrooom's growth
+passage; "data hosted outside the European Union" → "Do you mean: Can we use our customer data with AI and
+stay GDPR-compliant?". The thresholds were chosen on this same set.
+
 ## The page
 
 Main's page, its look read straight from `web/template.html` at build time (one design system, not a
