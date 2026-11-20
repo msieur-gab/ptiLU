@@ -248,6 +248,15 @@ stay GDPR-compliant?". The thresholds were chosen on this same set.
   when no skill claims it and it says enough (4 words that carry meaning); a sentence that starts with a
   command word never does.
 
+### Gab's own sentences as tests
+
+`engine/tests/real.md`: sentences Gab typed on the phone, with where each must (or must not) land; replayed
+by `node engine/test.js` every time. First catch: "how much data privacy is influencing your design
+process?" got AutoFlow's written answer from two keywords ("data", "privacy"), let through by the easier
+bar for long questions added the same morning. A file's keyword list now needs three words in common, or
+most of the question. That sentence now finds nothing by words, and by meaning gets "Do you mean: How do we
+see where personal data flows in our organisation?"
+
 ## The page
 
 Main's page, its look read straight from `web/template.html` at build time (one design system, not a

@@ -213,7 +213,11 @@ class Content {
     // a long question ("we are building a due diligence platform but users complain…") says much around its
     // topic: on the topic, a third of its words is enough
     const onTopicBar = hit.asked >= 5 ? 0.33 : 0.45;
+    // a file's keyword list is a weak witness: two keywords in common ("data", "privacy") don't make a question
+    // about that piece ("how much is data privacy influencing your design process?"); it needs three, or most
+    // of the question, and the easier bar for long questions is for passages only
     const pass = onlyQuestions ? hit.coverage >= 0.75 && hit.found >= 2
+      : hit.piece ? hit.found >= 3 || hit.coverage >= 0.6
       : (hit.onTopic && hit.coverage >= onTopicBar && hit.found >= 2) || (hit.onTopic && hit.coverage >= 0.45) || (hit.found >= OFF_TOPIC && hit.coverage >= 0.6);
     if (!pass) return null;
     const d = this.docs[hit.di];

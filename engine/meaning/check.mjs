@@ -21,7 +21,8 @@ const gab = ['is it a problem to have data hosted outside of European union',
   'we are launching a new product but would like to evaluate doing the launch without advertising',
   'we are building a due diligence platform but all users complain that is very hard to organize the fire. how will you approach such a problem?',
   'we are building a jewel diligence platform and research for designer. are you working on that',
-  'we need help to design a due diligence plate-forme'];
+  'we need help to design a due diligence plate-forme',
+  'how much data privacy is influencing your design process?'];
 for (const s of gab) { const r = await ask(make(), s); console.log(`> ${s}\n  [${r.by} · ${r.outcome} · ${r.why}] ${r.say.slice(0, 110)}${r.chips && r.chips.length ? '\n  chips: ' + r.chips.join(' | ') : ''}`); }
 const H = path.join(here, '../../../my-agent/tests/held-out.json');
 if (fs.existsSync(H)) {

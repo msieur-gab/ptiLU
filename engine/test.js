@@ -116,6 +116,20 @@ console.log(`review conversations (${rv.length}): ${tally(rv)}`);
   else console.log(`content teaching: "is ptilu heavy?" now finds its passage`);
 }
 
+// ---- 7. real sentences Gab typed (engine/tests/real.md): where each must, or must not, land
+{
+  const lines = fs.readFileSync(path.join(__dirname, "tests/real.md"), "utf8").split("\n").filter(l => /^- .+ → /.test(l));
+  let bad = 0;
+  for (const l of lines) {
+    const [, said, want] = l.match(/^- (.+) → (.+)$/);
+    const e = fresh(), r = e.respond(said);
+    const got = r.source && e.frame && e.frame.kind === "content" ? e.content.docs[e.frame.di].id : "nothing";
+    const ok = want.startsWith("not ") ? got !== want.slice(4) : got === want;
+    if (!ok) { bad++; console.log(`FAIL real: "${said}" → ${got} (want ${want}) · ${r.say.slice(0, 60)}`); }
+  }
+  if (bad) failed++; else console.log(`real sentences: ${lines.length}, all where they belong`);
+}
+
 const wrong = [...all, ...rv, ...others].filter(r => r[2] === "wrong").length;
 if (wrong) { failed++; console.log(`FAIL: ${wrong} wrong actions`); }
 process.exit(failed ? 1 : 0);
