@@ -312,6 +312,42 @@ defensible: "Can a product work without an account?" → Vrooom). But on questio
 ("When could you start?", "How much does a project cost?", "What tools do you use?"), where the site should
 invite the visitor to write, it answers 11 of 40 with a loosely related passage; the live site, 1.
 
+## What TermNL's latest teaches, tried (20 November, branch `engine-shared-words`)
+
+Gab: "run the test you think is the most promising, not directly on the main branch". Four changes, each
+measured alone against `engine` (8ae35cc) on 336 sentences, sentence by sentence: every `tests.md`, main's
+held-out set, and my-agent's 101 held-out questions.
+
+| | what it does | changed | kept? |
+|---|---|---|---|
+| A word another skill uses isn't new (TermNL, 31 Oct, its 0.8) | the taught-words check accepts any skill's word when the model is sure | 0 at 0.8, +1 at 0.7 | no: almost every miss is a word *no* skill was taught ("hey", "yet", "info", "14th") |
+| Small talk when sure | greet, thanks, help say it at 0.8 or more even with an untaught word | +3, none lost | **yes** |
+| The skill before the content | a skill the model proposes, with untaught words, is offered before the content is searched | 2 quotes become a question, none lost | **yes** |
+| Reading skills answer when sure | check-time, check-date answer at 0.8 despite an untaught word | +5 "right", 4 of them wrong answers | no |
+
+The four kept out: "what time is it in Tokyo" and "…over in Seoul" gave the time here, "what day is the 14th"
+and "what date is next thursday" gave today. `test.js` counts them right because the right skill acted: it
+measures the skill, not the answer. TermNL found the same on 24 October ("should reading ever ask first?").
+
+The two quotes it ends: "what date is next thursday" answered with ptiLU's date-parser passage, "what's the
+date in two weeks" with Dowgo's "two weeks from first conversation to working code". Both now ask "Do you
+want me to tell the date?". `test.js` counted them as "I can't".
+
+Kept together, against `engine`: 5 of 336 change, all better. `tests.md` 33 → 35 right, main's held-out
+29 → 30 right and 8 → 5 "I can't"; my-agent's questions unchanged (`check.mjs` identical).
+
+Seen on the way, not fixed:
+- **The content answers what it doesn't hold**, the same thing as the 11 of 40 above. On held-out.json's 10
+  near-misses (a covered topic, a fact the texts don't give: "how many employees does Dowgo have", "how much
+  did it cost to build Senz"), 9 get a quote, by words or by meaning. MiniLM's best cosine on them is 0.56 to
+  0.78; on the answerable ones the median is 0.74; off-topic stays under 0.40. Similarity finds the topic, so
+  no bar on it can tell "on the topic" from "answers it". What reads the question and the passage together
+  is a cross-encoder reranker (ms-marco-MiniLM-L6-v2, about 15 MB in 8-bit, on the ONNX runtime already
+  served): the next thing to try. TermNL hands the same sentences to the desk's Ask service, so it has the
+  same gap.
+- "what's the clock saying" and "what commands do you understand" still get a quote: the model proposes no
+  skill above 0.3.
+
 ## The page
 
 Main's page, its look read straight from `web/template.html` at build time (one design system, not a

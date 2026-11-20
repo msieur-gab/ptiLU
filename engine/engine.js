@@ -17,6 +17,7 @@ const K = typeof EngineKinds !== "undefined" ? EngineKinds : require("./kinds.js
 const S = typeof EngineSkills !== "undefined" ? EngineSkills : require("./skills.js");
 
 const SURE = 0.7, PROPOSE = 0.3;
+const CLEAR = 0.8; // small talk this sure says hello or thank you even with a word it wasn't taught ("great job thanks")
 // cosines of the meaning model: chosen on my-agent's held-out questions (no off-topic one reaches floor)
 const MEANING = { floor: 0.42, sure: 0.55, skill: 0.6 }; // below PROPOSE the model proposes nothing; the taught-words check guards what it does propose
 
@@ -182,6 +183,11 @@ class Engine {
       }
       const own = this.vocab.get(skill.name);
       unknown = T.words(left).filter(w => !this.talk.small.has(w) && !own.has(w) && ![...own].some(o => T.close(w, o)));
+      // small talk, when the model is clear: an untaught word doesn't stop it. A skill that only reads still
+      // asks: answered anyway, "what time is it in Tokyo" gave the time here and "what day is the 14th" today
+      if (unknown.length && conf >= CLEAR && skill.role) {
+        return this.next(skill, values, `model ${conf.toFixed(2)} (${skill.name}), clear; untaught: ${unknown.join(", ")}`, sentence);
+      }
       if (!unknown.length) {
         const why = `model ${conf.toFixed(2)} (${skill.name}), every word taught`;
         if (conf < SURE && skill.acts) return this.confirm(skill, values, why, sentence, true);
@@ -197,13 +203,12 @@ class Engine {
     // carry meaning); a command ("move ideas to documnet", "create a folder…") never is
     const told = !skill && !this.talk.commands.includes(ws[0]) && T.words(sentence).filter(w => !this.talk.small.has(w)).length >= 4;
     const isQuestion = (intent === "ask" && conf >= SURE) || this.asked || this.talk.questions.includes(ws[0]) || told;
+    // a skill the model proposes, with a word it wasn't taught, is offered before the content is searched:
+    // "what's the date in two weeks" is a date, not Dowgo's "two weeks from first conversation"
+    if (skill && !skill.role && unknown && unknown.length) return this.unsure(skill, values, conf, unknown, sentence, "before the content");
     if (this.content) {
       const r = this.content.answer(sentence, this.frame && this.frame.kind === "content" ? this.frame : null, !isQuestion);
       if (r) { this.frame = r.frame; return this.turn("act", r.say, { source: r.source, chips: r.chips, why: isQuestion ? "content" : "content, a question it lists" }); }
-    }
-    if (skill && unknown && unknown.length && !skill.role) {
-      return this.confirm(skill, values, `model ${conf.toFixed(2)} (${skill.name}), untaught: ${unknown.join(", ")}`, sentence, true,
-        this.say("unknown word", { word: unknown.slice(0, 2).map(w => `“${w}”`).join(", "), label: skill.label }));
     }
     const why = intent ? `model ${conf.toFixed(2)} (${intent}), nothing in the content` : "nothing read it";
     // with a meaning model, the host may still ask it (byMeaning) before this "I can't" stands
@@ -285,6 +290,11 @@ class Engine {
     });
   }
 
+  // a skill the model proposes, with words it wasn't taught: "I don't know “clock” yet. Do you want me to…?"
+  unsure(skill, values, conf, unknown, sentence, note = "") {
+    return this.confirm(skill, values, `model ${conf.toFixed(2)} (${skill.name}), ${note ? note + "; " : ""}untaught: ${unknown.join(", ")}`, sentence, true,
+      this.say("unknown word", { word: unknown.slice(0, 2).map(w => `“${w}”`).join(", "), label: skill.label }));
+  }
   confirm(skill, values, why, sentence, unsure, say) {
     this.pending = { type: "confirm", skill, values, why, sentence, unsure };
     return this.turn("ask", say || this.say("not sure", { label: skill.label }), { chips: this.talk.chips, skill: skill.name, texts: this.texts(values), why });
