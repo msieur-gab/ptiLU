@@ -2,35 +2,50 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ptiLU engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-  :root { --bg: #f6f4ef; --ink: #1d1c1a; --soft: #77736b; --line: #dcd7cc; --me: #e8e3d8; --accent: #3b5b4a; }
-  @media (prefers-color-scheme: dark) { :root { --bg: #171716; --ink: #ecebe6; --soft: #9a968d; --line: #33322f; --me: #26251f; --accent: #8fb89f; } }
-  * { box-sizing: border-box; }
-  body { margin: 0; font: 16px/1.45 system-ui, sans-serif; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; height: 100dvh; }
-  header { display: flex; gap: 1rem; align-items: baseline; padding: .8rem 1rem; border-bottom: 1px solid var(--line); }
-  header b { font-weight: 600; } header button { margin-left: auto; }
-  main { flex: 1; overflow-y: auto; padding: 1rem; }
-  .turn { margin: 0 0 .9rem; max-width: 38rem; }
-  .me { margin-left: auto; background: var(--me); padding: .45rem .75rem; border-radius: .8rem; width: fit-content; }
-  .why { color: var(--soft); font-size: .78rem; margin-top: .2rem; }
-  .chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .4rem; }
-  button { font: inherit; font-size: .9rem; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 1rem; padding: .25rem .7rem; }
-  button.go { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-  form.say { display: flex; gap: .5rem; padding: .7rem 1rem; border-top: 1px solid var(--line); }
-  form.say input { flex: 1; font: inherit; padding: .55rem .8rem; border-radius: 1.2rem; border: 1px solid var(--line); background: transparent; color: var(--ink); }
-  #inbox { display: none; } body.inbox #inbox { display: block; } body.inbox #log, body.inbox form.say { display: none; }
-  .item { border-bottom: 1px solid var(--line); padding: .8rem 0; }
-  .item select, .item input { font: inherit; font-size: .9rem; margin: .3rem .3rem 0 0; padding: .2rem .4rem; background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: .3rem; }
-  pre { white-space: pre-wrap; font-size: .8rem; color: var(--soft); }
+/*STYLE*/
+/* the engine's own additions */
+.reply .src { display: block; margin-top: 6px; font: 11.5px var(--font-mono); color: var(--muted); }
+.chips .chip.follow { border-color: var(--fg); }
+.sheet[hidden], .count[hidden] { display: none; }
+.card select, .card input { font: 14px var(--font-ui); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
 </style>
 </head>
 <body>
-<header><b>ptiLU</b><span class="why">engine · <span id="built"></span></span><button id="tab">Inbox</button></header>
-<main id="log"></main>
-<main id="inbox"></main>
-<form class="say"><input id="q" placeholder="Ask or tell me something" autocomplete="off"><button class="go">Send</button></form>
+<div class="app">
+  <header>
+    <div class="top">
+      <h1>ptiLU<span id="ver"></span></h1>
+      <div class="actions">
+        <button class="ghost" id="inboxBtn" type="button">Inbox<span class="count" id="inboxCount" hidden></span></button>
+        <button class="ghost" id="reset" type="button">Clear</button>
+      </div>
+    </div>
+  </header>
+  <main class="log" id="log" aria-live="polite"></main>
+  <div class="composer">
+    <div class="chips" id="chips"></div>
+    <form id="form" autocomplete="off">
+      <input id="q" type="text" enterkeyhint="send" autocapitalize="none" spellcheck="false" placeholder="Ask or tell me something" aria-label="Ask or tell me something">
+      <button class="send" type="submit">Send</button>
+    </form>
+  </div>
+</div>
+
+<section class="sheet" id="sheet" hidden aria-label="Inbox">
+  <div class="sheet-head"><h2>Inbox</h2><button class="ghost" id="sheetClose" type="button">Close</button></div>
+  <div class="sheet-body">
+    <p class="hint">What I couldn't do, and what you said yes to without my knowing the words. Pick the skill it meant and mark its values: I learn it at once. Everything stays on this phone.</p>
+    <div id="waiting"></div>
+    <div class="learned"><h3>Taught on this phone</h3><pre class="rlog" id="learned"></pre></div>
+  </div>
+</section>
+
 <script>
 /*SCRIPTS*/
 </script>
@@ -38,8 +53,7 @@
 const store = { get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 const packs = EngineLoad.fromFiles(FILES);
-const memory = store.get("ptilu.engine.me") || {};
-const engine = new EngineCore.Engine({ skills: packs.skills, talk: packs.talk, memory,
+const engine = new EngineCore.Engine({ skills: packs.skills, talk: packs.talk, memory: store.get("ptilu.engine.me") || {},
   content: packs.docs.length ? new EngineContent.Content(packs.docs, packs.talk.small, packs.topics) : null,
   model: new NLURuntime.NLU(MODEL) });
 const taught = store.get("ptilu.engine.taught") || [];
@@ -47,53 +61,94 @@ for (const t of taught) EngineLearn.teach(engine, t.sentence, t.skill, t.marks);
 const retrain = () => { engine.model = new NLURuntime.NLU(NLUTrainer.train(EngineTrain.examples(packs), { log: () => {} })); };
 if (taught.length) retrain();
 
-const $ = s => document.querySelector(s), log = $("#log");
-const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
-function say(text) {
-  const me = el("div", "turn me", text); log.append(me);
+const $ = id => document.getElementById(id), log = $("log");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+$("ver").textContent = `engine · built ${BUILT}`;
+const EXAMPLES = engine.examples();
+
+// the chips: what can follow the last answer, else what it can do
+function chips(list, follow) {
+  $("chips").innerHTML = list.map((c, i) => `<button class="chip${follow ? " follow" : ""}" type="button" data-i="${i}">${esc(c)}</button>`).join("");
+  $("chips").querySelectorAll(".chip").forEach(b => b.addEventListener("click", () => send(list[+b.dataset.i])));
+  $("chips").scrollLeft = 0;
+}
+
+function row(k, v, cls = "") { return `<div class="row ${cls}"><span>${k}</span><span>${v}</span></div>`; }
+function renderAgent(el, r) {
+  el.querySelector(".typing")?.remove();
+  let t = row("outcome", esc(r.outcome), r.outcome === "abstain" ? "abstain" : "state") + row("why", esc(r.why || ""));
+  if (r.values && Object.keys(r.values).length) t += row("values", esc(Object.entries(r.values).map(([k, v]) => `${k}: ${v}`).join(" · ")));
+  if (r.command) t += row("exec", `$ ${esc(r.command)}<em>simulated</em>`, "exec");
+  if (r.source) t += row("from", esc(r.source));
+  const dot = r.outcome === "abstain" ? "skip" : r.outcome === "act" ? "" : "ask";
+  const icon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  el.insertAdjacentHTML("beforeend", `<div class="reply">${esc(r.say)}${r.source ? `<span class="src">${esc(r.source)}</span>` : ""}</div>`
+    + `<details class="why"><summary aria-label="Show what the engine did">${icon}<span class="dot ${dot}"></span>${esc(r.skill || (r.source ? "content" : r.outcome))}</summary><div class="trace">${t}</div></details>`);
+  log.scrollTop = log.scrollHeight;
+}
+function renderUser(text, typing) {
+  const el = document.createElement("section");
+  el.className = "turn";
+  el.innerHTML = `<div class="cmd">${esc(text)}</div>` + (typing ? `<div class="reply typing" aria-label="Typing"><span></span><span></span><span></span></div>` : "");
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el;
+}
+
+// the engine answers in a millisecond; a short pause, longer for a longer reply, makes it a conversation
+let busy = false;
+function send(text, instant = false) {
+  text = String(text).trim();
+  if (!text || busy) return false;
   const r = engine.respond(text);
   store.set("ptilu.engine.me", engine.memory);
-  const t = el("div", "turn"); t.append(el("div", "", r.say));
-  t.append(el("div", "why", `${r.outcome} · ${r.why || ""}${r.command ? " → " + r.command : ""}${r.source ? " · from " + r.source : ""}`));
-  if (r.chips && r.chips.length) { const c = el("div", "chips"); for (const x of r.chips) { const b = el("button", "", x); b.onclick = () => say(x); c.append(b); } t.append(c); }
-  log.append(t); log.scrollTop = log.scrollHeight;
+  updateCount();
+  const after = () => { chips(r.chips && r.chips.length ? r.chips : EXAMPLES, !!r.source); };
+  if (instant) { renderAgent(renderUser(text, false), r); after(); return true; }
+  busy = true;
+  const el = renderUser(text, true);
+  const pause = 450 + Math.min(r.say.length * 6, 450) + Math.random() * 250;
+  setTimeout(() => { renderAgent(el, r); after(); busy = false; }, pause);
+  return true;
 }
-$("form.say").onsubmit = e => { e.preventDefault(); const v = $("#q").value.trim(); if (v) say(v); $("#q").value = ""; };
-$("#tab").onclick = () => { document.body.classList.toggle("inbox"); $("#tab").textContent = document.body.classList.contains("inbox") ? "Chat" : "Inbox"; drawInbox(); };
+$("form").addEventListener("submit", e => { e.preventDefault(); if (send($("q").value)) $("q").value = ""; });
+$("reset").addEventListener("click", () => { log.innerHTML = ""; engine.pending = null; engine.frame = null; chips(EXAMPLES); $("q").focus(); });
 
-// the inbox: pick the skill a sentence meant, mark its values, and it's learned at once
+// the inbox: pick the skill a sentence meant, mark its values; it's learned at once and kept on this phone
+function updateCount() { const n = engine.inbox.length; $("inboxCount").hidden = !n; $("inboxCount").textContent = n; }
+$("inboxBtn").addEventListener("click", () => { $("sheet").hidden = false; drawInbox(); });
+$("sheetClose").addEventListener("click", () => { $("sheet").hidden = true; updateCount(); });
 function drawInbox() {
-  const box = $("#inbox"); box.innerHTML = "";
-  if (!engine.inbox.length) box.append(el("p", "why", "Nothing waiting. What I can't do lands here, to be taught."));
+  const box = $("waiting"); box.innerHTML = "";
+  if (!engine.inbox.length) box.innerHTML = `<div class="empty">Nothing waiting.</div>`;
   for (const item of engine.inbox) {
-    const d = el("div", "item"); d.append(el("div", "", item.sentence), el("div", "why", item.why));
-    const sel = el("select"); sel.append(el("option", "", "teach it to…"));
-    for (const s of engine.skills) { const o = el("option", "", s.label); o.value = s.name; sel.append(o); }
-    const slots = el("div"), msg = el("div", "why");
-    sel.onchange = () => {
-      slots.innerHTML = "";
-      const s = engine.byName.get(sel.value); if (!s) return;
-      for (const slot of Object.keys(s.needs)) { const i = el("input"); i.placeholder = `${slot}: the words that are it`; i.dataset.slot = slot; slots.append(i); }
-      const b = el("button", "go", "Teach"); slots.append(b);
-      b.onclick = () => {
+    const card = document.createElement("div"); card.className = "card";
+    card.innerHTML = `<p class="said">${esc(item.sentence)}</p><p class="meta">${esc(item.why)}</p>`
+      + `<div class="card-actions"><select><option value="">teach it to…</option>${engine.skills.map(s => `<option value="${s.name}">${esc(s.label)}</option>`).join("")}</select>`
+      + `<button class="btn quiet" type="button">not for me</button></div><div class="slots card-actions"></div><p class="meta msg"></p>`;
+    const sel = card.querySelector("select"), slots = card.querySelector(".slots"), msg = card.querySelector(".msg");
+    sel.addEventListener("change", () => {
+      const s = engine.byName.get(sel.value); slots.innerHTML = ""; if (!s) return;
+      for (const slot of Object.keys(s.needs)) slots.insertAdjacentHTML("beforeend", `<input data-slot="${slot}" placeholder="${slot}: the words that are it">`);
+      slots.insertAdjacentHTML("beforeend", `<button class="primary" type="button">Teach</button>`);
+      slots.querySelector(".primary").addEventListener("click", () => {
         const marks = {};
-        for (const i of slots.querySelectorAll("input")) if (i.value.trim()) marks[i.dataset.slot] = i.value.trim();
+        slots.querySelectorAll("input").forEach(i => { if (i.value.trim()) marks[i.dataset.slot] = i.value.trim(); });
         const r = EngineLearn.teach(engine, item.sentence, sel.value, marks);
         msg.textContent = r.ok ? "Learned: " + r.pattern : "Not learned: " + r.why;
         if (r.ok) { taught.push({ sentence: item.sentence, skill: sel.value, marks }); store.set("ptilu.engine.taught", taught); retrain(); setTimeout(drawInbox, 900); }
-      };
-    };
-    const no = el("button", "", "not for me"); no.onclick = () => { engine.inbox.splice(engine.inbox.indexOf(item), 1); drawInbox(); };
-    d.append(sel, no, slots, msg); box.append(d);
-    if (item.suggest) { sel.value = item.suggest; sel.onchange(); }
+      });
+    });
+    card.querySelector(".btn.quiet").addEventListener("click", () => { engine.inbox.splice(engine.inbox.indexOf(item), 1); drawInbox(); });
+    if (item.suggest) { sel.value = item.suggest; sel.dispatchEvent(new Event("change")); }
+    box.appendChild(card);
   }
-  if (taught.length) {
-    const lines = taught.map(t => `${t.skill}: ${(engine.byName.get(t.skill).patterns.find(p => p.quote === engine.clean(t.sentence)) || {}).pattern}  ← "${t.sentence}"`);
-    box.append(el("h3", "", "Taught on this phone"), el("pre", "", lines.join("\n") + "\n\nCopy these under ## Learned in each skill.md to keep them."));
-  }
+  $("learned").textContent = taught.length ? taught.map(t => `${t.skill}: "${t.sentence}"`).join("\n") + "\n\nCopy these under ## Learned in each skill.md to keep them." : "Nothing yet.";
 }
-document.getElementById("built").textContent = "built " + BUILT;
-say("what can you do");
+
+chips(EXAMPLES);
+send("what can you do", true);
+const d = document.createElement("div"); d.className = "divider"; d.textContent = "your turn"; log.appendChild(d);
 </script>
 </body>
 </html>

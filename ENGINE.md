@@ -202,6 +202,13 @@ Read honestly: the bars were chosen on this held-out set, so it is no longer bli
 written by Claude, not visitors. Without anything declared, it finds words, not concepts: "democratise
 prototyping" isn't found until a question is taught or a keyword written.
 
+## The page
+
+Main's page, its look read straight from `web/template.html` at build time (one design system, not a
+copy): the yellow and grey turns, the trace folded under each reply, the chips at the bottom, and the
+pause before a reply (about half a second, longer for a longer one) so it reads as a conversation. The
+chips are what can follow the last answer, else one example per skill and one question per file.
+
 ## Not done yet
 
 - Follow-ups carry only values with a shape (durations, dates): "and 5 minutes" works, "and for buy milk"
