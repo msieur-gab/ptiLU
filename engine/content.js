@@ -45,7 +45,8 @@ let OFF_TOPIC = 3; // words in common a passage needs when its file isn't about 
 class Content {
   constructor(docs, small, topics = []) {
     this.small = small;
-    this.topics = topics; // what the content is about, in a few words (pack.md `about:`) // words that carry no topic: "the", "what", "about"…
+    this.topics = topics; // what the content is about, in a few words (pack.md `about:`)
+    this.asked = new Set(); // the questions asked in this conversation // words that carry no topic: "the", "what", "about"…
     this.docs = docs.map(({ id, md }) => {
       const { meta, body } = F.frontMatter(md);
       const title = meta.title || (body.match(/^#\s+(.+)$/m) || [, id])[1];
@@ -157,6 +158,7 @@ class Content {
   // onlyQuestions: for a sentence that isn't asked as a question ("my daughter lives abroad"), only what a
   // file says it answers counts, never a passage that happens to share its words
   answer(question, frame = null, onlyQuestions = false) {
+    this.asked.add(T.words(question).join(" ")); // a listed question asked once isn't offered again
     const hit = this.search(question, frame, onlyQuestions);
     // the bar: most of what was asked is in one passage, or a little less when the passage is on the topic
     // (its file's title or topic words, its heading, or a question the file lists). One word in common is
@@ -233,9 +235,13 @@ class Content {
 
   reply(di, si, said, say, source) {
     const d = this.docs[di];
-    // what can follow: more of the same, the sections after this one (each opens where it starts), related files
-    const chips = ["tell me more", ...d.sections.slice(si + 1).filter(s => s.heading !== d.title).slice(0, 3).map(s => s.heading),
-      ...d.next.map(id => (this.docs.find(x => x.id === id) || {}).title).filter(Boolean)];
+    // what can follow: the questions the file lists (its `questions:` and `answers:`) that weren't asked yet,
+    // in the file's order; a file that lists none offers the sections after this one, each opening where it
+    // starts. Then "tell me more", and the related files
+    const asked = q => this.asked.has(T.words(q).join(" "));
+    const listed = d.questions.map(x => x.q).filter(q => !asked(q)).slice(0, 3);
+    const next = listed.length ? listed : d.sections.slice(si + 1).filter(s => s.heading !== d.title).slice(0, 3).map(s => s.heading);
+    const chips = [...next, "tell me more", ...d.next.map(id => (this.docs.find(x => x.id === id) || {}).title).filter(Boolean)];
     return { say, source, chips, frame: { kind: "content", di, si, said } };
   }
 

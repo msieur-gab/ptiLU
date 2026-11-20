@@ -178,7 +178,8 @@ when a follow-up comes". That is how it works now:
 - **The reply:** from the sentence of the passage that holds most of the question to the end of its
   paragraph (three sentences at most), with where it comes from. A `see:` points to where that starts.
   A line of numbers, a byline or HTML is never a sentence to answer with.
-- **The moving window:** the chips are "tell me more" and the sections that come next; a heading or a file's
+- **The moving window:** the chips are the questions the file lists that weren't asked yet (in the file's
+  order), else the sections that come next, then "tell me more"; a heading or a file's
   title, tapped or typed alone, opens it. "tell me more" goes on from the last sentence said; a follow-up question looks
   in the same file first, and the passage it's on and the ones beside it most.
 - **Teaching:** a question it had nothing for is pointed, from the inbox, to the passage that answers it.
