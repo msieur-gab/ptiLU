@@ -71,4 +71,21 @@ function findIn(kind, sentence, now) {
   return null;
 }
 
-if (typeof module !== "undefined") module.exports = { reader, findIn, sayDay, sayTime };
+// sample values of each kind: to write example sentences (the model's training, the "try saying" chips)
+const SAMPLES = {
+  "a duration": ["10 minutes", "an hour", "five minutes", "30 seconds", "2 hours", "twenty minutes"],
+  "a date and time": ["tomorrow at 9", "next friday at 3pm", "tonight", "in two hours", "on monday", "at 6pm"],
+  "a date": ["tomorrow", "next friday", "monday"],
+  "a name": ["Gab", "Eva", "Sam"], "a place": ["Munich", "Paris", "Kyoto"],
+  "some text": ["call mum", "buy milk", "water the plants"],
+};
+function samplesFor(skill) {
+  const out = {};
+  for (const [slot, need] of Object.entries(skill.needs)) {
+    const list = need.kind.match(/^one of:\s*(.+)$/);
+    out[slot] = skill.samples[slot] || (list ? list[1].split(/\s*,\s*/) : SAMPLES[need.kind]);
+  }
+  return out;
+}
+
+if (typeof module !== "undefined") module.exports = { reader, findIn, sayDay, sayTime, samplesFor };

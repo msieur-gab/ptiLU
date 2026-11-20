@@ -229,7 +229,8 @@ class Engine {
     if (command && command.startsWith("memory.")) { key = this.remember(skill.command, values, sentence) || key; command = null; }
     this.frame = { kind: "skill", skill: skill.name, values };
     const reply = T.pick(skill.replies[key] || skill.replies.done, this.random);
-    return this.turn("act", T.fill(reply, { ...said, ...this.readings(reply) }), { skill: skill.name, values: said, command, why, approved });
+    const chips = reply.includes("{@skills}") ? this.examples() : [];
+    return this.turn("act", T.fill(reply, { ...said, ...this.readings(reply) }), { skill: skill.name, values: said, command, why, approved, chips });
   }
 
   // what the engine keeps about you: each value with the sentence you said it in, refused if the
@@ -242,6 +243,17 @@ class Engine {
     if (!v || !String(sentence).toLowerCase().includes(String(v.text).toLowerCase())) return "refused";
     this.memory[key] = { value: v.said, quote: sentence, on: this.now().toISOString().slice(0, 10) };
     return null;
+  }
+
+  // what to try: one sentence per skill, from its first pattern, and one question per content file. The
+  // index of what it can do, shown rather than guessed at (Nod keeps one; ptiLU shows it as chips)
+  examples() {
+    const out = this.skills.filter(s => !s.role && s.patterns.length).map(s => P.expand(s.patterns[0], K.samplesFor(s), 1)[0]);
+    if (this.content) for (const d of this.content.docs) {
+      if (d.questions.length) out.push(d.questions[0].q);
+      else if (d.title.split(/\s+/).length <= 3) out.push(`what is ${d.title}`);
+    }
+    return [...new Map(out.map(x => [x.toLowerCase(), x])).values()];
   }
 
   said(values) { return Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v.said || v.text])); }

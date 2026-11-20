@@ -137,7 +137,9 @@ class Content {
       if (prefer && u.di === prefer.di) score *= Math.abs(u.si - prefer.si) <= 1 ? 1.6 : 1.3;
       // ranked by how much of the question a unit covers as much as by how strongly: a short question that
       // shares one word ("wants") mustn't beat a section that holds most of what was asked
-      const coverage = covered / total, rank = score * coverage;
+      const coverage = covered / total;
+      // a question a file lists (or was taught) asked word for word wins, wherever the conversation is
+      const rank = score * coverage * (u.question && coverage >= 0.9 ? 3 : 1);
       if (!best || rank > best.rank) best = { ...u, score, rank, coverage, onTopic, found, asked: q.length, q };
     }
     return best && best.score > 0 ? best : null;

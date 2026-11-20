@@ -4,25 +4,14 @@
 // optional parts on and off, every "Also said" line, the content's questions and headings, and each
 // pack's out-of-scope lines. No values to tag: values come from the patterns and their kinds.
 const P = typeof EnginePatterns !== "undefined" ? EnginePatterns : require("./patterns.js");
+const K = typeof EngineKinds !== "undefined" ? EngineKinds : require("./kinds.js");
 const { Content } = typeof EngineContent !== "undefined" ? EngineContent : require("./content.js");
-
-const KIND_SAMPLES = {
-  "a duration": ["10 minutes", "an hour", "five minutes", "30 seconds", "2 hours", "twenty minutes"],
-  "a date and time": ["tomorrow at 9", "next friday at 3pm", "tonight", "in two hours", "on monday", "at 6pm"],
-  "a date": ["tomorrow", "next friday", "monday"],
-  "a name": ["Gab", "Eva", "Sam"], "a place": ["Munich", "Paris", "Kyoto"],
-  "some text": ["call mum", "buy milk", "water the plants"],
-};
 
 function examples(packs) {
   const out = [];
   const add = (intent, text) => out.push({ intent, text, spans: [] });
   for (const s of packs.skills) {
-    const samples = {};
-    for (const [slot, need] of Object.entries(s.needs)) {
-      const list = need.kind.match(/^one of:\s*(.+)$/);
-      samples[slot] = s.samples[slot] || (list ? list[1].split(/\s*,\s*/) : KIND_SAMPLES[need.kind]);
-    }
+    const samples = K.samplesFor(s);
     for (const p of s.patterns) for (const t of P.expand(p, samples, 12)) add(s.name, t);
     for (const t of s.also) add(s.name, t);
   }
