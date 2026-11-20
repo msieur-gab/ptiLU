@@ -1,0 +1,175 @@
+# The ptiLU engine
+
+Branch `engine`, started 20 November 2026. Gab: "the engine is the correct direction", after reading how
+Nod (n8n Labs' personal agent) is built and setting it beside TermNL's skills. `main` is untouched: this
+is a new core in `engine/`, reusing what was measured and works (the model, the date parser).
+
+**What it is.** A teachable core that understands short requests and questions on the device, offline,
+with no generated text. It has no domain of its own: domains come as **packs** of plain Markdown files.
+Anyone retrains it by writing sentences.
+
+**The rule that keeps it honest.** The engine never exists without a real pack on it, tested on real
+conversations. The first two packs are `everyday` (time, timers, reminders, you) and `about` (questions
+about written content, with follow-ups: what my-agent was trying to do).
+
+## Four outcomes
+
+Every turn ends in one of four, as in TermNL:
+
+- **act**: understood and complete. A command runs, or an answer is given.
+- **ask**: a value is missing or unclear, or the request isn't surely understood.
+- **approve**: the action is risky; the person says yes first.
+- **abstain**: "I can't", said plainly. The sentence waits in the inbox to be taught.
+
+## What was borrowed, and from where
+
+**From Nod: a small index first, the detail on demand.** Every pack declares its skills in one line
+each (`does: set timer`, `label: set a timer`). The engine reads only that index to decide *where* a
+sentence goes: a skill, the content, or nowhere. Then it opens the one skill file it needs, for its
+values, questions and replies. Each pack owns its vocabulary, so the content doesn't blur the commands.
+
+**From Nod: memory and content without embeddings.** Found by word matching (BM25), always with its
+source. An answer is a sentence that exists in a file, never one composed by a model. What the engine
+keeps about you is stored only with the quote you said it in, and refused if the quote doesn't hold
+the value.
+
+**From Nod: learned skills.** A sentence taught in the inbox becomes a pattern with placeholders
+("remind me to {task} when I'm home"), written under `## Learned` in that skill's file, with the
+sentence it came from. It works at once, without retraining. Lines you write yourself under
+`## People say` are yours: the engine never changes them.
+
+**From TermNL: the skill file.** Action × object, "People say" patterns read exactly before any model,
+"What it needs" in plain words, replies with variants, a `tests.md` per skill of sentences never trained on.
+
+**From ptiLU main: the model and the date parser.** Patterns come first; when none reads the sentence,
+the trained model (TF-IDF + logistic regression, `web/trainer.js`) picks the skill. Measured on 20
+November on ptiLU's held-out sentences: the model 96.4%, nearest-sentence matching 89.7%. So the model
+stays as the fallback. Dates, times and durations come from `web/entities.js` (rule-based).
+
+**Not borrowed:** Nod's trust check exists in ptiLU already (`acts: yes`, `approve: yes`), and its LLM
+parts have no place here.
+
+## A skill file
+
+`engine/packs/<pack>/skills/<action-object>/skill.md`
+
+```markdown
+---
+does: set timer
+label: set a timer
+acts: yes          # changes something: when unsure, ask "Do you want me to…?" first
+approve: no        # yes: always ask first
+---
+What it does, for whoever reads this file.
+
+## People say
+- set a timer for {duration}
+- (start/set) (a/the) timer (for) {duration}
+
+## Also said
+- wake me in twenty minutes
+
+## What it needs
+- {duration}: a duration. If it's missing, ask: For how long? | How long should it run?
+
+## Does
+timer.start {duration}
+
+## Replies
+- done: Timer set for {duration}. | OK, {duration} on the clock.
+
+## Learned
+- give me {duration} on the clock  ← "give me 10 minutes on the clock" (2026-11-20)
+```
+
+Patterns: `(a/the)` is optional, `to/into` is one of, `{name}` is a value. Kinds of value: *a duration*,
+*a date and time*, *a date*, *a name*, *a place*, *some text*, *one of: low, medium, high*. A reply can
+read the device: `{@time}`, `{@date}`, `{@me.name}`.
+
+## A content pack
+
+`engine/packs/<pack>/pack.md` says `kind: content` and lists the files it reads. Any Markdown file works:
+headings make sections. A file can also say, in its front matter, which questions it answers:
+
+```markdown
+---
+title: ptiLU
+questions:
+- what is ptilu
+- why is it so small
+answer: A model of about 350 KB that understands short commands on the device, offline.
+next: engine
+---
+```
+
+A question matching one of those gets the written answer. Otherwise the best section answers with its
+first sentences and says where they come from. "Tell me more" continues the same section, then the next;
+"and how does it learn?" stays in the same file first. Nothing found: "I don't have anything written
+about that."
+
+## The budget
+
+The engine's own code (`engine/*.js`, without the packs, the tests and the reused model and date parser)
+stays under main's core: 1,009 lines in `web/agent.js`, `services.js`, `inbox.js` and `skills.js`. Every pack ships with tests of its own, and the conversations from
+`REVIEW-2026-10-21.md` that concern its skills are its acceptance test.
+
+## The model, rethought (20 November)
+
+Gab: "our current model was perhaps not trained in the best way or aligned with our new plan". Nod's
+lesson is that the model is the first layer, never the last. So:
+
+- **It only proposes where a sentence goes**: a skill, `ask` (the content), or `out_of_scope`. No slot
+  model: values come from the patterns and their kinds.
+- **It learns from the pack files alone**: every pattern with its optional parts on and off, every "Also
+  said" line, the content's questions and headings, the out-of-scope lines. 332 sentences, trained in
+  0.2 s, 29 KB (main: 6,286 sentences, about a minute, 358 KB). Teaching on the phone retrains it at once.
+- **A check decides**: the skill acts only if every word that isn't a value is one the skill was taught
+  (or one letter from one). Otherwise it asks, naming the word: "I don't know “clock” yet. Do you want me
+  to set a timer?" A yes puts the sentence in the inbox with that skill already picked.
+- **Small talk only when sure**: a model guess never says hello or thank you below 0.7.
+- **A command is never answered with a quote**: the content is searched only for a question (a question
+  word, a "?", or the model saying `ask`). "move ideas to documnet" is in the review word for word; it
+  isn't an answer to itself.
+
+## Where it stands (20 November)
+
+`node engine/test.js`:
+
+| | sentences | right | asked first | "I can't" | wrong action |
+|---|---|---|---|---|---|
+| dialogue scripts | 15 scripts | all pass | | | |
+| `tests.md`, every skill | 46 | 29 | 10 | 7 | 0 |
+| main's handwritten held-out, skills in the packs | 51 | 25 | 19 | 7 | 0 |
+| main's handwritten held-out, skills elsewhere (files, weather…) | 140 | 135 | 5 | | 0 |
+| the 21 October conversations | 6 | 5 | 1 | | 0 |
+
+Read honestly:
+- **It never did the wrong thing**, including "create a new seed.md inside ideas folder" and "xyzzy flurb
+  remind me plonk", the two that broke main.
+- **It asks much more than main.** Main's model gets 50 of those 51 intents right, but that is the intent
+  alone, with no check, from 6,286 training sentences. The engine knows only the words its packs teach:
+  "is it past midnight already" is "I can't" until a time sentence uses "midnight". Each one taught in
+  the inbox becomes right at once. That is the trade, chosen: ask, never guess.
+- **The `tests.md` files were written alongside the patterns, so they aren't truly blind.** Sentences
+  written by someone else are the next real measure.
+- Main's held-out set wasn't used to tune anything here; it only measures.
+
+## Not done yet
+
+- Follow-ups carry only values with a shape (durations, dates): "and 5 minutes" works, "and for buy milk"
+  doesn't.
+- The page isn't on GitHub Pages: Pages serves `docs/` on main. Open `engine/index.html` from the branch,
+  or copy it to `docs/engine/` when it's worth testing on the phone.
+- TermNL's board skills as a pack, my-agent's content as a pack, the same engine on the board.
+
+## Run
+
+```
+node engine/train.js            # the packs → engine/model.json
+node engine/test.js             # the dialogue scripts, tests.md, the held-out set, the review, teaching
+node engine/chat.js             # talk to it in the terminal (/inbox, /teach <skill> slot=words)
+node engine/build.js            # engine/index.html: the engine, packs and model in one offline page
+```
+
+Core size: 871 lines in `engine/*.js` (without test.js, chat.js and build.js), against 1,009 for main's
+`web/agent.js`, `services.js`, `inbox.js` and `skills.js`.
