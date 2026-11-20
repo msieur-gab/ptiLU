@@ -11,7 +11,8 @@
 /*STYLE*/
 /* the engine's own additions */
 .reply .src { display: block; margin-top: 6px; font: 11.5px var(--font-mono); color: var(--muted); }
-.chips .chip.follow { border-color: var(--fg); }
+.turn .follow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.turn .follow .chip { white-space: normal; text-align: left; }
 .sheet[hidden], .count[hidden] { display: none; }
 .card select, .card input { font: 14px var(--font-ui); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
 </style>
@@ -66,9 +67,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 $("ver").textContent = `engine · built ${BUILT}`;
 const EXAMPLES = engine.examples();
 
-// the chips: what can follow the last answer, else what it can do
-function chips(list, follow) {
-  $("chips").innerHTML = list.map((c, i) => `<button class="chip${follow ? " follow" : ""}" type="button" data-i="${i}">${esc(c)}</button>`).join("");
+// the bar at the bottom: what it can do, always the same
+function chips(list) {
+  $("chips").innerHTML = list.map((c, i) => `<button class="chip" type="button" data-i="${i}">${esc(c)}</button>`).join("");
   $("chips").querySelectorAll(".chip").forEach(b => b.addEventListener("click", () => send(list[+b.dataset.i])));
   $("chips").scrollLeft = 0;
 }
@@ -82,8 +83,12 @@ function renderAgent(el, r) {
   if (r.source) t += row("from", esc(r.source));
   const dot = r.outcome === "abstain" ? "skip" : r.outcome === "act" ? "" : "ask";
   const icon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  // what can follow this answer sits under it, in the conversation; the bar at the bottom keeps the skills
+  const follow = r.chips && r.chips.length && !r.chips.every(c => EXAMPLES.includes(c)) ? r.chips : [];
   el.insertAdjacentHTML("beforeend", `<div class="reply">${esc(r.say)}${r.source ? `<span class="src">${esc(r.source)}</span>` : ""}</div>`
+    + (follow.length ? `<div class="follow">${follow.map((c, i) => `<button class="chip" type="button" data-i="${i}">${esc(c)}</button>`).join("")}</div>` : "")
     + `<details class="why"><summary aria-label="Show what the engine did">${icon}<span class="dot ${dot}"></span>${esc(r.skill || (r.source ? "content" : r.outcome))}</summary><div class="trace">${t}</div></details>`);
+  el.querySelectorAll(".follow .chip").forEach(b => b.addEventListener("click", () => send(follow[+b.dataset.i])));
   log.scrollTop = log.scrollHeight;
 }
 function renderUser(text, typing) {
@@ -103,7 +108,7 @@ function send(text, instant = false) {
   const r = engine.respond(text);
   store.set("ptilu.engine.me", engine.memory);
   updateCount();
-  const after = () => { chips(r.chips && r.chips.length ? r.chips : EXAMPLES, !!r.source); };
+  const after = () => {};
   if (instant) { renderAgent(renderUser(text, false), r); after(); return true; }
   busy = true;
   const el = renderUser(text, true);
