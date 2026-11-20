@@ -1,6 +1,6 @@
 ---
 kind: question
-label: aI people can trust
+label: AI people can trust
 leads: [designing-by-abstention, senz]
 ---
 AI people can trust. Section C of my-agent's docs/questions.md: its questions are the

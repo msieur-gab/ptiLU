@@ -40,4 +40,5 @@ Words that say nothing about which skill is meant.
 - ok: OK. | Alright.
 - far: That's outside what I work on, so I'd rather not guess. | I don't have anything on that, and it's not my field.
 - several: {n} pieces of my work answer this. | {n} of my projects are about this.
+- cluster: That touches on {label}. Which part of it? | That's about {label}. Which part?
 - no more: That's all I have written about {title}.

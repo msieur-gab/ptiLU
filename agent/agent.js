@@ -18,8 +18,9 @@ const NUMBERS = { 2: "Two", 3: "Three", 4: "Four" };
 const BARS = { meaning: { sure: 0.525, ask: 0.45, gap: 0.08, far: 0.3 }, words: { sure: 0.75, ask: 0.35, gap: 0.1, far: 0.1 } };
 
 class Agent {
-  constructor({ skills, projects, talk, router, now = () => new Date(), random = Math.random, mode = "site" }) {
-    Object.assign(this, { skills, projects, talk, router, now, random, mode });
+  constructor({ skills, clusters = [], projects, talk, router, now = () => new Date(), random = Math.random, mode = "site" }) {
+    Object.assign(this, { skills, clusters, projects, talk, router, now, random, mode });
+    this.clusterOf = new Map(clusters.map(c => [c.name, c]));
     this.byName = new Map(skills.map(s => [s.name, s]));
     this.fallbackSkill = skills.find(s => s.fallback) || null;
     this.contactSkill = skills.find(s => s.kind === "contact" && !s.fallback) || this.fallbackSkill;
@@ -104,6 +105,9 @@ class Agent {
     // a question about the owner ("what makes you different") isn't a project detail, even if its words are in one
     const aboutMe = ranked.slice(0, 3).some(r => r.score >= bar.ask - 0.05 && ["about", "contact"].includes(this.byName.get(r.skill).kind));
     if (hit && !aboutMe && (!a || a.score < bar.sure) && hit.coverage >= 0.66) return this.detail(hit, `${hit.project}: ${hit.found} words of ${Math.round(hit.found / hit.coverage)}`);
+    // near two skills of the same cluster, sure of neither: the cluster's answer, its skills as tags
+    if (a && b && a.score >= bar.ask && b.score >= bar.ask && this.byName.get(a.skill).cluster && this.byName.get(a.skill).cluster === this.byName.get(b.skill).cluster)
+      return this.cluster(this.clusterOf.get(this.byName.get(a.skill).cluster), sentence, vec, `${why(a)}, and ${b.skill}: the cluster`);
     if (a && a.score >= bar.ask) {
       const options = ranked.filter(r => r.score >= bar.ask && a.score - r.score < 0.08).slice(0, 2).map(r => r.skill);
       return this.confirm(sentence, vec, options, why(a));
@@ -144,8 +148,20 @@ class Agent {
     chips.push({ text: "No", type: "no", pending });
     return this.turn("ask", options.length === 1 ? this.say("not sure", { label: this.byName.get(options[0]).label }) : this.say("do you mean"), { chips, why, sentence, options });
   }
+  // a cluster: its answer (or a line saying what it covers), the projects its skills lead to as cards, its
+  // skills as tags. Tapping one is a yes, as to "Do you mean…?"
+  cluster(c, sentence, vec, why) {
+    const leads = [...new Set(c.members.flatMap(n => this.byName.get(n).leads))].filter(id => this.projects.byId.has(id));
+    const pending = { type: "confirm", sentence, vec, options: c.members };
+    const chips = [...c.members.map(name => ({ text: this.byName.get(name).label.replace(/^./, x => x.toUpperCase()), type: "choose", name, pending })), ...leads.map(id => ({ text: this.projects.byId.get(id).title, type: "project", id })), ...this.contactChip()];
+    this.frame = null;
+    this.inbox.push({ sentence, why: `${c.label}: which of its skills?`, vec, on: this.today() });
+    return this.turn(leads.length ? "act" : "ask", c.answer || this.say("cluster", { label: c.label }), { why, sentence, cluster: c.name, options: c.members,
+      projects: leads.length ? leads : undefined, cards: leads.map(id => this.projects.card(id)), chips });
+  }
   chose(p, name) {
     const skill = this.byName.get(name);
+    this.inbox = this.inbox.filter(e => e.sentence !== p.sentence);
     this.taught(p.sentence, skill, p.vec, "you said yes");
     return this.run(skill, this.valuesIn(skill, p.sentence), p.sentence, `confirmed: ${name}`);
   }

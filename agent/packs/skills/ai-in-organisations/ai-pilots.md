@@ -1,6 +1,6 @@
 ---
 kind: question
-label: aI pilots that don't go anywhere
+label: AI pilots that don't go anywhere
 leads: [senz]
 ---
 AI pilots that don't go anywhere. Section B of my-agent's docs/questions.md: its questions are the

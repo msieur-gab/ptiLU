@@ -39,7 +39,18 @@ Without the model (still loading, or not built), skills are found by words, with
 
 - `agent/packs/conversation.md`: yes, no, fillers, small words, "tell me more", the agent's replies, and
   `contact:` (the contact form's address, empty for now).
-- `agent/packs/skills/*.md`, one per skill:
+- `agent/packs/skills/<cluster>/`: a cluster is a folder of skills, with a `cluster.md` (label, and an
+  `## Answer` to write). A question near two skills of one cluster, and sure of neither, gets the
+  cluster: its line, the projects its skills lead to as cards, its skills as tags. Tapping a tag is a yes,
+  so it teaches, as "Do you mean…?" does. Five clusters, grouped by Claude for you to review:
+  - **data and privacy**: regulation, data protection, privacy for people.
+  - **AI in organisations**: AI pilots, AI people can trust.
+  - **children and family**: presence across distance, children and screens.
+  - **change in organisations**: ideas that never get tested, stuck organisations.
+  - **me, and working together**: who I am, what I do, how this page works, working together, work I
+    haven't done.
+  Discovery without advertising, and the time, date, timer, hello, thanks and help skills, stay outside.
+- `agent/packs/skills/**/*.md`, one per skill:
   - **10 question skills**: sections A–J of my-agent's `docs/questions.md`. Their questions are the
     examples, and each leads to the projects named as candidates there. None has a written answer yet:
     write yours under `## Answer`. Until then, the reply introduces the first project and its card.
@@ -77,6 +88,11 @@ On sentences it was never given, from my-agent's `tests/held-out.json` and `docs
 | off-topic (25) | 21 | 0 | — | 4 | — |
 | requests (10) | 7 | 0 | — | 3 | — |
 | questions about Gab (44) | 19 | 3 | 12 | 5 | 5 |
+
+With clusters (20 November, afternoon): a project expected 37 right, 1 wrong, 3 asking with the right one
+offered; questions about Gab 19 right, 3 wrong, 13 asking with the right one offered. One more right
+and one more wrong than without them: these sets have almost no broad questions ("what do you think about
+AI in companies"), which is where a cluster answers instead of guessing.
 
 The engine, for comparison, on its own teaching experiment: about 15 wrong answers in 83. Its bars had
 been tuned on held-out.json; these weren't (`bars.mjs` chooses them on the skills' own examples, each
