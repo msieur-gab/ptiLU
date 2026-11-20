@@ -257,6 +257,27 @@ bar for long questions added the same morning. A file's keyword list now needs t
 most of the question. That sentence now finds nothing by words, and by meaning gets "Do you mean: How do we
 see where personal data flows in our organisation?"
 
+## The tagger is back (20 November, late morning)
+
+Gab: dropping the Snips-style half of the model "might become a loss over time". It was. The CRF tagger is
+back as the fallback for values: rules and patterns first; when they leave a value unfound, the tagger
+(trained from the patterns' sentences, where every value's place is known) proposes it, and its kind still
+has to read it. Sentences without marked values (Also said, questions, out of scope) train the skill, not
+the tagger. The samples of the reminder, name and place skills are main's own value lists.
+
+`node engine/tests/values.js`, values compared with the ones marked in main's sentences:
+
+| | handwritten held-out (11 values) | main's template sentences (354) |
+|---|---|---|
+| patterns only | 3 right, 2 wrong, 6 missed | 174 right, 24 wrong, 199 missed |
+| patterns + tagger | 7 right, 2 wrong, 2 missed | 248 right, 31 wrong, 118 missed |
+| main's model (CRF on 6,286 sentences) | 11 right | (trained on them) |
+
+Read honestly: 11 values is a small set; main's template sentences use the same value lists the samples now
+use. Most misses are sentences that never reach the skill ("I just moved to Rotterdam": the model is 0.28
+sure), or values the reader takes whole ("water the bonsai every" + "sunday"). The model trains in 0.4 s
+on the phone, so a sentence taught with its values marked retrains the skill and the tagger at once.
+
 ## The page
 
 Main's page, its look read straight from `web/template.html` at build time (one design system, not a

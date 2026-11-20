@@ -83,4 +83,30 @@ function expand(compiled, samples, limit = 24) {
   return Array.from({ length: limit }, (_, i) => outs[Math.floor(i * outs.length / limit)]); // spread over all forms
 }
 
-if (typeof module !== "undefined") module.exports = { compile, match, expand };
+// the same, with where each value sits ([start, end, slot] in the text): labelled sentences for the tagger
+function expandSpans(compiled, samples, limit = 24) {
+  const outs = [];
+  function* gen(items, k, acc) {
+    if (k === items.length) { yield acc; return; }
+    const it = items[k];
+    if (it.alt) { for (const a of it.alt) yield* gen(items, k + 1, acc.concat({ w: a })); return; }
+    if (it.opt) { for (const o of gen(it.opt, 0, [])) yield* gen(items, k + 1, acc.concat(o)); yield* gen(items, k + 1, acc); return; }
+    const s = samples[it.slot] || ["something"];
+    yield* gen(items, k + 1, acc.concat({ w: s[(acc.length + k + outs.length) % s.length], slot: it.slot }));
+  }
+  for (const parts of gen(compiled.items, 0, [])) {
+    let text = "";
+    const spans = [];
+    for (const p of parts) {
+      if (text) text += " ";
+      if (p.slot) spans.push([text.length, text.length + p.w.length, p.slot]);
+      text += p.w;
+    }
+    outs.push({ text, spans });
+    if (outs.length >= 400) break;
+  }
+  if (outs.length <= limit) return outs;
+  return Array.from({ length: limit }, (_, i) => outs[Math.floor(i * outs.length / limit)]);
+}
+
+if (typeof module !== "undefined") module.exports = { compile, match, expand, expandSpans };

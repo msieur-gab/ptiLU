@@ -22,7 +22,7 @@ Where home is. Kept on this device only, with the sentence you said it in.
 - {place}: a place. If it's missing, ask: Where do you live?
 
 ## Samples
-- place: Munich | Paris | Kyoto | Lisbon | Shenzhen
+- place: Munich | Paris | Lisbon | Tokyo | Berlin | Lyon | New York | Shenzhen | Montreal | Vienna | Barcelona | Hamburg | Hong Kong | Rio de Janeiro | Buenos Aires | Cape Town | San Francisco | Kuala Lumpur | New Delhi
 
 ## Does
 memory.set place {place}

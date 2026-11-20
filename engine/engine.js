@@ -23,6 +23,7 @@ const MEANING = { floor: 0.42, sure: 0.55, skill: 0.6 }; // below PROPOSE the mo
 class Engine {
   constructor({ skills, content = null, talk, model = null, memory = {}, now = () => new Date(), random = Math.random }) {
     Object.assign(this, { skills, content, talk, model, memory, now, random });
+    this.tagger = true; // the CRF finds values no rule found; false to measure without it
     this.pending = null; // the question waiting for an answer
     this.frame = null; // the last thing done: a skill and its values, or a place in the content
     this.inbox = []; // what it couldn't do, waiting to be taught
@@ -164,9 +165,20 @@ class Engine {
     if (skill && conf >= (skill.role ? SURE : PROPOSE)) {
       // the values its shape gives away, then the words left: are they all the skill's own?
       let left = sentence;
+      const take = (slot, v) => { values[slot] = v; left = left.replace(new RegExp(v.text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), " "); };
       for (const [slot, need] of Object.entries(skill.needs)) {
         const v = K.findIn(need.kind, sentence, this.now());
-        if (v) { values[slot] = v; left = left.replace(new RegExp(v.text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), " "); }
+        if (v) take(slot, v);
+      }
+      // the tagger (the model's CRF, trained from the patterns' marked values): the values no rule found,
+      // each still read by its kind ("pick up the parcel" as some text, "Rotterdam" as a place)
+      if (this.tagger && this.model.tag) {
+        const slots = this.model.parse(sentence).slots;
+        for (const [slot, need] of Object.entries(skill.needs)) {
+          if (values[slot] || !slots[slot]) continue;
+          const v = this.reader(skill)(slot, slots[slot]);
+          if (v) take(slot, { text: slots[slot], ...v, by: "tagger" });
+        }
       }
       const own = this.vocab.get(skill.name);
       unknown = T.words(left).filter(w => !this.talk.small.has(w) && !own.has(w) && ![...own].some(o => T.close(w, o)));
@@ -275,7 +287,7 @@ class Engine {
 
   confirm(skill, values, why, sentence, unsure, say) {
     this.pending = { type: "confirm", skill, values, why, sentence, unsure };
-    return this.turn("ask", say || this.say("not sure", { label: skill.label }), { chips: this.talk.chips, skill: skill.name, why });
+    return this.turn("ask", say || this.say("not sure", { label: skill.label }), { chips: this.talk.chips, skill: skill.name, texts: this.texts(values), why });
   }
 
   // 6. what's still missing, an approval, or act
@@ -286,14 +298,14 @@ class Engine {
       if (need.default) { values[slot] = { text: need.default, said: this.reads(need.default) }; continue; }
       if (need.ask) {
         this.pending = { type: "value", skill, slot, values, why, sentence };
-        return this.turn("ask", T.pick(need.ask, this.random), { skill: skill.name, values: this.said(values), why });
+        return this.turn("ask", T.pick(need.ask, this.random), { skill: skill.name, values: this.said(values), texts: this.texts(values), why });
       }
     }
     for (const [slot, v] of Object.entries(values)) {
       if (v.ambiguous && v.alternatives && v.alternatives.length) {
         const choices = [{ iso: v.iso, said: v.said }, ...v.alternatives];
         this.pending = { type: "choose", skill, slot, values, why, sentence, choices };
-        return this.turn("ask", this.say("which one", { a: choices[0].said, b: choices[1].said }), { chips: choices.map(c => c.said), skill: skill.name, why });
+        return this.turn("ask", this.say("which one", { a: choices[0].said, b: choices[1].said }), { chips: choices.map(c => c.said), skill: skill.name, texts: this.texts(values), why });
       }
     }
     if (skill.approve) {
@@ -312,7 +324,7 @@ class Engine {
     this.frame = { kind: "skill", skill: skill.name, values };
     const reply = T.pick(skill.replies[key] || skill.replies.done, this.random);
     const chips = reply.includes("{@skills}") ? this.examples() : [];
-    return this.turn("act", T.fill(reply, { ...said, ...this.readings(reply) }), { skill: skill.name, values: said, command, why, approved, chips });
+    return this.turn("act", T.fill(reply, { ...said, ...this.readings(reply) }), { skill: skill.name, values: said, texts: this.texts(values), command, why, approved, chips });
   }
 
   // what the engine keeps about you: each value with the sentence you said it in, refused if the
@@ -338,6 +350,7 @@ class Engine {
     return [...new Map(out.map(x => [x.toLowerCase(), x])).values()];
   }
 
+  texts(values) { return Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v.text])); }
   said(values) { return Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v.said || v.text])); }
   reads(text) { return text === "home" && this.memory.place ? this.memory.place.value : text; }
 

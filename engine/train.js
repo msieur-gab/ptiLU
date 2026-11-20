@@ -9,10 +9,12 @@ const { Content } = typeof EngineContent !== "undefined" ? EngineContent : requi
 
 function examples(packs) {
   const out = [];
-  const add = (intent, text) => out.push({ intent, text, spans: [] });
+  // spans = where the values sit (from the patterns); a sentence without them (Also said, questions, out of
+  // scope) teaches the skill, never the tagger: its values aren't marked, so they mustn't read as "no value"
+  const add = (intent, text, spans = null) => out.push({ intent, text, spans: spans || [], noSlots: !spans });
   for (const s of packs.skills) {
     const samples = K.samplesFor(s);
-    for (const p of s.patterns) for (const t of P.expand(p, samples, 12)) add(s.name, t);
+    for (const p of s.patterns) for (const x of P.expandSpans(p, samples, 12)) add(s.name, x.text, x.spans);
     for (const t of s.also) add(s.name, t);
   }
   for (const t of packs.asks) add("ask", t);

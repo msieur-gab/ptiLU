@@ -22,7 +22,7 @@ What to call you. Kept on this device only, with the sentence you said it in.
 - {name}: a name. If it's missing, ask: What should I call you?
 
 ## Samples
-- name: Gab | Eva | Sam | Noor | Kenji
+- name: Gab | Gabriel | Eva | Romain | Léa | Sam | Yuki | Amara | Lucas | Mia | Noah | Chloé | Tom | Ines | Doc | Boss | Chief | Professor | Kiki
 
 ## Does
 memory.set name {name}

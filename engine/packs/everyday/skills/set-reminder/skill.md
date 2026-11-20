@@ -33,7 +33,7 @@ it asks which one.
 - {when}: a date and time. If it's missing, ask: When? | When should I remind you?
 
 ## Samples
-- task: call mum | buy milk | water the plants | send the invoice | oil the cedar box | book the dentist
+- task: call mum | buy milk | water the plants | pick up the kids | send the invoice | take the bread out | check the oven | pay the rent | book the dentist | back up the photos | reply to Eva | charge the camera | feed the cat | stretch | drink some water | move the car | submit the report | glue the box | oil the cedar box | take a break | call the bank | order more wood | print the tickets | bring the bikes in | renew my passport | ask Romain about the demo | clean the workshop | check the laundry | start dinner | go to bed | send the quote to Marc | give the keys to Lea | talk to the neighbours | bring the drill to the workshop | go to the post office | write to the landlord | take the car to the garage | send the photos to grandma
 
 ## Does
 reminder.add {when} {task}
