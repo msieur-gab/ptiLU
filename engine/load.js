@@ -56,7 +56,7 @@ function files(dir) {
     const pdir = path.join(dir, pack), p = out.packs[pack] = { "pack.md": read(path.join(pdir, "pack.md")), skills: {}, docs: [] };
     if (has(path.join(pdir, "out-of-scope.md"))) p["out-of-scope.md"] = read(path.join(pdir, "out-of-scope.md"));
     const { meta } = F.frontMatter(p["pack.md"]);
-    for (const f of meta.files || []) p.docs.push({ id: path.basename(f, ".md").toLowerCase(), md: read(path.join(root, f)) });
+    for (const f of meta.files || []) p.docs.push({ id: path.basename(f, ".md").toLowerCase(), md: read(path.resolve(root, f)) });
     const cdir = path.join(pdir, "content");
     if (has(cdir)) for (const f of fs.readdirSync(cdir).filter(f => f.endsWith(".md")).sort()) p.docs.push({ id: path.basename(f, ".md"), md: read(path.join(cdir, f)) });
     const sdir = path.join(pdir, "skills");

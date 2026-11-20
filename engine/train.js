@@ -29,7 +29,7 @@ function examples(packs) {
   for (const t of packs.asks) add("ask", t);
   for (const d of packs.docs) {
     for (const doc of new Content([d], packs.talk.small).docs) {
-      for (const q of doc.questions) add("ask", q);
+      for (const q of doc.questions) add("ask", q.q);
       add("ask", `what is ${doc.title}`); add("ask", `tell me about ${doc.title}`);
       for (const sec of doc.sections) add("ask", `tell me about ${sec.heading.toLowerCase()}`);
     }

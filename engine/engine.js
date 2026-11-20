@@ -170,18 +170,21 @@ class Engine {
         return this.next(skill, values, why, sentence);
       }
     }
-    // a question about the content: the model says so, or the sentence is shaped like a question.
-    // A command is never answered with a quote ("move ideas to documnet" is in the review, word for word)
-    if (this.content && (intent === "ask" || this.asked || this.talk.questions.some(w => ws[0] === w))) {
-      const r = this.content.answer(sentence, this.frame && this.frame.kind === "content" ? this.frame : null);
-      if (r) { this.frame = r.frame; return this.turn("act", r.say, { source: r.source, chips: r.chips, why: "content" }); }
+    // the content: a question (the model says so, a question word, a "?") is searched everywhere; any other
+    // sentence only against what the files say they answer. So "my daughter lives abroad" finds the piece
+    // that lists it, and a command is never answered with a quote ("move ideas to documnet" is in the
+    // review, word for word)
+    const isQuestion = intent === "ask" || this.asked || this.talk.questions.includes(ws[0]);
+    if (this.content) {
+      const r = this.content.answer(sentence, this.frame && this.frame.kind === "content" ? this.frame : null, !isQuestion);
+      if (r) { this.frame = r.frame; return this.turn("act", r.say, { source: r.source, chips: r.chips, why: isQuestion ? "content" : "content, a question it lists" }); }
     }
     if (skill && unknown && unknown.length && !skill.role) {
       return this.confirm(skill, values, `model ${conf.toFixed(2)} (${skill.name}), untaught: ${unknown.join(", ")}`, sentence, true,
         this.say("unknown word", { word: unknown.slice(0, 2).map(w => `“${w}”`).join(", "), label: skill.label }));
     }
     const why = intent ? `model ${conf.toFixed(2)} (${intent}), nothing in the content` : "nothing read it";
-    if (this.content && (intent === "ask" || this.asked || this.talk.questions.includes(ws[0]))) {
+    if (this.content && isQuestion) {
       this.inbox.push({ sentence, why, on: this.now().toISOString().slice(0, 10) });
       return this.turn("abstain", this.say("nothing written"), { why });
     }

@@ -48,4 +48,20 @@ function unlearn(engine, skillName, pattern) {
   return { ok: true, md: skill.md };
 }
 
-if (typeof module !== "undefined") module.exports = { teach, unlearn };
+// a question the content didn't answer, taught to the passage that does: `see` is the start of that
+// passage, as the file says it. Accepted only if the passage is in the file and the question then finds it.
+function teachContent(engine, sentence, doc, see) {
+  const c = engine.content;
+  const di = c ? c.docs.findIndex(d => d.id === doc || d.title === doc) : -1;
+  if (di < 0) return { ok: false, why: `no file called ${doc}` };
+  const want = c.terms(see).join(" ");
+  if (!want || !c.docs[di].sections.some(s => s.sentences.some(x => c.terms(x).join(" ").includes(want)))) return { ok: false, why: `"${see}" isn't in ${c.docs[di].title}` };
+  const q = engine.clean(sentence);
+  c.learn(di, q, see);
+  const r = c.answer(q);
+  if (!r || r.frame.di !== di) { c.docs[di].questions.pop(); c.units.pop(); return { ok: false, why: "the question still doesn't find that passage" }; }
+  engine.inbox = engine.inbox.filter(e => e.sentence !== q && e.sentence !== sentence);
+  return { ok: true, line: `  - q: ${q}\n    see: ${see}`, say: r.say };
+}
+
+if (typeof module !== "undefined") module.exports = { teach, unlearn, teachContent };

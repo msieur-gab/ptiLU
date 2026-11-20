@@ -4,7 +4,7 @@
 const fs = require("fs");
 const path = require("path");
 const { make } = require("./make.js");
-const { teach, unlearn } = require("./learn.js");
+const { teach, unlearn, teachContent } = require("./learn.js");
 const T = require("../web/trainer.js");
 const R = require("../web/runtime.js");
 
@@ -102,6 +102,18 @@ console.log(`review conversations (${rv.length}): ${tally(rv)}`);
   const ok = r1.outcome !== "act" && taught.ok && r2.outcome === "act" && r2.say.includes("25 minutes") && !refused.ok && !own.ok && /## Learned\n- give me \{duration\} on the clock/.test(taught.md);
   if (!ok) { failed++; console.log("FAIL teaching", { r1: r1.say, taught, r2: r2.say, refused, own }); }
   else console.log(`teaching: "${taught.line.slice(2)}" works at once`);
+}
+
+// ---- 6. teaching the content: a question it had nothing for, pointed to the passage that answers it
+{
+  const e = fresh();
+  const before = e.respond("does it need a server?");
+  const t = teachContent(e, "does it need a server?", "ptilu", "Assistants usually sit on a large language model");
+  const after = e.respond("does it need a server?");
+  const bad = teachContent(e, "what colour is it?", "ptilu", "a sentence that isn't there");
+  const ok = before.outcome === "abstain" && t.ok && after.outcome === "act" && after.say.startsWith("Assistants usually") && !bad.ok;
+  if (!ok) { failed++; console.log("FAIL content teaching", { before: before.say, t, after: after.say, bad }); }
+  else console.log(`content teaching: "does it need a server?" now finds its passage`);
 }
 
 const wrong = [...all, ...rv, ...others].filter(r => r[2] === "wrong").length;

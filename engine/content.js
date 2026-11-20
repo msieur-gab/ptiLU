@@ -6,7 +6,18 @@
 const F = typeof EngineFiles !== "undefined" ? EngineFiles : require("./files.js");
 const T = typeof EngineText !== "undefined" ? EngineText : require("./text.js");
 
-const stem = w => w.replace(/'s$/, "").replace(/(ing|ed|es|s)$/, m => (w.length > m.length + 3 ? "" : m));
+// endings off, so "drawings" finds "drawing" and "organisations" finds "organisation" (my-agent's rules)
+function stem(w) {
+  w = w.replace(/'s$/, "");
+  if (w.length > 5 && /[iz]ations?$/.test(w)) return w.replace(/[iz]ations?$/, "is");
+  if (w.length > 5 && /ations?$/.test(w)) return w.replace(/ations?$/, "at");
+  if (w.length > 4 && /ing$/.test(w)) return w.slice(0, -3);
+  if (w.length > 4 && /ies$/.test(w)) return w.slice(0, -3) + "y";
+  if (w.length > 4 && /ed$/.test(w)) return w.slice(0, -2);
+  if (w.length > 3 && /es$/.test(w) && !/ses$/.test(w)) return w.slice(0, -1);
+  if (w.length > 3 && /s$/.test(w) && !/ss$/.test(w)) return w.slice(0, -1);
+  return w.replace(/i[sz]e$/, "iz").replace(/(?<=.{5})is$/, "iz"); // anonymise, anonymize, anonymised: one word
+}
 
 function plain(md) {
   return md.replace(/```[\s\S]*?```/g, " ").replace(/`([^`]*)`/g, "$1").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
@@ -36,31 +47,52 @@ class Content {
         if (h) { if (cur.text.trim()) secs.push(cur); cur = { heading: h[1], text: "" }; } else cur.text += line + "\n";
       }
       if (cur.text.trim()) secs.push(cur);
-      return { id, title, questions: meta.questions || [], answer: meta.answer || null, next: meta.next ? meta.next.split(/\s*,\s*/) : [],
+      // questions: "what is ptilu" (answered by `answer:`) or { q, see } (answered by the passage that says `see`);
+      // answers: questions the whole piece answers (by `answer:`); keywords: what the piece is about
+      const qs = [].concat(meta.questions || [], meta.answers || []).map(q => (typeof q === "string" ? { q } : q)).filter(q => q.q);
+      const next = Array.isArray(meta.next) ? meta.next : meta.next ? meta.next.split(/\s*,\s*/) : [];
+      return { id, title, questions: qs, answer: meta.answer || null, next, keywords: [].concat(meta.keywords || [], meta.themes || []),
         sections: secs.map(s => ({ heading: s.heading, sentences: sentencesOf(s.text) })).filter(s => s.sentences.length) };
     });
     // the units searched: every section, and every question a file says it answers
     this.units = [];
     this.docs.forEach((d, di) => {
-      d.sections.forEach((s, si) => this.units.push({ di, si, head: new Set(this.terms(`${d.title} ${s.heading}`)),
+      const about = this.terms(`${d.title} ${d.keywords.join(" ")}`);
+      d.sections.forEach((s, si) => this.units.push({ di, si, head: new Set([...about, ...this.terms(s.heading)]),
         terms: this.terms(`${d.title} ${s.heading} ${s.heading} ${s.sentences.join(" ")}`) }));
-      d.questions.forEach(q => this.units.push({ di, si: 0, question: q, head: new Set(this.terms(q)), terms: this.terms(q) }));
+      d.questions.forEach(({ q, see }) => this.units.push({ di, si: 0, question: q, see, head: new Set([...about, ...this.terms(q)]), terms: this.terms(q) }));
+      // the piece as a whole: its keywords say what it is about, its `answer:` answers it
+      if (d.keywords.length && d.answer) this.units.push({ di, si: 0, question: d.title, head: new Set(about), terms: about });
     });
     this.df = new Map();
     for (const u of this.units) for (const t of new Set(u.terms)) this.df.set(t, (this.df.get(t) || 0) + 1);
     this.avg = this.units.reduce((a, u) => a + u.terms.length, 0) / Math.max(1, this.units.length);
   }
 
+  // a question taught from the inbox: it points to a passage of a file, as a `questions:` line would
+  learn(di, q, see) {
+    const d = this.docs[di];
+    const about = this.terms(`${d.title} ${d.keywords.join(" ")}`);
+    const u = { di, si: 0, question: q, see, head: new Set([...about, ...this.terms(q)]), terms: this.terms(q) };
+    d.questions.push({ q, see });
+    this.units.push(u);
+    for (const t of new Set(u.terms)) this.df.set(t, (this.df.get(t) || 0) + 1);
+    this.avg = this.units.reduce((a, x) => a + x.terms.length, 0) / this.units.length;
+  }
+
   terms(text) { return T.words(text).filter(w => !this.small.has(w)).map(stem); }
   idf(t) { const n = this.df.get(t) || 0; return Math.log(1 + (this.units.length - n + 0.5) / (n + 0.5)); }
 
   // the best unit for a question, and how much of the question it covers (0..1, by weight of the words)
-  search(question, prefer = null) {
-    const q = [...new Set(this.terms(question))];
+  search(question, prefer = null, onlyQuestions = false) {
+    // a word no file holds is read as the one known word a letter away from it ("halucinates", "GDRP")
+    const known = t => this.df.has(t) ? t : ([...this.df.keys()].filter(k => k.length >= 5 && T.close(t, k)).sort((a, b) => this.df.get(b) - this.df.get(a))[0] || t);
+    const q = [...new Set(this.terms(question).map(known))];
     if (!q.length) return null;
     const total = q.reduce((a, t) => a + this.idf(t), 0);
     let best = null;
     for (const u of this.units) {
+      if (onlyQuestions && !u.question) continue;
       const tf = new Map();
       for (const t of u.terms) tf.set(t, (tf.get(t) || 0) + 1);
       let score = 0, covered = 0, onTopic = false;
@@ -72,21 +104,36 @@ class Content {
         score += this.idf(t) * (f * 2.2) / (f + 1.2 * (0.25 + 0.75 * u.terms.length / this.avg));
       }
       if (u.question) score *= 1.5;
-      if (prefer !== null && u.di === prefer) score *= 1.3;
-      if (!best || score > best.score) best = { ...u, score, coverage: covered / total, onTopic, asked: q.length };
+      // a follow-up looks around where the conversation is: the same file first, the passage it's on and
+      // the ones beside it most (a moving window, not a fresh search)
+      if (prefer && u.di === prefer.di) score *= Math.abs(u.si - prefer.si) <= 1 ? 1.6 : 1.3;
+      // ranked by how much of the question a unit covers as much as by how strongly: a short question that
+      // shares one word ("wants") mustn't beat a section that holds most of what was asked
+      const coverage = covered / total, rank = score * coverage;
+      if (!best || rank > best.rank) best = { ...u, score, rank, coverage, onTopic, asked: q.length };
     }
     return best && best.score > 0 ? best : null;
   }
 
   // a question → { say, source, chips, frame } or null
-  answer(question, frame = null) {
-    const hit = this.search(question, frame ? frame.di : null);
+  // onlyQuestions: for a sentence that isn't asked as a question ("my daughter lives abroad"), only what a
+  // file says it answers counts, never a passage that happens to share its words
+  answer(question, frame = null, onlyQuestions = false) {
+    const hit = this.search(question, frame, onlyQuestions);
     // the bar: half of what was asked is there, and the topic is what the section is about (its title, its
     // heading, or a question the file says it answers): "what is the weather" isn't answered by a section
     // that mentions the weather in passing. To widen what a file answers, add `questions:` to it
-    if (!hit || hit.coverage < 0.5 || !hit.onTopic) return null;
+    // a question a file lists is closer to the point than a passage, so a little under half of the words is enough there
+    if (!hit || hit.coverage < (hit.question ? 0.45 : 0.5) || !hit.onTopic) return null;
     const d = this.docs[hit.di];
-    if (hit.question && d.answer && hit.coverage >= 0.75) return this.reply(hit.di, hit.si, [0], d.answer, `${d.title}, written answer`);
+    if (hit.question && hit.see) { // the passage the file points to for this question
+      const want = this.terms(hit.see).join(" ");
+      for (let si = 0; si < d.sections.length; si++) {
+        const at = d.sections[si].sentences.findIndex(x => this.terms(x).join(" ").includes(want));
+        if (at >= 0) return this.reply(hit.di, si, ...this.from(d.sections[si], at), this.where(d, d.sections[si]));
+      }
+    }
+    if (hit.question && d.answer) return this.reply(hit.di, hit.si, [0], d.answer, `${d.title}, written answer`);
     const s = d.sections[hit.si];
     const q = new Set(this.terms(question));
     let at = 0, most = -1;
