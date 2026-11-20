@@ -57,7 +57,7 @@ const store = { get: k => { try { return JSON.parse(localStorage.getItem(k)); } 
 const packs = EngineLoad.fromFiles(FILES);
 const engine = new EngineCore.Engine({ skills: packs.skills, talk: packs.talk, memory: store.get("ptilu.engine.me") || {},
   content: packs.docs.length ? new EngineContent.Content(packs.docs, packs.talk.small, packs.topics) : null,
-  model: new NLURuntime.NLU(MODEL) });
+  model: new NLURuntime.NLU(MODEL), author: { lines: packs.forAuthor, say: packs.invites } });
 if (MEANING) engine.setMeaning(EngineContent.decodeMeaning(MEANING));
 const taught = store.get("ptilu.engine.taught") || [];
 for (const t of taught) EngineLearn.teach(engine, t.sentence, t.skill, t.marks);

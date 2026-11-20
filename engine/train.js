@@ -26,6 +26,7 @@ function examples(packs) {
     }
   }
   for (const t of packs.outOfScope) add("out_of_scope", t);
+  for (const t of packs.forAuthor || []) add("invite", t);
   return out;
 }
 

@@ -27,14 +27,18 @@ function conversation(md) {
 //          docs: [{ id, md }] } } }
 function fromFiles(files) {
   const talk = conversation(files["conversation.md"]);
-  const skills = [], docs = [], outOfScope = [], asks = [], topics = [];
+  const skills = [], docs = [], outOfScope = [], asks = [], topics = [], forAuthor = [], invites = [];
   for (const [pack, p] of Object.entries(files.packs)) {
     const { meta, body } = F.frontMatter(p["pack.md"]);
     if (p["out-of-scope.md"]) outOfScope.push(...Object.values(F.sections(p["out-of-scope.md"])).flatMap(x => x.lines));
     if (meta.kind === "content") {
       if (meta.about) topics.push(meta.about);
       docs.push(...p.docs);
-      asks.push(...(F.sections(body)["also said"] || { lines: [] }).lines);
+      const sec = F.sections(body), lines = k => (sec[k] || { lines: [] }).lines;
+      asks.push(...lines("also said"));
+      // questions for the author, not the files (his time, price, tools), and what is said to them
+      forAuthor.push(...lines("for the author"));
+      invites.push(...lines("invite"));
       continue;
     }
     for (const [name, f] of Object.entries(p.skills || {})) {
@@ -43,7 +47,7 @@ function fromFiles(files) {
       skills.push(skill);
     }
   }
-  return { talk, skills, docs, outOfScope, asks, topics };
+  return { talk, skills, docs, outOfScope, asks, topics, forAuthor, invites };
 }
 
 // Node: the files from engine/packs, and the content files a pack lists from the repository

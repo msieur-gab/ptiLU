@@ -312,6 +312,12 @@ defensible: "Can a product work without an account?" → Vrooom). But on questio
 ("When could you start?", "How much does a project cost?", "What tools do you use?"), where the site should
 invite the visitor to write, it answers 11 of 40 with a loosely related passage; the live site, 1.
 
+## The answer check and questions for the author (branch `engine-answers`, 20 November)
+
+The goal, the judge and the results are in `GOAL.md`: wrong quotes on the blind set 16 → 7, right answers
+23 → 23; on the tuning set 12 → 0. `engine/answers.js` (what a question asks for and whether a reply holds it,
+TREC-style), `Content.check`, and a content pack's `## For the author` and `## Invite` sections.
+
 ## The page
 
 Main's page, its look read straight from `web/template.html` at build time (one design system, not a

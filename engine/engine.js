@@ -17,18 +17,25 @@ const K = typeof EngineKinds !== "undefined" ? EngineKinds : require("./kinds.js
 const S = typeof EngineSkills !== "undefined" ? EngineSkills : require("./skills.js");
 
 const SURE = 0.7, PROPOSE = 0.3;
+const INVITE = +(typeof process !== "undefined" && process.env.INVITE) || 0.5; // the model this sure a question is for the author: the invitation
 // cosines of the meaning model: chosen on my-agent's held-out questions (no off-topic one reaches floor)
 const MEANING = { floor: 0.42, sure: 0.55, skill: 0.6 }; // below PROPOSE the model proposes nothing; the taught-words check guards what it does propose
 
 class Engine {
-  constructor({ skills, content = null, talk, model = null, memory = {}, now = () => new Date(), random = Math.random }) {
-    Object.assign(this, { skills, content, talk, model, memory, now, random });
+  constructor({ skills, content = null, talk, model = null, memory = {}, now = () => new Date(), random = Math.random, author = { lines: [], say: [] } }) {
+    Object.assign(this, { skills, content, talk, model, memory, now, random, author });
     this.tagger = true; // the CRF finds values no rule found; false to measure without it
     this.pending = null; // the question waiting for an answer
     this.frame = null; // the last thing done: a skill and its values, or a place in the content
     this.inbox = []; // what it couldn't do, waiting to be taught
     this.vocab = new Map(skills.map(s => [s.name, S.vocabulary(s, T.words)]));
     this.byName = new Map(skills.map(s => [s.name, s]));
+  }
+
+  // a question for the author (his time, his price, a service asked of him): the content pack's own invitation,
+  // never a passage that happens to share a word with it
+  invite(why) {
+    return this.turn("abstain", this.author.say.length ? T.pick(this.author.say, this.random) : this.say("nothing written"), { why, invite: true });
   }
 
   say(key, values = {}) { return T.fill(T.pick(this.talk.replies[key] || [key], this.random), values); }
@@ -160,6 +167,7 @@ class Engine {
     const ranked = this.model ? this.model.classify(sentence) : [];
     const [intent, conf] = ranked[0] || [null, 0];
     const skill = this.byName.get(intent);
+    if (intent === "invite" && conf >= INVITE) return this.invite(`model ${conf.toFixed(2)} (invite)`);
     let unknown = null, values = {};
     // small talk is cheap to get wrong but still wrong: the model alone says hello only when sure
     if (skill && conf >= (skill.role ? SURE : PROPOSE)) {
@@ -198,7 +206,7 @@ class Engine {
     const told = !skill && !this.talk.commands.includes(ws[0]) && T.words(sentence).filter(w => !this.talk.small.has(w)).length >= 4;
     const isQuestion = (intent === "ask" && conf >= SURE) || this.asked || this.talk.questions.includes(ws[0]) || told;
     if (this.content) {
-      const r = this.content.answer(sentence, this.frame && this.frame.kind === "content" ? this.frame : null, !isQuestion);
+      const r = this.content.check(sentence, this.content.answer(sentence, this.frame && this.frame.kind === "content" ? this.frame : null, !isQuestion));
       if (r) { this.frame = r.frame; return this.turn("act", r.say, { source: r.source, chips: r.chips, why: isQuestion ? "content" : "content, a question it lists" }); }
     }
     if (skill && unknown && unknown.length && !skill.role) {
@@ -219,6 +227,7 @@ class Engine {
   // what to embed: the content's listed questions and passages, and each skill's example sentences
   meaningItems() {
     const out = this.content ? this.content.meaningItems() : [];
+    this.author.lines.forEach((t, i) => out.push({ key: `a|author|${i}`, text: t }));
     for (const s of this.skills) {
       const seen = new Set();
       const add = t => { if (!seen.has(t)) { seen.add(t); out.push({ key: `s|${s.name}|${out.length}`, text: t }); } };
@@ -245,10 +254,10 @@ class Engine {
       return { key, score: c };
     }).sort((a, b) => b.score - a.score);
     const of = k => all.filter(x => x.key.startsWith(k + "|"));
-    const qs = of("q"), ps = of("p"), ss = of("s");
+    const qs = of("q"), ps = of("p"), ss = of("s"), as = of("a");
     const top = qs[0] && (!ps[0] || qs[0].score >= ps[0].score - 0.03) ? qs[0] : ps[0];
     const seen = new Set();
-    return { top, skill: ss[0], questions: qs.filter(x => { const q = x.key.split("|")[2].toLowerCase(); return !seen.has(q) && seen.add(q); }).slice(0, 4) };
+    return { top, skill: ss[0], author: as[0], questions: qs.filter(x => { const q = x.key.split("|")[2].toLowerCase(); return !seen.has(q) && seen.add(q); }).slice(0, 4) };
   }
 
   // after an "I can't": by meaning. A skill is never done on a guess: it asks "Do you want me to…?". The
@@ -267,9 +276,10 @@ class Engine {
         return this.confirm(skill, values, `meaning ${n.skill.score.toFixed(2)} (${skill.name})`, sentence, true);
       }
     }
+    if (n.author && n.author.score >= MEANING.sure && (!n.top || n.author.score >= n.top.score)) { drop(); return this.invite(`meaning ${n.author.score.toFixed(2)} (for the author)`); }
     if (!this.content || !n.top) return null;
     if (n.top.score >= MEANING.sure) {
-      const r = this.content.answerKey(n.top.key);
+      const r = this.content.check(sentence, this.content.answerKey(n.top.key));
       if (r) { drop(); this.frame = r.frame; return this.turn("act", r.say, { source: r.source, chips: r.chips, why: `meaning ${n.top.score.toFixed(2)}` }); }
     }
     const qs = n.questions.filter(x => x.score >= MEANING.floor);

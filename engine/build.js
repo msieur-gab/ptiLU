@@ -6,7 +6,7 @@ const { files } = require("./load.js");
 const here = f => fs.readFileSync(path.join(__dirname, f), "utf8");
 const raw = ["../web/runtime.js", "../web/entities.js", "../web/trainer.js"].map(here).join("\n");
 const mods = [["EngineText", "text.js"], ["EngineFiles", "files.js"], ["EnginePatterns", "patterns.js"], ["EngineKinds", "kinds.js"],
-  ["EngineSkills", "skills.js"], ["EngineContent", "content.js"], ["EngineLoad", "load.js"], ["EngineCore", "engine.js"],
+  ["EngineSkills", "skills.js"], ["EngineAnswers", "answers.js"], ["EngineContent", "content.js"], ["EngineLoad", "load.js"], ["EngineCore", "engine.js"],
   ["EngineLearn", "learn.js"], ["EngineTrain", "train.js"]]
   .map(([name, f]) => `const ${name} = (() => { const module = { exports: {} };\n${here(f)}\nreturn module.exports; })();`).join("\n");
 const built = new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC";

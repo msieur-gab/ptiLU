@@ -5,6 +5,7 @@
 
 const F = typeof EngineFiles !== "undefined" ? EngineFiles : require("./files.js");
 const T = typeof EngineText !== "undefined" ? EngineText : require("./text.js");
+const A = typeof EngineAnswers !== "undefined" ? EngineAnswers : require("./answers.js");
 
 // endings off, so "drawings" finds "drawing" and "organisations" finds "organisation" (my-agent's rules)
 function stem(w) {
@@ -234,6 +235,39 @@ class Content {
       if (n > most) { most = n; at = i; }
     }
     return this.reply(hit.di, hit.si, ...this.from(s, at), this.where(d, s));
+  }
+
+  // the answer check (answers.js): a reply to "who…", "how many…", "when…", "how much…" must hold that value
+  // by what was asked. Else the sentence of the files that does (the files the question names, else the
+  // one found), else nothing: "how many employees does Dowgo have" isn't answered with what Dowgo is
+  check(question, r) {
+    const type = A.wants(question);
+    if (!type || !r) return r;
+    const qt = this.terms(question), d0 = this.docs[r.frame.di];
+    const focusIn = d => { const title = new Set(this.terms(d.title)); return [...new Set(qt.filter(t => !title.has(t)))]; };
+    // a name the question already says (the file's title, "AutoFlow") is no answer to "which companies use AutoFlow"
+    const said = new RegExp(`\\b(${question.split(/\W+/).filter(w => w.length > 2).join("|")})\\b`, "gi");
+    const by = (text, focus) => A.clauses(text).reduce((m, c) => {
+      if (!A.hasType(type, type === "name" ? c.replace(said, "") : c)) return m;
+      const ts = new Set(this.terms(c)), n = focus.filter(t => ts.has(t)).reduce((a, t) => a + this.idf(t), 0);
+      return Math.max(m, focus.length ? n : 1);
+    }, 0);
+    if (by(r.say, focusIn(d0)) > 0) return r;
+    const named = this.docs.map((d, di) => di).filter(di => this.terms(this.docs[di].title).some(t => qt.includes(t)));
+    let best = null;
+    for (const di of named.length ? named : [r.frame.di]) {
+      const d = this.docs[di], focus = focusIn(d);
+      if (!focus.length) continue;
+      d.sections.forEach((s, si) => s.sentences.forEach((x, at) => {
+        const n = by(x, focus);
+        // most of what was asked, by weight: one shared word ("built") isn't the answer to "who built the models"
+        const need = 0.5 * focus.reduce((a, t) => a + this.idf(t), 0);
+        if (n >= need && (!best || n > best.n)) best = { n, di, si, at };
+      }));
+    }
+    if (!best) return null;
+    const s = this.docs[best.di].sections[best.si];
+    return this.reply(best.di, best.si, ...this.from(s, best.at), this.where(this.docs[best.di], s));
   }
 
   // a listed question's answer: the passage its `see:` points to, else the file's written `answer:`

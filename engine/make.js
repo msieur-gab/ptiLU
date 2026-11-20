@@ -12,7 +12,8 @@ function make({ now, random = () => 0, memory = {}, withMeaning = true } = {}) {
   const model = fs.existsSync(file) ? new R.NLU(JSON.parse(fs.readFileSync(file, "utf8"))) : null;
   const content = packs.docs.length ? new Content(packs.docs, packs.talk.small, packs.topics) : null;
   const meaning = path.join(__dirname, "meaning.json"); // optional: built by engine/meaning/embed.mjs
-  const engine = new Engine({ skills: packs.skills, content, talk: packs.talk, model, memory, random, now: now || (() => new Date()) });
+  const engine = new Engine({ skills: packs.skills, content, talk: packs.talk, model, memory, random, now: now || (() => new Date()),
+    author: { lines: packs.forAuthor, say: packs.invites } });
   if (withMeaning && fs.existsSync(meaning)) engine.setMeaning(decodeMeaning(JSON.parse(fs.readFileSync(meaning, "utf8"))));
   return engine;
 }
